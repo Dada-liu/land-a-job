@@ -9,6 +9,7 @@ import {
   type SnapshotDto,
 } from '../lib/api'
 import { qk } from '../lib/queries'
+import { AGENT_INSTALL_URL, GITHUB_URL, SITE_URL } from '../lib/links'
 import { Button, Card, EmptyState, PageHeader, SectionTitle } from '../components/ui'
 import { errorText, useToast } from '../components/Toast'
 
@@ -151,6 +152,34 @@ export default function Settings() {
           >
             复制安装命令
           </button>
+        </div>
+        {/* 第一次装、换机器、想升级时，把安装说明交给 Agent 比照着手敲命令省事 */}
+        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-stone-500">
+          <span>第一次装？把安装说明交给你的 Agent：</span>
+          <a
+            href={AGENT_INSTALL_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-stone-300 underline-offset-2 hover:text-stone-800"
+          >
+            安装说明
+          </a>
+          <a
+            href={SITE_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-stone-300 underline-offset-2 hover:text-stone-800"
+          >
+            官网
+          </a>
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="underline decoration-stone-300 underline-offset-2 hover:text-stone-800"
+          >
+            GitHub
+          </a>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-[11px]">
