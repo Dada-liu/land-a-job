@@ -1,0 +1,55 @@
+name: site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - 'scripts/build-site.mjs'
+      - '.github/workflows/site.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时间只允许一次发布；不取消进行中的（避免把已上传的产物丢在半路）
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 配置 Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: 构建站点
+        env:
+          GITHUB_PAGES_URL: ${{ steps.pages.outputs.base_url }}
+        run: node scripts/build-site.mjs
+
+      - name: 上传产物
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: 发布到 GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,25 @@
+# Land a Job
+
+> 本地优先、Agent 原生的求职流水线：目标公司 → JD 匹配 → 简历定制 → 投递 → 跟进 → 面试 → offer 谈判。
+> 数据只存在本机 SQLite，应用零模型调用；AI 能力由用户安装的 Skill 在其 Agent 中执行，通过 MCP 读写本地数据。
+
+## 安装（由 Agent 执行）
+
+- [安装说明（给 Agent）](https://dada-liu.github.io/land-a-job/agent-install.md)：环境确认、clone、构建、起服务、装 Skill、注册 MCP、验证，以及失败处理与红线。
+
+## 给人看的
+
+- [项目主页](https://dada-liu.github.io/land-a-job/)：安装入口、使用方式、设计取舍、常见问题。
+- [README](https://github.com/Dada-liu/land-a-job/blob/main/README.md)：快速开始、命令速查、页面地图、排障。
+- [ARCHITECTURE](https://github.com/Dada-liu/land-a-job/blob/main/ARCHITECTURE.md)：分层、数据模型、API / MCP 契约、ADR。
+
+## 仓库
+
+- https://github.com/Dada-liu/land-a-job
+
+## 关键约束
+
+- 应用不调用任何模型，不存 API Key，MCP 里没有 `generate_*` 工具。
+- 写入只有一个入口：本机 Fastify 服务。
+- AI 产出落库必须带 `provenance: { skill, skillVersion }`。
+- 提交投递必须 `confirm: true`；浏览器辅助投递的最后一次点击永远留给用户。

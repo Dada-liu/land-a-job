@@ -1,0 +1,60 @@
+{
+  "name": "@land/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./application": {
+      "types": "./dist/application.d.ts",
+      "default": "./dist/application.js"
+    },
+    "./resume-templates": {
+      "types": "./dist/resume-templates.d.ts",
+      "default": "./dist/resume-templates.js"
+    },
+    "./fit": {
+      "types": "./dist/fit.d.ts",
+      "default": "./dist/fit.js"
+    },
+    "./funnel": {
+      "types": "./dist/funnel.d.ts",
+      "default": "./dist/funnel.js"
+    },
+    "./followup": {
+      "types": "./dist/followup.d.ts",
+      "default": "./dist/followup.js"
+    },
+    "./tailor": {
+      "types": "./dist/tailor.d.ts",
+      "default": "./dist/tailor.js"
+    },
+    "./offer": {
+      "types": "./dist/offer.d.ts",
+      "default": "./dist/offer.js"
+    },
+    "./tax": {
+      "types": "./dist/tax.d.ts",
+      "default": "./dist/tax.js"
+    },
+    "./skills": {
+      "types": "./dist/skills.d.ts",
+      "default": "./dist/skills.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  }
+}

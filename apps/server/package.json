@@ -1,0 +1,33 @@
+{
+  "name": "@land/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -b && node scripts/copy-assets.mjs",
+    "start": "node dist/index.js",
+    "seed": "tsx src/seed.ts",
+    "import:legacy": "tsx scripts/import-legacy.ts"
+  },
+  "dependencies": {
+    "@fastify/static": "^10.1.8",
+    "@land/core": "*",
+    "@mozilla/readability": "^0.6.0",
+    "better-sqlite3": "^13.0.3",
+    "fastify": "^5.12.8",
+    "jsdom": "^30.1.3",
+    "pino": "^10.4.0",
+    "puppeteer-core": "^25.16.0",
+    "ws": "^8.22.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@land/resume-kit": "*",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/jsdom": "^30.0.0",
+    "@types/ws": "^8.18.2",
+    "tsx": "^4.23.15"
+  }
+}

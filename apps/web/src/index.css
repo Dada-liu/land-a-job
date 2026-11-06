@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+/* resume-kit 在 workspace 里以源码形式被消费，Tailwind 4 默认只扫本工程目录。
+   不加这行，kit 里简历纸面与编辑面板的类名会被裁掉，页面退化成裸 HTML。 */
+@source "../../../packages/resume-kit/src";
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #faf9f7;
+  color: #1c1917;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #d6efe1;
+}
+
+/* 打印页：纸面不要阴影，否则 PDF 边缘会留一圈灰 */
+.print-mode [data-resume-page] > div {
+  box-shadow: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  /*
+   * 每一页必须严格等于一张 A4。
+   *
+   * A4_HEIGHT 常量取的是 1123px，而 A4 在 96dpi 下是 1122.52px——多出的
+   * 零点几像素会被浏览器顺延成一张空白页，用户收到的 PDF 末尾就多一页空的。
+   * 页间距 24px 同理：那是屏幕上分隔两页的视觉留白，打印时必须归零，
+   * 否则 2 页的堆叠高度会超过 2 张 A4 的总高。用 mm 表达尺寸即可消除误差。
+   */
+  .print-mode [data-resume-page] {
+    height: 297mm !important;
+    margin-bottom: 0 !important;
+    overflow: hidden;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  /* 外层占位容器的高度是「页数 × A4 + 页间距」，只用于屏幕占位。
+     打印时必须交回 auto，否则这多出来的 24px 会溢出成一张空白页。 */
+  .print-mode [data-resume-stack] {
+    height: auto !important;
+    width: auto !important;
+  }
+
+  .print-mode [data-resume-page]:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+}

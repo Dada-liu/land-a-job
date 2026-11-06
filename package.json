@@ -1,0 +1,45 @@
+{
+  "name": "land-a-job",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "本地优先、Agent 原生的求职流水线",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,web -c cyan,magenta --kill-others-on-fail \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "npm run build -w @land/core && npm run dev -w @land/server",
+    "dev:web": "node scripts/dev-web.mjs",
+    "build": "npm run build -w @land/resume-kit && npm run build -w @land/core && npm run build -w @land/server && npm run build -w @land/mcp && npm run build -w @land/web",
+    "start": "node apps/server/dist/index.js",
+    "seed": "npm run seed -w @land/server --",
+    "test": "vitest run",
+    "test:core": "vitest run packages/core",
+    "test:server": "vitest run apps/server",
+    "typecheck": "npm run build -w @land/resume-kit && tsc -b packages/core/tsconfig.json apps/server/tsconfig.json && tsc --noEmit -p apps/web/tsconfig.json",
+    "import:legacy": "npm run import:legacy -w @land/server --",
+    "e2e": "npm run build && node scripts/e2e/p3.mjs && node scripts/e2e/p4.mjs && node scripts/e2e/p5.mjs && node scripts/e2e/p6.mjs && node scripts/e2e/p7.mjs",
+    "e2e:p3": "node scripts/e2e/p3.mjs",
+    "e2e:p4": "node scripts/e2e/p4.mjs",
+    "e2e:p5": "node scripts/e2e/p5.mjs",
+    "skills:install": "bash scripts/install-skills.sh",
+    "mcp": "node apps/mcp/dist/index.js",
+    "e2e:p6": "node scripts/e2e/p6.mjs",
+    "launchd:install": "bash scripts/install-launchd.sh",
+    "launchd:uninstall": "bash scripts/install-launchd.sh --uninstall",
+    "e2e:p7": "node scripts/e2e/p7.mjs",
+    "site:build": "node scripts/build-site.mjs",
+    "site:dev": "node scripts/build-site.mjs --serve"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "concurrently": "^10.0.6",
+    "typescript": "^6.0.3",
+    "vitest": "^5.1.0"
+  }
+}

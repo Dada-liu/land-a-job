@@ -1,0 +1,21 @@
+{
+  "name": "@land/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": { "land-mcp": "./dist/index.js" },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@land/core": "*",
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15"
+  }
+}

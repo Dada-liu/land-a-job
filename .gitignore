@@ -1,0 +1,14 @@
+node_modules/
+dist/
+data/
+coverage/
+*.log
+*.tsbuildinfo
+.DS_Store
+.env
+.env.local
+.vite/
+playwright-report/
+test-results/
+# 本机的 Agent 会话与记忆，不属于项目源码
+.workbuddy/
