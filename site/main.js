@@ -81,10 +81,15 @@ if (buildInfo) {
   fetch('build.json', { cache: 'no-store' })
     .then((response) => (response.ok ? response.json() : Promise.reject(new Error('no build.json'))))
     .then((info) => {
+      // pages 字段只留在 build.json 里备查：页脚再挂一遍部署地址纯属噪音
       const parts = []
       if (info.sha) parts.push(`构建 ${info.sha}`)
-      if (info.pages) parts.push(info.pages)
-      if (info.builtAt) parts.push(new Date(info.builtAt).toISOString().slice(0, 16).replace('T', ' '))
+      if (info.builtAt) {
+        // 用访客本地时间显示，别拿 UTC 糊人（差 8 小时看起来像是构建没更新）
+        const at = new Date(info.builtAt)
+        const pad = (n) => String(n).padStart(2, '0')
+        parts.push(`${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`)
+      }
       buildInfo.textContent = parts.length > 0 ? parts.join(' · ') : '本地预览'
     })
     .catch(() => {
