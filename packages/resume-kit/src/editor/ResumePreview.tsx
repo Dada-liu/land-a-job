@@ -33,7 +33,7 @@ export const ResumePreview = forwardRef<HTMLDivElement, ResumePreviewProps>(func
           title="缩小简历"
           disabled={zoom <= MIN_ZOOM}
           onClick={() => setZoom((current) => Math.max(MIN_ZOOM, Number((current - ZOOM_STEP).toFixed(1))))}
-          className="rounded p-1.5 text-stone-600 transition-colors hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded p-1.5 text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ZoomOut aria-hidden="true" className="h-4 w-4" />
         </button>
@@ -46,7 +46,7 @@ export const ResumePreview = forwardRef<HTMLDivElement, ResumePreviewProps>(func
           title="放大简历"
           disabled={zoom >= MAX_ZOOM}
           onClick={() => setZoom((current) => Math.min(MAX_ZOOM, Number((current + ZOOM_STEP).toFixed(1))))}
-          className="rounded p-1.5 text-stone-600 transition-colors hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded p-1.5 text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ZoomIn aria-hidden="true" className="h-4 w-4" />
         </button>

@@ -33,15 +33,15 @@ export function CustomSelect({ options, value, onChange }: CustomSelectProps) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 px-2 py-0.5 text-sm text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+        className="flex items-center gap-1 px-2 py-0.5 text-sm text-stone-600 hover:bg-stone-100 hover:text-stone-900 rounded-lg transition-colors"
       >
         <span>{selected?.label ?? value}</span>
         <ChevronDown
-          className={`w-3 h-3 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`w-3 h-3 text-stone-400 transition-transform ${open ? 'rotate-180' : ''}`}
         />
       </button>
       {open && (
-        <div className="absolute top-full mt-1 left-0 bg-white border border-gray-200 rounded-lg shadow-lg z-50 min-w-full py-0.5">
+        <div className="absolute top-full mt-1 left-0 bg-white border border-stone-200 rounded-lg shadow-lg z-50 min-w-full py-0.5">
           {options.map((opt) => (
             <button
               key={opt.value}
@@ -52,8 +52,8 @@ export function CustomSelect({ options, value, onChange }: CustomSelectProps) {
               }}
               className={`w-full text-left px-3 py-1.5 text-sm whitespace-nowrap transition-colors ${
                 opt.value === value
-                  ? 'bg-gray-100 text-gray-800 font-medium'
-                  : 'text-gray-600 hover:bg-gray-50'
+                  ? 'bg-stone-900 text-white font-medium'
+                  : 'text-stone-600 hover:bg-stone-100 hover:text-stone-900'
               }`}
             >
               {opt.label}

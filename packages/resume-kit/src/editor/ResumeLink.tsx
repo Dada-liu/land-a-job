@@ -14,7 +14,7 @@ export function ResumeLink({ href, accent = false, children }: ResumeLinkProps) 
       href={href}
       rel="noreferrer"
       target={/^https?:/i.test(href) ? '_blank' : undefined}
-      className={accent ? 'text-blue-600 hover:underline' : 'hover:underline'}
+      className={accent ? 'text-stone-900 hover:underline' : 'hover:underline'}
     >
       {children}
     </a>

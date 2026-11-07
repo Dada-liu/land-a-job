@@ -24,27 +24,27 @@ export function SkillsEditor() {
           <div className="border rounded-lg p-3 bg-white">
             <form onSubmit={(e) => handleSubmit(e, skill.id)} className="space-y-2">
               <div>
-                <label className="block text-xs text-gray-500 mb-1">技能名称</label>
+                <label className="block text-xs text-stone-500 mb-1">技能名称</label>
                 <input
                   name="name"
                   defaultValue={skill.name}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm focus:border-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900"
                   placeholder="如: React"
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 mb-1">技能描述</label>
+                <label className="block text-xs text-stone-500 mb-1">技能描述</label>
                 <input
                   name="description"
                   defaultValue={skill.description}
-                  className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm focus:border-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900"
                   placeholder="如: 精通、熟练、掌握、了解"
                 />
               </div>
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600"
+                  className="flex-1 px-3 py-2 bg-stone-900 text-white rounded-lg text-sm hover:bg-stone-800"
                 >
                   保存
                 </button>
@@ -62,14 +62,14 @@ export function SkillsEditor() {
       />
       <button
         onClick={addSkill}
-        className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-blue-500 hover:text-blue-500"
+        className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-dashed border-stone-300 rounded-lg text-sm text-stone-500 hover:border-stone-900 hover:text-stone-900"
       >
         <Plus className="w-4 h-4" />
         添加专业技能
       </button>
       <button
         onClick={() => setActiveEditor(null)}
-        className="w-full px-3 py-2 border rounded-lg text-sm hover:bg-gray-100"
+        className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm hover:bg-stone-100 hover:text-stone-900"
       >
         完成
       </button>

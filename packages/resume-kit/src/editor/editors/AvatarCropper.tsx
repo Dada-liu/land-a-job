@@ -60,7 +60,7 @@ export function AvatarCropper({ image, onCropComplete, onCancel, cropShape = 'ro
 
   return (
     <div className="space-y-4">
-      <div className="relative w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
+      <div className="relative w-full h-48 bg-stone-100 rounded-lg overflow-hidden">
         <Cropper
           image={image}
           crop={crop}
@@ -76,7 +76,7 @@ export function AvatarCropper({ image, onCropComplete, onCancel, cropShape = 'ro
 
       {/* Zoom Slider */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-gray-500">-</span>
+        <span className="text-xs text-stone-500">-</span>
         <input
           type="range"
           value={zoom}
@@ -86,21 +86,21 @@ export function AvatarCropper({ image, onCropComplete, onCancel, cropShape = 'ro
           onChange={(e) => setZoom(Number(e.target.value))}
           className="flex-1"
         />
-        <span className="text-xs text-gray-500">+</span>
+        <span className="text-xs text-stone-500">+</span>
       </div>
 
       <div className="flex gap-2">
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 px-3 py-2 border rounded-lg text-sm hover:bg-gray-100"
+          className="flex-1 px-3 py-2 border border-stone-300 rounded-lg text-sm hover:bg-stone-100 hover:text-stone-900"
         >
           取消
         </button>
         <button
           type="button"
           onClick={getCroppedImg}
-          className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600"
+          className="flex-1 px-3 py-2 bg-stone-900 text-white rounded-lg text-sm hover:bg-stone-800"
         >
           确认裁剪
         </button>

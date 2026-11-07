@@ -269,7 +269,7 @@ export default function ResumeEditor() {
           <button
             type="button"
             onClick={() => navigate('/resumes')}
-            className="rounded-md p-1.5 text-stone-500 hover:bg-stone-100"
+            className="rounded-md p-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-900"
             title="返回简历列表"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -281,7 +281,7 @@ export default function ResumeEditor() {
             onKeyDown={(e) => {
               if (e.key === 'Enter') e.currentTarget.blur()
             }}
-            className="w-52 rounded-md border border-transparent px-2 py-1 text-sm font-medium text-stone-900 hover:border-stone-200 focus:border-stone-300 focus:outline-none"
+            className="w-52 rounded-md border border-transparent px-2 py-1 text-sm font-medium text-stone-900 hover:border-stone-200 focus:border-stone-900 focus:outline-none"
           />
           <span className="hidden items-center gap-1 text-[11px] text-stone-400 sm:flex">
             <span className={`${SAVE_COLOR[saveState]}`}>{SAVE_LABEL[saveState]}</span>
@@ -314,7 +314,7 @@ export default function ResumeEditor() {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-1 rounded-md border border-stone-200 px-2 py-1 text-xs text-stone-600 hover:bg-stone-50"
+            className="inline-flex items-center gap-1 rounded-md border border-stone-200 px-2 py-1 text-xs text-stone-600 hover:bg-stone-50 hover:text-stone-900"
           >
             <Upload className="h-3.5 w-3.5" />
             导入
@@ -322,7 +322,7 @@ export default function ResumeEditor() {
           <button
             type="button"
             onClick={handleExportJson}
-            className="inline-flex items-center gap-1 rounded-md border border-stone-200 px-2 py-1 text-xs text-stone-600 hover:bg-stone-50"
+            className="inline-flex items-center gap-1 rounded-md border border-stone-200 px-2 py-1 text-xs text-stone-600 hover:bg-stone-50 hover:text-stone-900"
           >
             <FileJson className="h-3.5 w-3.5" />
             JSON
@@ -339,7 +339,7 @@ export default function ResumeEditor() {
           <button
             type="button"
             onClick={() => setPanelOpen((v) => !v)}
-            className="rounded-md p-1.5 text-stone-500 hover:bg-stone-100"
+            className="rounded-md p-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-900"
             title={panelOpen ? '收起编辑区' : '打开编辑区'}
           >
             {panelOpen ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
@@ -374,7 +374,7 @@ export default function ResumeEditor() {
       {message ? (
         <div className="flex items-center justify-between gap-2 border-b border-stone-200 bg-stone-50 px-4 py-2 text-xs text-stone-600">
           <span>{message}</span>
-          <button type="button" onClick={() => setMessage(null)} className="text-stone-400 hover:text-stone-600">
+          <button type="button" onClick={() => setMessage(null)} className="text-stone-400 hover:text-stone-900">
             关闭
           </button>
         </div>

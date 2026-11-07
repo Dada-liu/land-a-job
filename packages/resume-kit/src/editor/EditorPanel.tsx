@@ -26,7 +26,7 @@ export function EditorPanel({ modules, activeEditor, onToggle }: EditorPanelProp
                   type="button"
                   onClick={() => onToggle(isActive ? null : mod.id)}
                   className={`flex w-full items-center justify-between rounded-lg px-4 py-3 transition-colors ${
-                    isActive ? 'bg-stone-900 text-white' : 'text-stone-700 hover:bg-stone-100'
+                    isActive ? 'bg-stone-900 text-white' : 'text-stone-700 hover:bg-stone-100 hover:text-stone-900'
                   }`}
                 >
                   <span className="flex items-center gap-3">

@@ -82,7 +82,7 @@ export function PersonalInfoEditor() {
         />
         <div
           onClick={() => fileInputRef.current?.click()}
-          className="w-24 h-24 rounded-full overflow-hidden cursor-pointer border-2 border-dashed border-gray-300 hover:border-blue-500 flex items-center justify-center"
+          className="w-24 h-24 rounded-full overflow-hidden cursor-pointer border-2 border-dashed border-stone-300 hover:border-stone-900 flex items-center justify-center"
         >
           {personalInfo.avatar ? (
             <img
@@ -91,13 +91,13 @@ export function PersonalInfoEditor() {
               className="w-full h-full object-cover"
             />
           ) : (
-            <span className="text-gray-400 text-xs text-center">点击上传<br />头像</span>
+            <span className="text-stone-400 text-xs text-center">点击上传<br />头像</span>
           )}
         </div>
         {personalInfo.avatar &&
           (confirmRemoveAvatar ? (
             <div className="mt-2 flex items-center gap-2 text-xs">
-              <span className="text-gray-500">删除后要重新上传，确定？</span>
+              <span className="text-stone-500">删除后要重新上传，确定？</span>
               <button
                 type="button"
                 onClick={() => {
@@ -108,7 +108,7 @@ export function PersonalInfoEditor() {
               >
                 确认删除
               </button>
-              <button type="button" onClick={() => setConfirmRemoveAvatar(false)} className="text-gray-500 hover:underline">
+              <button type="button" onClick={() => setConfirmRemoveAvatar(false)} className="text-stone-500 hover:underline">
                 取消
               </button>
             </div>
@@ -132,15 +132,15 @@ export function PersonalInfoEditor() {
               type="checkbox"
               checked={personalInfo.showAvatar !== false}
               onChange={(e) => updatePersonalInfo({ ...personalInfo, showAvatar: e.target.checked })}
-              className="w-4 h-4 text-blue-500 rounded focus:ring-blue-500"
+              className="w-4 h-4 accent-stone-900 rounded focus:ring-2 focus:ring-stone-900"
             />
-            <span className="text-sm text-gray-600">在简历中显示头像</span>
+            <span className="text-sm text-stone-600">在简历中显示头像</span>
           </label>
         </div>
 
         {/* Avatar Shape Selection */}
         <div>
-          <label className="block text-xs text-gray-500 mb-2">头像形状</label>
+          <label className="block text-xs text-stone-500 mb-2">头像形状</label>
           <div className="flex gap-4">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -149,9 +149,9 @@ export function PersonalInfoEditor() {
                 value="circle"
                 checked={personalInfo.avatarShape === 'circle'}
                 onChange={(e) => updatePersonalInfo({ ...personalInfo, avatarShape: e.target.value as 'circle' })}
-                className="w-4 h-4 text-blue-500 focus:ring-blue-500"
+                className="w-4 h-4 accent-stone-900 focus:ring-2 focus:ring-stone-900"
               />
-              <span className="text-sm text-gray-600">圆形</span>
+              <span className="text-sm text-stone-600">圆形</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -160,38 +160,38 @@ export function PersonalInfoEditor() {
                 value="square"
                 checked={personalInfo.avatarShape === 'square'}
                 onChange={(e) => updatePersonalInfo({ ...personalInfo, avatarShape: e.target.value as 'square' })}
-                className="w-4 h-4 text-blue-500 focus:ring-blue-500"
+                className="w-4 h-4 accent-stone-900 focus:ring-2 focus:ring-stone-900"
               />
-              <span className="text-sm text-gray-600">方形</span>
+              <span className="text-sm text-stone-600">方形</span>
             </label>
           </div>
         </div>
       </div>
 
       <div>
-        <label className="block text-xs text-gray-500 mb-1">姓名</label>
+        <label className="block text-xs text-stone-500 mb-1">姓名</label>
         <input
           name="name"
           defaultValue={personalInfo.name}
-          className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm focus:border-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900"
           placeholder="请输入姓名"
         />
       </div>
       <div>
-        <label className="block text-xs text-gray-500 mb-1">求职岗位</label>
+        <label className="block text-xs text-stone-500 mb-1">求职岗位</label>
         <input
           name="jobTitle"
           defaultValue={personalInfo.jobTitle}
-          className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm focus:border-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900"
           placeholder="请输入求职岗位"
         />
       </div>
       <div>
-        <label className="block text-xs text-gray-500 mb-1">工作年限</label>
+        <label className="block text-xs text-stone-500 mb-1">工作年限</label>
         <input
           name="workYears"
           defaultValue={personalInfo.workYears}
-          className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm focus:border-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900"
           placeholder="如: 3年"
         />
       </div>
@@ -199,13 +199,13 @@ export function PersonalInfoEditor() {
         <button
           type="button"
           onClick={() => setActiveEditor(null)}
-          className="flex-1 px-3 py-2 border rounded-lg text-sm hover:bg-gray-100"
+          className="flex-1 px-3 py-2 border border-stone-300 rounded-lg text-sm hover:bg-stone-100 hover:text-stone-900"
         >
           取消
         </button>
         <button
           type="submit"
-          className="flex-1 px-3 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600"
+          className="flex-1 px-3 py-2 bg-stone-900 text-white rounded-lg text-sm hover:bg-stone-800"
         >
           保存
         </button>

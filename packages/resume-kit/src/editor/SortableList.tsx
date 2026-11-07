@@ -75,7 +75,7 @@ export function SortableList<T extends { id: string }>({
           onDrop={(event) => handleDrop(event, index)}
           className={`rounded-lg transition-shadow ${
             dropTargetIndex === index && draggedIndex !== index
-              ? 'ring-2 ring-blue-400'
+              ? 'ring-2 ring-stone-900'
               : ''
           }`}
         >
@@ -88,7 +88,7 @@ export function SortableList<T extends { id: string }>({
               onKeyDown={(event) => handleKeyDown(event, index)}
               aria-label={`调整第 ${index + 1} 项顺序：拖拽或使用上下方向键`}
               title="拖拽调整顺序，也可使用上下方向键"
-              className={`inline-flex h-6 w-6 items-center justify-center rounded text-gray-400 select-none [-webkit-user-select:none] hover:bg-gray-100 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              className={`inline-flex h-6 w-6 items-center justify-center rounded text-stone-400 select-none [-webkit-user-select:none] hover:bg-stone-100 hover:text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900 ${
                 draggedIndex === index ? 'cursor-grabbing' : 'cursor-grab'
               }`}
             >
