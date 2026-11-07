@@ -136,7 +136,7 @@ land-a-job/
 │           └── resources.ts
 ├── skills/
 │   └── job-hunt/{SKILL.md, references/}
-├── site/                        # static website (install for agents, usage for humans)
+├── site/                        # static website, English (`index.html`) + Chinese (`index.zh-CN.html`); install for agents, usage for humans
 ├── data/                        # runtime, gitignored
 │   ├── land.db
 │   ├── files/{jd,evidence,exports}/

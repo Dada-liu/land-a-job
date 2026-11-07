@@ -1,6 +1,8 @@
 # PR 描述模板
 
-> 用法：复制本文件到 `docs/pr/NNNN-短标题.md` 后填写，删掉模板里的说明性括号。
+[English](./pull-request-template.md) · **简体中文**
+
+> 用法：复制本文件到 `docs/pr/NNNN-short-title.zh-CN.md` 后填写（英文版同名去掉 `.zh-CN`），删掉模板里的说明性括号。
 > 若走 GitHub PR，也可把「正文」一段搬进 `.github/PULL_REQUEST_TEMPLATE.md`。
 
 ---

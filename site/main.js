@@ -1,6 +1,14 @@
 /* Land a Job · 官网站点脚本
    只做三件小事：复制代码块、切换使用方式的三张面板、把构建信息填进页脚。
-   没有框架、没有依赖，Pages 上就是一个静态文件。 */
+   没有框架、没有依赖，Pages 上就是一个静态文件。
+
+   站点中英两版共用这一份脚本：文案按 <html lang> 取，别把中文写死在 DOM 里
+   （英文页 index.html，中文页 index.zh-CN.html）。 */
+
+const isZh = document.documentElement.lang.toLowerCase().startsWith('zh')
+const TEXT = isZh
+  ? { copied: '已复制', local: '本地预览', build: (sha) => `构建 ${sha}` }
+  : { copied: 'Copied', local: 'local preview', build: (sha) => `build ${sha}` }
 
 const copyText = async (text) => {
   try {
@@ -23,7 +31,7 @@ const copyText = async (text) => {
 
 const flash = (button) => {
   const label = button.textContent
-  button.textContent = '已复制'
+  button.textContent = TEXT.copied
   button.classList.add('is-done')
   window.setTimeout(() => {
     button.textContent = label
@@ -83,16 +91,16 @@ if (buildInfo) {
     .then((info) => {
       // pages 字段只留在 build.json 里备查：页脚再挂一遍部署地址纯属噪音
       const parts = []
-      if (info.sha) parts.push(`构建 ${info.sha}`)
+      if (info.sha) parts.push(TEXT.build(info.sha))
       if (info.builtAt) {
         // 用访客本地时间显示，别拿 UTC 糊人（差 8 小时看起来像是构建没更新）
         const at = new Date(info.builtAt)
         const pad = (n) => String(n).padStart(2, '0')
         parts.push(`${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`)
       }
-      buildInfo.textContent = parts.length > 0 ? parts.join(' · ') : '本地预览'
+      buildInfo.textContent = parts.length > 0 ? parts.join(' · ') : TEXT.local
     })
     .catch(() => {
-      buildInfo.textContent = '本地预览'
+      buildInfo.textContent = TEXT.local
     })
 }

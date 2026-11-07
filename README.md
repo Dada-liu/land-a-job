@@ -340,7 +340,7 @@ skills/               Nine skills (SKILL.md + references), where the real capabi
 scripts/e2e           P3–P7 end-to-end (real server + real Chrome), shared skeleton in lib.mjs
 scripts/build-site.mjs  Website build (copies site/ → site/dist, writes build.json)
 scripts/install-launchd.sh  Login item / uninstall / status
-site/                 Static website: install (for agents) / usage (for humans) / design notes; agent-install.md is plain text for agents
+site/                 Static website (English + Chinese): install (for agents) / usage (for humans) / design notes; agent-install.md is plain text for agents
 .github/workflows/site.yml  Builds and deploys to GitHub Pages on push to main
 docs/                 Main documents (PRD / ARCHITECTURE / IMPLEMENTATION) plus PR records, template and proposals
 data/                 Runtime data: land.db, .token, logs/, files/, snapshots/

@@ -8,7 +8,7 @@
 - **应用零模型调用**：不存 API Key。生成类能力由你安装的 Skill 在任意 Agent（Claude Code / Codex / WorkBuddy / Cursor / 豆包工作 / Kimi）中执行，结果通过 MCP 落回本地库。
 - **Web 只做查看与编辑**：关掉终端也能用；需要 AI 的按钮会给出「在 Agent 中执行」的交接指令。
 
-**官网**：[dada-liu.github.io/land-a-job](https://dada-liu.github.io/land-a-job/) · **交给 Agent 的安装说明**：[agent-install.md](https://dada-liu.github.io/land-a-job/agent-install.md) · 如果对你有帮助，点个 star。
+**官网**：[dada-liu.github.io/land-a-job](https://dada-liu.github.io/land-a-job/index.zh-CN.html) · **交给 Agent 的安装说明**：[agent-install.zh-CN.md](https://dada-liu.github.io/land-a-job/agent-install.zh-CN.md) · 如果对你有帮助，点个 star。
 
 > 当前状态：**P7 完成（八个阶段全部交付）**。数据层、接口、简历、投递看板、JD 定制、投递助手、MCP/Skill、面试与 Offer、指标与打磨全部可用；单测 274 例、端到端 355 项断言全绿。
 
@@ -344,7 +344,7 @@ skills/               九个 Skill（SKILL.md + references），软件能力的�
 scripts/e2e           P3–P7 端到端（真服务 + 真 Chrome），lib.mjs 抽公共骨架
 scripts/build-site.mjs  官网构建（拷 site/ → site/dist + 写 build.json）
 scripts/install-launchd.sh  开机常驻 / 卸载 / 状态
-site/                 官网静态站：安装（给 Agent）/ 使用（给人）/ 设计说明；agent-install.md 是 Agent 读的纯文本
+site/                 官网静态站（中英两版）：安装（给 Agent）/ 使用（给人）/ 设计说明；agent-install.md 是 Agent 读的纯文本
 .github/workflows/site.yml  推 main 时构建并发布到 GitHub Pages
 docs/                 主文档（PRD / ARCHITECTURE / IMPLEMENTATION）+ PR 记录、模板与提案（见 docs/README.md）
 data/                 运行期生成：land.db、.token、logs/、files/、snapshots/

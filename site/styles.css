@@ -176,6 +176,24 @@ kbd {
   gap: 8px;
 }
 
+/* 语言切换：不用 .btn-ghost —— 那个在 640px 以下会被隐藏，
+   而切换语言在任何宽度都得能用 */
+.lang {
+  font-size: 13px;
+  line-height: 1;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+.lang:hover {
+  color: var(--ink);
+  border-color: var(--line);
+  background: var(--surface);
+}
+
 /* ---------- 按钮 ---------- */
 
 .btn {

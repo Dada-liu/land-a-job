@@ -27,7 +27,7 @@
 | 评审纪要 / 复盘 | `docs/reviews/` | `YYYY-MM-DD-短标题.md` | 只记结论与待办，过程聊天记录不入库 |
 | 独立 ADR | `docs/adr/` | `NNNN-短标题.md` | 目前 ADR 摘要收在 `ARCHITECTURE.zh-CN.md` §12；单条决策需要展开论证时才独立成篇 |
 
-目录按需创建，不放空的占位文件。已有示例见 [pr/0001-jd-collect-and-cn-ats.md](./pr/0001-jd-collect-and-cn-ats.md)。
+目录按需创建，不放空的占位文件。已有示例见 [pr/0001-jd-collect-and-cn-ats.zh-CN.md](./pr/0001-jd-collect-and-cn-ats.zh-CN.md)。
 
 > **`docs/proposals/` 为什么不在 main 上**：提案是内部推演材料（商业模式、远程服务设想等），对外分发没有价值，也容易被误当成路线图。它们整体保存在本地分支 `local-proposals`——`git switch local-proposals` 可以查看或继续写，但**这个分支不推送到远程**。在 main 上写新提案前，先切到该分支。
 >
@@ -63,3 +63,5 @@
 - 四个批量 / 浏览器类 Skill（`job-search-batch`、`resume-tailor-batch`、`browser-apply`、`application-status-sync`）的 §0 前置检查是**同一份文本**，改一处必须四处同步；`scripts/e2e/p5.mjs` 会检查它们都在且都带前置检查。
 - `docs/` 里的文档不参与构建与运行时，也不含真实简历、手机号、令牌等敏感数据。
 - **每份文档都有英文对应版本**（`*.md` 为英文，`*.zh-CN.md` 为中文）：同一次提交里两边一起改，文件头部的语言切换链接不要漏。
+- 官网同样分两版：`site/index.html`、`site/agent-install.md` 是英文（GitHub Pages 的默认入口），`site/index.zh-CN.html`、`site/agent-install.zh-CN.md` 是中文。两边一起改，导航里的语言切换不要丢；应用内给出的外链在 `apps/web/src/lib/links.ts`，指向中文页。
+- **`skills/**` 刻意只保留中文**：`SKILL.md` 是 Agent 读的执行说明，不是给人浏览的文档；双份容易让同一套流程跑偏，而任何 Agent 都读得懂中文。工具名、路径、frontmatter 本来就是 ASCII，英文读者照样能跟。
