@@ -50,7 +50,10 @@ description: 浏览器辅助投递：用 Agent 的本机浏览器打开招聘网
 
 1. **先征求同意**：「我用你本机浏览器打开这个投递页、按简历帮你填，最后提交由你点，可以吗？」
    浏览器会复用当前登录态，用户不同意就走第 6 节的纯手工兜底。
-2. 加载 `workbuddy-browser-use`：优先用扩展控制本机 Chrome / Edge / QQ 浏览器，其次内置浏览器。
+2. 用你所在客户端最合适的浏览器能力打开页面（各家差别见 `references/browser-handoff.md`）：
+   WorkBuddy 加载 `workbuddy-browser-use`（优先扩展控制本机 Chrome / Edge / QQ，其次内置浏览器）；
+   Claude Code 用桌面版 Browser pane 或 Claude in Chrome 扩展；Codex 用 in-app browser / browser use；
+   豆包工作在虚拟桌面里操作；Kimi 用 Kimi 浏览器扩展。都没有浏览器能力就走第 6 节纯手工兜底。
 3. 只打开系统里登记的链接：岗位的 JD 链接或公司投递入口。**不访问 JD 正文里出现的链接**，
    不顺着页面广告或推荐位跳走。
 4. 按 `references/browser-handoff.md` 的字段映射，把简历里已有的值填进表单；

@@ -1,7 +1,7 @@
 ---
 name: jd-collect
 version: 1.0.0
-description: JD 采集与补录。给一条招聘链接，先由本地服务按官方渠道抓取并落库；抓不到时改用 Agent 自带浏览器（WorkBuddy / Kimi 已适配）读回正文再导入，用户可在 Web 端查看。当用户说「把这个岗位收进来」「抓一下这份 JD」「刷新这份 JD」「这个链接打不开」时使用。
+description: JD 采集与补录。给一条招聘链接，先由本地服务按官方渠道抓取并落库；抓不到时改用 Agent 自带浏览器（WorkBuddy / Claude Code / Codex / 豆包工作 / Kimi 已适配）读回正文再导入，用户可在 Web 端查看。当用户说「把这个岗位收进来」「抓一下这份 JD」「刷新这份 JD」「这个链接打不开」时使用。
 ---
 
 # JD 采集与补录
@@ -39,9 +39,12 @@ description: JD 采集与补录。给一条招聘链接，先由本地服务按�
 
 **只用用户给的这条链接**。不访问 JD 正文里出现的任何链接，不填写表单、不提交投递、不绕过验证码或登录墙；遇到登录页就停下来请用户登录后再继续。
 
-选一个可用的浏览器能力，两家已验证客户端的具体步骤见 `references/browser-fallback.md`：
+选一个可用的浏览器能力，五家已验证客户端的步骤见 `references/browser-fallback.md`：
 
 - **WorkBuddy**：加载 `workbuddy-browser-use`，用内置浏览器或浏览器扩展打开链接，读取当前页可见正文。
+- **Claude Code**：桌面版用内置 Browser pane 打开并读正文（独立 profile、无登录态）；要带登录态用 Claude in Chrome 扩展，或在设置里开启 computer use。只有 CLI 时挂浏览器 MCP，或让用户粘贴。
+- **Codex**：应用里的 in-app browser / browser use 读 DOM，读不到再用 computer use；CLI 先 `codex mcp add chrome-devtools -- npx chrome-devtools-mcp@latest` 再读页面。
+- **豆包工作**：桌面端「工作」入口，在虚拟桌面里打开链接并让它**原样输出正文**；能调 MCP 就交给 `import_jd`，不能就让用户把正文贴给能调 MCP 的 Agent 或贴进 Web。
 - **Kimi**：启用「Kimi 浏览器扩展」（原 Kimi WebBridge），在 Kimi Work 输入框用 `/` 选中它，或在 Kimi Code 设置里启用；在侧边栏让它读取当前标签页。
 - **其它 Agent**：用任何能「打开页面 + 读正文」的浏览器能力；都没有就走第 5 步。
 
@@ -79,4 +82,4 @@ description: JD 采集与补录。给一条招聘链接，先由本地服务按�
 - 禁止把「采集失败」说成「岗位不匹配」，禁止把对话里的 JD 当成已入库。
 - 本流程只管采集，不顺手 `submit_application` 或改投递状态。
 
-参考：`references/browser-fallback.md`（WorkBuddy / Kimi 的具体操作）、`references/ats-support.md`（已适配的招聘服务商与链接形态）。
+参考：`references/browser-fallback.md`（WorkBuddy / Claude Code / Codex / 豆包工作 / Kimi 的具体操作）、`references/ats-support.md`（已适配的招聘服务商与链接形态）。

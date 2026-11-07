@@ -7,7 +7,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-TARGETS=("$HOME/.claude/skills" "$HOME/.workbuddy/skills")
+# 只列有公开约定的用户级目录；豆包工作这类不读本地 skill 目录的客户端不在其中（用 SKILL.md 正文当任务说明即可）。
+TARGETS=("$HOME/.claude/skills" "$HOME/.codex/skills" "$HOME/.workbuddy/skills" "$HOME/.cursor/skills")
 LINKED=0
 
 for target in "${TARGETS[@]}"; do
@@ -27,7 +28,7 @@ for target in "${TARGETS[@]}"; do
 done
 
 if [ "$LINKED" -eq 0 ]; then
-  echo "没有安装任何 Skill：请确认 Claude Code 或 WorkBuddy 已安装" >&2
+  echo "没有安装任何 Skill：请确认 Claude Code / Codex / WorkBuddy / Cursor 至少装了一个" >&2
   exit 1
 fi
 

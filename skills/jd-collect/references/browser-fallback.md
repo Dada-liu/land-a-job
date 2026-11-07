@@ -1,9 +1,9 @@
-# 浏览器兜底：WorkBuddy 与 Kimi
+# 浏览器兜底：五家 Agent 的等价做法
 
 本地服务抓不到 JD 时，浏览器采集在 **Agent 侧**发生，不在应用里。应用不会启动浏览器、不会调用模型，
 也不会拿到你的登录凭证；浏览器读到的正文由 Agent 通过 `import_jd` 写回本地库。
 
-## 通用原则（两家都适用）
+## 通用原则（所有 Agent 都适用）
 
 - **先征求同意**：浏览器会复用你当前浏览器里的登录态。动手前问一句「可以用浏览器读这个页面吗」。
 - **只开用户给的那条链接**，不访问 JD 正文里出现的链接，不做点击提交、不填表、不改页面内容。
@@ -13,15 +13,73 @@
 - 读完关掉临时标签页；不要留下登录态被意外使用的窗口。
 - 输出给 `import_jd` 的是**原文**，不摘要、不改写、不翻译、不补全缺失信息。
 
+## 先按客户端选一条路
+
+| 客户端 | 浏览器能力从哪来 | 备注 |
+| --- | --- | --- |
+| WorkBuddy | `workbuddy-browser-use` Skill：内置浏览器 IAB，或 Chrome / Edge / QQ 浏览器扩展 | 扩展模式要在「设置 → Agent → Browser control」打开 |
+| Claude Code | 桌面版内置 **Browser pane**（独立 profile，不带你的登录态）；要带登录态用 **Claude in Chrome** 扩展；也可让 Claude 用 computer use 直接操作屏幕 | computer use 在桌面端设置里开启，Pro / Max，macOS 与 Windows |
+| Codex | Codex 应用的 **in-app browser / browser use**（DOM 级）与 **computer use**（桌面级，macOS 先行）；CLI 走 Chrome DevTools MCP | CLI 注册：`codex mcp add chrome-devtools -- npx chrome-devtools-mcp@latest` |
+| 豆包工作 | 桌面端左侧「工作」，在**虚拟桌面**里操作浏览器，过程可见、可随时暂停或接管 | 适合长流程；是否支持自定义 MCP 取决于你装的版本 |
+| Kimi | 「Kimi 浏览器扩展」（原 Kimi WebBridge），Chrome / Edge | 本地桥接默认在 `http://127.0.0.1:10086/command` |
+
 ## WorkBuddy
 
-1. 加载 `workbuddy-browser-use` Skill。使用扩展控制本机浏览器时，需要先在「设置 → Agent → Browser control」开启浏览器控制，并安装 Chrome / Edge / QQ 浏览器扩展；用内置浏览器（IAB）则不需要扩展。
+1. 加载 `workbuddy-browser-use`。使用扩展控制本机浏览器时，需要先在「设置 → Agent → Browser control」开启浏览器控制，并安装 Chrome / Edge / QQ 浏览器扩展；用内置浏览器（IAB）则不需要扩展。
 2. 打开一个新标签页并跳转到用户给的招聘链接，等待正文渲染完成（不要只等标题出现）。
 3. 读取当前页的可见 DOM 文本（可见 DOM / 页面文本能力），必要时滚动后补读懒加载段落。
 4. 从结果里圈出岗位正文区域，去掉导航与推荐位，保留完整职责与要求条目。
 5. 关闭临时标签页。
 
 若返回的是登录页、验证码页或一串不相关岗位标题，视为**没取到**，不要拿它当 JD。
+
+## Claude Code
+
+**桌面版内置 Browser pane**（最省事）：
+
+1. 在 Claude Code / Cowork 桌面端打开 Browser pane，把用户给的链接贴给 Claude，让它在这个面板里打开。
+   Browser pane 用的是独立的干净 profile，**不带你日常浏览器的登录态**——公开可读的 JD 页足够用。
+2. 让 Claude 读取该页正文（它会用与校验本地应用相同的一套浏览工具），需要时向下滚动读完懒加载段落。
+3. 若站点必须登录：不要让它硬闯。要么让用户自己登录一次（Browser pane 内可登录），要么改用 **Claude in Chrome** 扩展——那个共享你浏览器的登录状态。首次在外部站点操作时会弹权限卡，选「仅本次允许」或「始终允许该站点」。
+4. 读到正文后交给 `import_jd`。**不要在浏览器里点「投递」或填表**，采集与投递是两件事。
+
+**computer use**（需要看屏幕而不是读 DOM 时）：在桌面端设置里开启后，Claude 可以自己点鼠标、敲键盘、开浏览器；每一步前会请求许可。适合页面结构不规整、纯 DOM 读不到正文的情况，但比浏览器面板慢。
+
+**只用 CLI 时**：CLI 没有内置浏览器，挂一个浏览器 MCP（例如 Chrome DevTools MCP）后同样能读页面；或者干脆走人工粘贴。
+
+## Codex
+
+**Codex 应用（macOS 先行）**：
+
+1. 用 in-app browser 打开链接。它读的是 DOM 而不是像素，能拿到完整正文，也能在页面上标注要哪一块。
+2. 页面需要登录时，先在 Codex 的浏览器里登录一次（或按它的提示用已连接的 Chrome 实例）。
+3. 读不到正文时再退到 computer use：它能看屏幕、点、敲键盘，适合没有干净 DOM 的页面。Windows 上 computer use 会接管前台，别在此期间抢鼠标。
+4. 正文交给 `import_jd`。
+
+**Codex CLI**：
+
+```bash
+codex mcp add chrome-devtools -- npx chrome-devtools-mcp@latest
+```
+
+注册后 Codex 会自动拉起这个 MCP，拿到 DOM 快照、截图、控制台与网络能力（约 29 个工具），
+足以打开页面并读出正文。它用 Puppeteer 驱动本机 Chrome，需要 Chrome 与 `--remote-debugging-port`。
+
+## 豆包工作
+
+豆包工作（桌面端左侧「工作」）在**虚拟桌面**里操作电脑与浏览器：与你正常用电脑互不干扰，
+过程实时可见，随时可以暂停或接管；也能把一次操作录成可复用的「技能」。
+
+1. 把任务说清楚再授权：给**具体那条链接**、要读哪些字段（标题 / 公司 / 城市 / 薪资 / 职责 / 要求）、
+   不要点任何按钮、不要把内容改写成摘要。
+2. 它会自己拆步骤并在虚拟桌面里打开页面；你可以在旁边看，发现它要点「投递」就立刻暂停。
+3. 读完后让它**原样输出正文**。长页面可能被截断，明确要求「完整输出，不要省略」。
+
+注意落库这一步：豆包工作是否能调用本仓库的 MCP，取决于你装的版本与连接器配置。
+
+- 能调 MCP：直接把正文交给 `import_jd`。
+- 不能调 MCP：让它把正文原样贴出来，再交给一个能调 MCP 的 Agent（或用户在 Web 岗位详情页粘贴）。
+  **只在对话里贴 JD 不算完成**——Web 上看不到，等于没采集。
 
 ## Kimi
 
@@ -37,9 +95,7 @@ Kimi 的浏览器能力叫「**Kimi 浏览器扩展**」（原名 Kimi WebBridge
 
 扩展也支持把重复流程「录成技能」或「把会话存为技能」，但那是网页工作流技能，不是本仓库的 `jd-collect`；两者别混用。
 
-> 只在自己被授权访问、且站点条款允许的页面上使用；涉及账号权限或表单提交时先核对目标。
-
-## 其它 Agent 与最终降级
+## 其余 Agent 与最终降级
 
 任何具备「打开页面 + 读正文」能力的 Agent 都可以走同一条链路：读回原文 → `import_jd` 落库 → `get_job` 核对。
 如果当前环境完全没有浏览器能力，或页面始终读不到正文，就请用户复制完整 JD 发过来，再用 `import_jd` 写入。

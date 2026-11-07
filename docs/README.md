@@ -1,62 +1,61 @@
-# 文档索引
+# Documentation index
 
-本目录存放**全部主文档**（产品定义、架构、实施计划）与**过程性文档**（PR 记录、变更提案、评审纪要）。
+**English** · [简体中文](./README.zh-CN.md)
 
-## 主文档
+This directory holds **all main documents** (product definition, architecture, implementation plan) and **process documents** (PR records, change proposals, review notes).
 
-| 文档 | 内容 | 什么时候读 |
+## Main documents
+
+| Document | What it covers | When to read |
 | --- | --- | --- |
-| [../README.md](../README.md) | 快速开始、详细使用方式、架构图、接口速查、约束 | 上手、查命令、看整体架构 |
-| [PRD.md](./PRD.md) | 需求、北极星指标、验收标准、已定决策 D1–D3 | 讨论「要不要做」「做成什么」 |
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | 设计原则、数据模型、API 契约、MCP 工具表、Skill 契约、ADR | 改代码之前 |
-| [IMPLEMENTATION.md](./IMPLEMENTATION.md) | 8 周阶段计划、实测完成情况、测试与 E2E 口径 | 排期、验收、查「做到哪了」 |
+| [../README.md](../README.md) | Quick start, detailed usage, architecture diagrams, API reference, constraints | Getting started, commands, the big picture |
+| [PRD.md](./PRD.md) | Requirements, north-star metric, acceptance criteria, locked decisions D1–D3 | Deciding *whether* and *what* to build |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | Design principles, data model, API contracts, MCP tool table, skill contracts, ADRs | Before touching code |
+| [IMPLEMENTATION.md](./IMPLEMENTATION.md) | Eight-week plan, what was actually built, testing and E2E approach | Planning, acceptance, "how far along is this" |
 
-根目录只留 `README.md` 作为入口（GitHub 仓库首页会渲染它），其余文档都在本目录。
-三份主文档互相引用用的是同目录相对链接（如 `./ARCHITECTURE.md`），在本目录内跳转仍然有效；
-从仓库根目录、`apps/`、`skills/` 等处引用它们时必须带 `docs/` 前缀，例如 `docs/ARCHITECTURE.md`。
+The repository root keeps only `README.md` as the entry point (GitHub renders it on the repo home page); everything else lives here. The main documents link to each other with same-directory relative links (e.g. `./ARCHITECTURE.md`), which still work inside this directory. From the repository root, `apps/`, or `skills/`, references must carry the `docs/` prefix, e.g. `docs/ARCHITECTURE.md`.
 
-## 过程性文档
+## Process documents
 
-| 类型 | 路径 | 命名 | 说明 |
+| Type | Path | Naming | Purpose |
 | --- | --- | --- | --- |
-| PR 记录 | `docs/pr/` | `NNNN-短标题.md` | 一次可评审的变更：背景、改动、影响面、验证、风险与回滚；编号四位递增，不复用 |
-| PR 模板 | `docs/pull-request-template.md` | — | 新建 PR 记录时复制填写；用 GitHub PR 时可把正文搬进 `.github/PULL_REQUEST_TEMPLATE.md` |
-| 变更提案 | `docs/proposals/`（**不在 main 上**） | `YYYY-MM-DD-短标题.md` | 尚未实施、需要讨论的方案；落地后改为引用对应 PR 记录。这些提案属于内部推演，不随仓库分发，只保存在本地分支 `local-proposals`（见下方说明） |
-| 评审纪要 / 复盘 | `docs/reviews/` | `YYYY-MM-DD-短标题.md` | 只记结论与待办，过程聊天记录不入库 |
-| 独立 ADR | `docs/adr/` | `NNNN-短标题.md` | 目前 ADR 摘要收在 `ARCHITECTURE.md` §12；单条决策需要展开论证时才独立成篇 |
+| PR record | `docs/pr/` | `NNNN-short-title.md` | One reviewable change: context, diff, blast radius, verification, risks and rollback. Four-digit, monotonically increasing, never reused |
+| PR template | `docs/pull-request-template.md` | — | Copy when starting a PR record; for GitHub PRs the body can be moved into `.github/PULL_REQUEST_TEMPLATE.md` |
+| Change proposal | `docs/proposals/` (**not on main**) | `YYYY-MM-DD-short-title.md` | Ideas not yet implemented. Internal reasoning (business models, hosted-service explorations) that isn't useful to ship and is easily mistaken for a roadmap. Kept on the local branch `local-proposals` only (see below) |
+| Review notes / retrospective | `docs/reviews/` | `YYYY-MM-DD-short-title.md` | Conclusions and action items only; chat transcripts stay out of the repo |
+| Standalone ADR | `docs/adr/` | `NNNN-short-title.md` | ADR summaries currently live in `ARCHITECTURE.md` §12; split one out only when it needs its own argument |
 
-目录按需创建，不放空的占位文件。已有示例见 [pr/0001-jd-collect-and-cn-ats.md](./pr/0001-jd-collect-and-cn-ats.md)。
+Create directories as needed; don't commit empty placeholders. An example exists at [pr/0001-jd-collect-and-cn-ats.md](./pr/0001-jd-collect-and-cn-ats.md).
 
-> **`docs/proposals/` 为什么不在 main 上**：提案是内部推演材料（商业模式、远程服务设想等），对外分发没有价值，也容易被误当成路线图。它们整体保存在本地分支 `local-proposals`——`git switch local-proposals` 可以查看或继续写，但**这个分支不推送到远程**。在 main 上写新提案前，先切到该分支。
->
-> 注意：不要用 `git push --all` 或 `git push origin local-proposals`，那会把它变成公开分支，与这条约定冲突。
+> **Why `docs/proposals/` is not on main**: proposals are internal reasoning. They live on the local branch `local-proposals` — `git switch local-proposals` to read or continue writing — and that branch is **never pushed**. Before writing a new proposal, switch to it first. Do not use `git push --all` or `git push origin local-proposals`; that would publish it and break this convention.
 
-## 写 PR 记录的最低要求
+## Minimum bar for a PR record
 
-1. **写清「明确不做」**：这个项目的边界（单用户本地、应用零 LLM）比功能更重要，说清没做什么能省下大量评审往返。
-2. **列影响面**：数据库列、MCP 工具、Skill 注册表、迁移版本、文档数量口径，任一变动都要点名——它们各自有对应的静态检查。
-3. **贴真实验证结果**：`npm test` / `npm run typecheck` / `npm run build` / `npm run e2e` 的实际数字，不要写「应该通过」。
-4. **给回滚方式**：迁移是否可回退、旧库升级后历史行怎么处理、Skill 是否需要重装。
+1. **State what you're explicitly not doing.** This project's boundaries (single-user local, zero LLM in the app) matter more than its features. Saying what you left out saves a lot of review round-trips.
+2. **List the blast radius.** Database columns, MCP tools, the skill registry, migration version, documented counts — call out any change; each has a static check behind it.
+3. **Paste real verification output.** Actual numbers from `npm test` / `npm run typecheck` / `npm run build` / `npm run e2e`. Never "should pass".
+4. **Provide a rollback path.** Is the migration reversible, how are existing rows handled, do skills need reinstalling?
 
-## 质量红线（评审时逐条对照）
+## Hard rules (check each one in review)
 
-| # | 红线 | 违反时的症状 |
+| # | Rule | Symptom when broken |
 | --- | --- | --- |
-| 1 | 依赖中不得出现 `openai` / `@anthropic-ai/*` / `langchain` / `ai` | 应用开始代理模型请求，违背 D2 |
-| 2 | `.env.example` 不含模型 / API Key 配置 | 同上 |
-| 3 | MCP 工具名不得出现 `generate_*` | 生成能力被挪进应用 |
-| 4 | 写接口必须校验 `provenance.skill ∈ SKILL_REGISTRY` | AI 产出无法归因，版本胜率统计失真 |
-| 5 | `SKILL.md` 引用的工具名必须存在于 MCP 注册表 | CI 静态检查失败 |
-| 6 | 新增数据库列必须同步 `apps/server/src/db/tables.ts` 与 `schema.test.ts` 的 `user_version` 断言 | `npm test` 变红（刻意设计） |
-| 7 | 改状态只走 `POST /applications/:id/status`；`PATCH` 不接受 `status` | 事件与时间线漏写，漏斗口径错 |
-| 8 | PATCH schema 由 `patchOf()` 生成，字段不带 `.default()` | 空 body 静默重置默认值 |
-| 9 | 屏幕预览与无头 PDF 共用 `ResumePages` 分页 | 两套分页逻辑漂移 |
-| 10 | `apps/web` 里 import `@land/resume-kit` 的页面必须 `lazy()` | jsPDF / html-to-image 进首屏包 |
+| 1 | No `openai` / `@anthropic-ai/*` / `langchain` / `ai` in dependencies | The app starts proxying model calls, violating D2 |
+| 2 | `.env.example` has no model or API-key settings | Same as above |
+| 3 | MCP tool names never contain `generate_*` | Generation moved into the app |
+| 4 | Write endpoints must validate `provenance.skill ∈ SKILL_REGISTRY` | AI output can't be attributed; win-rate stats drift |
+| 5 | Tool names referenced in `SKILL.md` must exist in the MCP registry | CI static check fails |
+| 6 | A new database column must be added to `apps/server/src/db/tables.ts` and to the `user_version` assertion in `schema.test.ts` | `npm test` turns red (by design) |
+| 7 | Status changes only via `POST /applications/:id/status`; `PATCH` refuses `status` | Events and timeline get skipped; funnel definitions break |
+| 8 | PATCH schemas are generated by `patchOf()`, fields carry no `.default()` | An empty body silently resets defaults |
+| 9 | Screen preview and headless PDF share `ResumePages` pagination | Two pagination implementations drift apart |
+| 10 | Any page in `apps/web` importing `@land/resume-kit` must be `lazy()` | jsPDF / html-to-image land in the first-load bundle |
 
-## 维护约定
+## Maintenance conventions
 
-- 改了代码，同步更新对应主文档的状态表；改了接口，更新 `README.md` 的「本机接口」表与 `ARCHITECTURE.md` §6.2。
-- 增删 MCP 工具：`TOOL_MANIFEST`、`apps/mcp/test/manifest.test.ts`、文档里的工具数量三处一起改。
-- 增删 Skill：`packages/core/src/skills.ts` 的 `SKILL_REGISTRY`、`scripts/install-skills.sh` 覆盖的目录、文档里的 Skill 数量与列表一起改；还要同步 `apps/mcp/test/manifest.test.ts`、`apps/server/test/api.test.ts`、`scripts/e2e/p5.mjs`、`scripts/e2e/p7.mjs` 里的 Skill 数量断言；装完需重启 Agent。
-- 四个批量 / 浏览器类 Skill（`job-search-batch`、`resume-tailor-batch`、`browser-apply`、`application-status-sync`）的 §0 前置检查是**同一份文本**，改一处必须四处同步；`scripts/e2e/p5.mjs` 会检查它们都在且都带前置检查。
-- `docs/` 里的文档不参与构建与运行时，也不含真实简历、手机号、令牌等敏感数据。
+- Code changed → update the status table in the matching main document. API changed → update the "Local API" table in `README.md` and §6.2 in `ARCHITECTURE.md`.
+- Adding or removing MCP tools: change `TOOL_MANIFEST`, `apps/mcp/test/manifest.test.ts` and the documented tool count together.
+- Adding or removing skills: change `SKILL_REGISTRY` in `packages/core/src/skills.ts`, the directories covered by `scripts/install-skills.sh`, and the documented skill count and list; also update the count assertions in `apps/mcp/test/manifest.test.ts`, `apps/server/test/api.test.ts`, `scripts/e2e/p5.mjs` and `scripts/e2e/p7.mjs`. Restart the agent afterwards.
+- The four batch / browser skills (`job-search-batch`, `resume-tailor-batch`, `browser-apply`, `application-status-sync`) share **one identical** §0 preamble; change one and you must change all four. `scripts/e2e/p5.mjs` checks that they exist and carry that preamble.
+- Everything in `docs/` is excluded from builds and runtime, and must never contain real resumes, phone numbers or tokens.
+- Every document has a Chinese counterpart (`*.zh-CN.md`). Change both in the same commit; each file's header carries the language switch.

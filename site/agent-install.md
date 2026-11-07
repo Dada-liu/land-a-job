@@ -68,8 +68,8 @@ curl --noproxy '*' "http://127.0.0.1:$(cat data/.port 2>/dev/null || echo 4399)/
 npm run skills:install
 ```
 
-- 脚本用 **symlink** 把 `skills/*` 链到 `~/.claude/skills` 与 `~/.workbuddy/skills`；只处理父目录已存在的 Agent，不会凭空造目录。
-- 如果用户用的是别家 Agent（Cursor / Kimi 等），按该 Agent 的 Skill 目录手动建同样的软链，不要复制文件（复制会变成「装的是上一版」）。
+- 脚本用 **symlink** 把 `skills/*` 链到 `~/.claude/skills`、`~/.codex/skills`、`~/.workbuddy/skills` 与 `~/.cursor/skills`；只处理父目录已存在的 Agent，不会凭空造目录。
+- 如果用户用的是别家 Agent（Kimi、豆包工作等），按该 Agent 的 Skill 目录手动建同样的软链（已知：Claude Code 与 Codex 的用户级目录分别是 `~/.claude/skills`、`~/.codex/skills`）；不读本地 skill 目录的客户端（如豆包工作）把 `SKILL.md` 正文作为任务说明交给它即可。不要复制文件（复制会变成「装的是上一版」）。
 - **装完必须重启 Agent** 才会重新加载 Skill；重启后本文件第 6 步才能验证到新版本。
 
 ## 5 · 注册 MCP server（stdio）
@@ -78,6 +78,12 @@ Claude Code：
 
 ```bash
 claude mcp add land-a-job -- node "$HOME/Tools/land-a-job/apps/mcp/dist/index.js"
+```
+
+Codex CLI：
+
+```bash
+codex mcp add land-a-job -- node "$HOME/Tools/land-a-job/apps/mcp/dist/index.js"
 ```
 
 其它 Agent 改它的 MCP 配置（WorkBuddy 是 `~/.workbuddy/mcp.json`，Cursor 是 `~/.cursor/mcp.json`）：
