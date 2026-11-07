@@ -2,6 +2,7 @@
   "name": "land-a-job",
   "version": "0.1.0",
   "private": true,
+  "license": "AGPL-3.0-or-later",
   "type": "module",
   "description": "本地优先、Agent 原生的求职流水线",
   "engines": {

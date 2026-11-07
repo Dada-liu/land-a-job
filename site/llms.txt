@@ -16,6 +16,8 @@
 ## 仓库
 
 - https://github.com/Dada-liu/land-a-job
+- 许可证：AGPL-3.0-or-later，全文见 https://github.com/Dada-liu/land-a-job/blob/main/LICENSE
+- 源码获取：本仓库即源码。按 AGPL §13，通过网站使用本应用的人有权拿到所运行版本的源码。
 
 ## 关键约束
 
