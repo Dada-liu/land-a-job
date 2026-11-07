@@ -476,6 +476,7 @@ The engine is a pure function `evaluate(applications, interviews, offers, now) â
 | POST | `/apply/sessions/:id/fill` | Execute the fill |
 | POST | `/apply/sessions/:id/submit` | Confirm and submit (`confirm: true`) + screenshot |
 | GET | `/export/all` | Whole-database JSON export |
+| GET/PATCH | `/settings` | Local preferences (`weeklyTarget` = this week's effective-application goal, default 8) |
 
 #### 6.2.1 JD pipeline (layered, no browser, no LLM)
 

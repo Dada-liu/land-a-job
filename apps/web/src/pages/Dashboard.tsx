@@ -11,6 +11,7 @@ import {
 } from '../lib/api'
 import { qk } from '../lib/queries'
 import { Card, EmptyState, PageHeader, SectionTitle } from '../components/ui'
+import { WeeklyTarget } from '../components/WeeklyTarget'
 import { errorText, useToast } from '../components/Toast'
 
 const KIND_LABELS: Record<FollowupTaskDto['kind'], string> = {
@@ -142,7 +143,7 @@ export default function Dashboard() {
             <span data-testid="north-star-value" className="text-4xl font-semibold tabular-nums text-stone-900">
               {northStar.value}
             </span>
-            <span className="pb-1.5 text-xs text-stone-400">/ 目标 {northStar.target}</span>
+            <WeeklyTarget target={northStar.target} />
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-stone-100">
             <div

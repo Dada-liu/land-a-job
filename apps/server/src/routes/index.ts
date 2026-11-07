@@ -14,6 +14,7 @@ import { registerJobRoutes } from './jobs.js'
 import { registerOfferRoutes } from './offers.js'
 import { registerQuestionRoutes } from './questions.js'
 import { registerResumeRoutes } from './resumes.js'
+import { registerSettingsRoutes } from './settings.js'
 import { registerStatsRoutes } from './stats.js'
 import { registerTailorRoutes } from './tailor.js'
 
@@ -61,6 +62,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
   registerQuestionRoutes(app, deps)
   registerOfferRoutes(app, deps)
   registerStatsRoutes(app, deps)
+  registerSettingsRoutes(app, deps)
   registerTailorRoutes(app, deps)
   registerApplyRoutes(app, deps)
   registerDataRoutes(app, deps)

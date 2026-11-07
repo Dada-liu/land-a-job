@@ -8,7 +8,7 @@
 | 关联 | [PRD.zh-CN.md](./PRD.zh-CN.md) · [ARCHITECTURE.zh-CN.md](./ARCHITECTURE.zh-CN.md) |
 | 总工期 | 约 8 周（单人，25–30 h/周，约 40 人日） |
 | 前置环境 | Node ≥ 22（已验证 v22.22.2）、npm ≥ 10、Chrome（导出/自动化） |
-| 实现进度 | P0–P7 全部完成：`npm test` 198 例、`npm run e2e` 288 项断言全绿 |
+| 实现进度 | P0–P7 全部完成：`npm test` 280 例、`npm run e2e` 362 项断言全绿 |
 
 ---
 
@@ -786,7 +786,7 @@ export function computeOffer(o: OfferInput): OfferResult { /* 按 ARCHITECTURE 5
 
 ### 8.1 完成情况（实测）
 
-`npm test` **244 例全绿**（20 个文件，含 JD 采集分层管线、飞书/北森适配器与来源持久化用例）；`node scripts/e2e/p7.mjs` **60 项断言通过**。全套 `npm run e2e`（P3→P7）一次跑通：**28 + 64 + 92 + 62 + 60 = 306 项断言**，无失败项（JD 采集重构与第五个 Skill 落地后重跑）。
+`npm test` **280 例全绿**（22 个文件，含 JD 采集分层管线、飞书/北森适配器、来源持久化与可改的本周目标用例）；`node scripts/e2e/p7.mjs` **76 项断言通过**。全套 `npm run e2e`（P3→P7）一次跑通：**42 + 78 + 104 + 62 + 76 = 362 项断言**，无失败项。
 
 | # | 结果 | 落地位置 / 证据 |
 | --- | --- | --- |
@@ -850,11 +850,11 @@ export function computeOffer(o: OfferInput): OfferResult { /* 按 ARCHITECTURE 5
 
 | 脚本 | 断言数 | 覆盖 |
 | --- | --- | --- |
-| `p3.mjs` | 28 | 指标口径、⌘K 建岗、fit 排序、看板拖拽（含非法跃迁拦截）、时间线/备注、WS 自动刷新 |
-| `p4.mjs` | 64 | JD 抓取（含来源/元信息回写）、粘贴降级、浏览器兜底入库与 Web 可见、规则打分、定制计划与编造校验、投递助手扫描/填充/提交、验证码拦截 |
-| `p5.mjs` | 92 | MCP 工具清单（含 JD 采集工具）、自动拉起、写路径、provenance 闸门、资源读取、stdout 协议干净、五个 Skill 包结构与浏览器兜底说明 |
+| `p3.mjs` | 42 | 指标口径、本周目标可改（hover → 编辑 → Esc 取消）、⌘K 建岗、fit 排序、看板拖拽（含非法跃迁拦截）、时间线/备注、WS 自动刷新 |
+| `p4.mjs` | 78 | JD 抓取（含来源/元信息回写）、粘贴降级、浏览器兜底入库与 Web 可见、规则打分、定制计划与编造校验、投递助手扫描/填充/提交、验证码拦截 |
+| `p5.mjs` | 104 | MCP 工具清单（含 JD 采集工具）、自动拉起、写路径、provenance 闸门、资源读取、stdout 协议干净、五个 Skill 包结构与浏览器兜底说明 |
 | `p6.mjs` | 62 | Offer 总包口径（手算绝对值）、权重滑块重排、定性评分、题库筛选与雷达、复盘待办消失 |
-| `p7.mjs` | 60 | 响应中位数、版本胜率、漏斗、快捷键、390px 移动端、快照与导出、Skill 状态条、交接卡、provenance 差异 |
+| `p7.mjs` | 76 | 响应中位数、版本胜率、漏斗、快捷键、390px 移动端、快照与导出、Skill 状态条、交接卡、provenance 差异 |
 
 关键手法：断言优先读**落库结果**（HTTP 再查一次）而不是只读 DOM；DOM 断言一律走 `data-testid`；需要「复制成功」这类浏览器权限时用 CDP `Browser.grantPermissions`。
 

@@ -12,6 +12,7 @@ import {
   type Status,
 } from '@land/core'
 import { overview, type OverviewStats } from './application.js'
+import { readSettings } from './settings.js'
 import type { Db } from '../index.js'
 
 /**
@@ -137,6 +138,7 @@ export function dashboard(db: Db, now = new Date()): DashboardStats {
   const applications = loadApplications(db)
   const events = loadEvents(db)
   const start = weekStart(now).toISOString()
+  const { weeklyTarget } = readSettings(db)
 
   const funnel = buildFunnel(
     applications.map((app) => ({
@@ -198,9 +200,9 @@ export function dashboard(db: Db, now = new Date()): DashboardStats {
     northStar: {
       label: '本周有效投递',
       value: effective.length,
-      // 单周 8 份是「认真投」的下限，也是 PRD 里北极星的默认目标
-      target: 8,
-      hint: '只算匹配度 60 分以上、并且绑了简历的投递。一周 8 份是「认真投」的下限',
+      // 目标是用户自己定的（总览页点数字就能改），默认 8 份是 PRD 里「认真投」的下限
+      target: weeklyTarget,
+      hint: `只算匹配度 60 分以上、并且绑了简历的投递。一周 ${weeklyTarget} 份是「认真投」的下限，点数字可以改`,
     },
     funnel: funnel.steps.map((step) => ({ ...step, label: FUNNEL_LABELS[step.stage] })),
     today,

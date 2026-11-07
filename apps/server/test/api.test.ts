@@ -480,6 +480,49 @@ describe('分页与统计', () => {
   })
 })
 
+/**
+ * 本周目标（北极星的分母）是用户自己调的，存在 settings 表里。
+ * 这里钉住三件事：默认值、改完 dashboard 立刻跟着变、脏值不会把页面搞崩。
+ */
+describe('本机偏好：本周有效投递目标', () => {
+  it('默认 8；PATCH 之后 dashboard 的 target 与提示文案一起变', async () => {
+    const initial = await app.call('GET', '/settings')
+    expect(initial.body.data.weeklyTarget).toBe(8)
+
+    const before = await app.call('GET', '/stats/dashboard')
+    expect(before.body.data.northStar.target).toBe(8)
+
+    const patched = await app.call('PATCH', '/settings', { weeklyTarget: 12 })
+    expect(patched.status).toBe(200)
+    expect(patched.body.data.weeklyTarget).toBe(12)
+
+    const after = await app.call('GET', '/stats/dashboard')
+    expect(after.body.data.northStar.target).toBe(12)
+    expect(after.body.data.northStar.hint).toContain('12')
+  })
+
+  it('空 body / 越界 / 小数一律 400，不会把目标静默改回默认值', async () => {
+    expect((await app.call('PATCH', '/settings', {})).status).toBe(400)
+    expect((await app.call('PATCH', '/settings', { weeklyTarget: 0 })).status).toBe(400)
+    expect((await app.call('PATCH', '/settings', { weeklyTarget: 101 })).status).toBe(400)
+    expect((await app.call('PATCH', '/settings', { weeklyTarget: 6.5 })).status).toBe(400)
+
+    const still = await app.call('GET', '/settings')
+    expect(still.body.data.weeklyTarget).toBe(8)
+  })
+
+  it('settings 表被手改成脏值时回落到 1–100，而不是让进度条除以零', async () => {
+    app.db.prepare(`INSERT INTO settings (key, value) VALUES ('weeklyTarget', 'oops')`).run()
+    expect((await app.call('GET', '/settings')).body.data.weeklyTarget).toBe(8)
+
+    app.db.prepare(`UPDATE settings SET value = '0' WHERE key = 'weeklyTarget'`).run()
+    expect((await app.call('GET', '/settings')).body.data.weeklyTarget).toBe(1)
+
+    app.db.prepare(`UPDATE settings SET value = '999' WHERE key = 'weeklyTarget'`).run()
+    expect((await app.call('GET', '/settings')).body.data.weeklyTarget).toBe(100)
+  })
+})
+
 describe('面试与 Offer', () => {
   it('面试必须挂在存在的投递上', async () => {
     const invalid = await app.call('POST', '/interviews', { applicationId: 'nope' })

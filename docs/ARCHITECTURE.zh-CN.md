@@ -475,6 +475,7 @@ score = Σ(weight_i × subScore_i)  // 每项 0..1，缺失项不计入分母
 | POST | `/apply/sessions/:id/fill` | 执行填充 |
 | POST | `/apply/sessions/:id/submit` | 确认提交（需 `confirm: true`）+ 截图 |
 | GET | `/export/all` | 全库 JSON 导出 |
+| GET/PATCH | `/settings` | 本机偏好（`weeklyTarget` = 本周有效投递目标，默认 8，总览页可改） |
 
 #### 6.2.1 JD 采集管线（分层，零浏览器、零 LLM）
 

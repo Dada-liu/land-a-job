@@ -594,6 +594,18 @@ export interface ResumePerformanceDto {
 export const getResumePerformance = (): Promise<ResumePerformanceDto[]> =>
   apiGet<ResumePerformanceDto[]>('/stats/resume-performance')
 
+/* ------------------------------ 本机偏好 ------------------------------ */
+
+export interface SettingsDto {
+  /** 本周有效投递目标（北极星的分母），默认 8，总览页可改 */
+  weeklyTarget: number
+}
+
+export const getSettings = (): Promise<SettingsDto> => apiGet<SettingsDto>('/settings')
+
+export const patchSettings = (body: { weeklyTarget: number }): Promise<SettingsDto> =>
+  apiPatch<SettingsDto>('/settings', body)
+
 /* ------------------------------ JD 与 fit ------------------------------ */
 
 export interface JdSignalsDto {

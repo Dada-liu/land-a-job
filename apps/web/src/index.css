@@ -26,6 +26,25 @@ body {
   background: #d6efe1;
 }
 
+/*
+ * 数字输入框去掉原生上下箭头（总览页「本周目标」那类行内小数字）。
+ *
+ * Tailwind 的 `appearance-none` 在 Chrome 里管不到 spin button：它需要
+ * 单独的 `::-webkit-inner-spin-button` 规则。不处理的话，48px 宽的框有近一半被
+ * 箭头占掉，数字挤在左边、和相邻小字对不齐。
+ * 只作用于显式带 `no-spin` 的输入框，其它表单控件不受影响。
+ */
+input[type='number'].no-spin::-webkit-inner-spin-button,
+input[type='number'].no-spin::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'].no-spin {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 /* 打印页：纸面不要阴影，否则 PDF 边缘会留一圈灰 */
 .print-mode [data-resume-page] > div {
   box-shadow: none;

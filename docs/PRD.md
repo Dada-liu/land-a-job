@@ -225,7 +225,7 @@ By D2, the product's AI capability = installed skills × the user's agent × thi
 
 | # | Requirement | Acceptance |
 | --- | --- | --- |
-| FR-8.1 | Dashboard | North star + funnel + weekly trend + today's actions, readable on first screen |
+| FR-8.1 | Dashboard | North star (the weekly goal is editable inline, default 8) + funnel + weekly trend + today's actions, readable on first screen |
 | FR-8.2 | Page matrix | Resume editor, company library, pipeline board, interview calendar, offer comparison, question bank |
 | FR-8.3 | Live sync | Agent-side changes reflect within 1 s (WS), no refresh |
 | FR-8.4 | Single address | Fixed `http://127.0.0.1:4399`, avoiding data split across origins |

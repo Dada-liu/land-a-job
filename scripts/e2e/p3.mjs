@@ -96,6 +96,45 @@ async function main() {
     eq(await text(page, '[data-testid="funnel-applied"]'), '2', '总览页已投递显示 2（含 10 天前那条）')
     ok((await page.content()).includes('催一下'), '总览页出现「催一下」待办')
 
+    /* --------------------------- 本周目标可调 --------------------------- */
+    section('总览：本周目标可调（hover → 改数字）')
+    const pencilIdle = await page.$eval('[data-testid="north-star-target"] svg', (el) => getComputedStyle(el).opacity)
+    const targetBox = await (await page.$('[data-testid="north-star-target"]')).boundingBox()
+    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2)
+    await page
+      .waitForFunction(
+        () => getComputedStyle(document.querySelector('[data-testid="north-star-target"] svg')).opacity === '1',
+        { timeout: 2000 },
+      )
+      .then(() => ok(pencilIdle === '0', '铅笔默认不显示，hover 到目标数上才出现'))
+      .catch(() => ok(false, '铅笔默认不显示，hover 到目标数上才出现'))
+
+    await page.click('[data-testid="north-star-target"]')
+    await page.waitForSelector('[data-testid="north-star-target-input"]', { timeout: 3000 })
+    // 输入框出现时是全选状态，直接敲数字即可替换原值
+    await page.type('[data-testid="north-star-target-input"]', '12')
+    await page.keyboard.press('Enter')
+    await page
+      .waitForFunction(() => document.querySelector('[data-testid="north-star-target"]')?.textContent?.includes('12'), {
+        timeout: 4000,
+      })
+      .catch(() => null)
+    eq((await text(page, '[data-testid="north-star-target"]')).replace(/\s/g, ''), '/目标12', '目标改为 12 并立即回显')
+    eq((await api.get('/settings')).weeklyTarget, 12, '目标已落库')
+    eq((await api.get('/stats/dashboard')).northStar.target, 12, 'dashboard 的 target 跟着变（不是只改了界面）')
+
+    // Esc 取消：敲了 30 但不该落库
+    await page.click('[data-testid="north-star-target"]')
+    await page.waitForSelector('[data-testid="north-star-target-input"]', { timeout: 3000 })
+    await page.type('[data-testid="north-star-target-input"]', '30')
+    await page.keyboard.press('Escape')
+    await page.waitForFunction(
+      () => document.querySelector('[data-testid="north-star-target"]')?.textContent?.includes('12'),
+      { timeout: 3000 },
+    ).catch(() => null)
+    eq((await text(page, '[data-testid="north-star-target"]')).replace(/\s/g, ''), '/目标12', 'Esc 取消后回显原值')
+    eq((await api.get('/settings')).weeklyTarget, 12, 'Esc 取消不落库')
+
     /* --------------------------- WS 实时刷新 --------------------------- */
     section('WS 实时刷新（Agent 改动 → 页面自更新）')
     await api.post(`/applications/${appApplied.id}/status`, { to: 'screening' })
