@@ -694,11 +694,20 @@ export interface TailorPlanDto {
   match: { jdTech: number; matched: number; ratio: number }
 }
 
+/** 不传 resumeId 时，服务端按「该投递绑定的版本 → 默认母版」挑，不用页面猜 */
+export type TailorResumeSource = 'explicit' | 'application' | 'master'
+
 export const getTailorPlan = (
   jobId: string,
   resumeId?: string,
-): Promise<{ jobId: string; resumeId: string; resumeTitle: string; plan: TailorPlanDto; instruction: string }> =>
-  apiGet(`/jobs/${jobId}/tailor-plan${resumeId ? `?resumeId=${resumeId}` : ''}`)
+): Promise<{
+  jobId: string
+  resumeId: string
+  resumeTitle: string
+  resumeSource: TailorResumeSource
+  plan: TailorPlanDto
+  instruction: string
+}> => apiGet(`/jobs/${jobId}/tailor-plan${resumeId ? `?resumeId=${resumeId}` : ''}`)
 
 export const validateTailor = (
   before: object,

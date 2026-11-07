@@ -8,7 +8,7 @@
 | Related | [PRD.md](./PRD.md) · [ARCHITECTURE.md](./ARCHITECTURE.md) |
 | Timeline | ~8 weeks (one person, 25–30 h/week, ~40 person-days) |
 | Prerequisites | Node ≥ 22 (verified v22.22.2), npm ≥ 10, Chrome (export/automation) |
-| Status | P0–P7 complete: 280 unit tests, 369 E2E assertions, all green |
+| Status | P0–P7 complete: 286 unit tests, 373 E2E assertions, all green |
 
 ---
 
@@ -433,6 +433,7 @@ export async function inspectForm(page: Page): Promise<FieldInfo[]> {
 5. **Immutable fields**: item count, company names, employment dates, degrees. Reordering, restating and bolding are allowed.
 6. **`summaryHints` draws evidence from the whole resume** (skill names, project stacks, experience descriptions), not just `skills`, or "growth" in "rebuilt the growth funnel" is misread as fabrication.
 7. **The demo form `/apply-demo` sits outside `/api` and needs no token**: it's a page for browsers and the E2E target; using a real company site would be unstable and rude.
+8. **Tailoring analyzes the version actually used for this application**: without an explicit `resumeId`, `/tailor-plan` picks the resume bound to the job's application (active first), then the default master — never `listResumes({limit:1})`, which sorts by `updated_at` and often returns a variant. The response carries `resumeSource` so the UI can label it correctly.
 
 **Traps**
 
@@ -641,7 +642,7 @@ export interface OfferResult { firstYearCash: number; annualCash: number; fourYe
 | # | Task | Acceptance |
 | --- | --- | --- |
 | P7-1 | `/stats/dashboard` and funnel | Matches manual counting |
-| P7-2 | Resume win rate | Aggregated by `resume_id`; "not enough data" below 3 samples |
+| P7-2 | Resume win rate | Aggregated by `resume_id` over **submitted applications only** (queued excluded, same rule as the funnel’s first stage); "not enough data" below 3 samples |
 | P7-3 | Median response time | Defined as `applied_at` → first `screening` or later |
 | P7-4 | Global `⌘K` and shortcuts | Create/search/advance without the mouse |
 | P7-5 | Mobile | Board readable at 390 px |
@@ -654,7 +655,7 @@ export interface OfferResult { firstYearCash: number; annualCash: number; fourYe
 
 ### 8.1 Results
 
-280 tests green across 22 files (including the layered JD pipeline, Feishu/Beisen adapters and the editable weekly target); `p7.mjs` passes 83 assertions. Full `npm run e2e` (P3→P7) passes in one run: **42 + 78 + 104 + 62 + 83 = 369 assertions**, zero failures.
+286 tests green across 22 files (including the layered JD pipeline, Feishu/Beisen adapters and the editable weekly target); `p7.mjs` passes 84 assertions. Full `npm run e2e` (P3→P7) passes in one run: **42 + 81 + 104 + 62 + 84 = 373 assertions**, zero failures.
 
 **Key decisions**
 
@@ -705,10 +706,10 @@ Planned as Playwright Test, delivered as `scripts/e2e/*.mjs` with a hand-rolled 
 | Script | Assertions | Coverage |
 | --- | --- | --- |
 | `p3.mjs` | 42 | Metric definitions, editable weekly target (hover → edit → Esc), ⌘K job creation, fit ordering, board drag (including illegal transitions), timeline/notes, WS auto-refresh |
-| `p4.mjs` | 78 | JD fetch (source and metadata write-back), paste fallback, browser fallback persistence, rule scoring, tailoring plan and fabrication checks, apply scan/fill/submit, CAPTCHA abort |
+| `p4.mjs` | 81 | JD fetch (source and metadata write-back), paste fallback, browser fallback persistence, rule scoring, tailoring plan (defaults to the application-bound resume) and fabrication checks, apply scan/fill/submit, CAPTCHA abort |
 | `p5.mjs` | 104 | MCP tool inventory, auto-spawn, write paths, provenance gate, resource reads, clean stdout, nine skill packages and their browser notes |
 | `p6.mjs` | 62 | Comp assumptions (hand-computed absolutes), weight-driven re-ranking, qualitative scores, question filters and radar, debrief to-dos disappearing |
-| `p7.mjs` | 83 | Response median, win rate, funnel, shortcuts, settings landing on the resume tab (sidebar and ⌘K share one entry point), 390 px mobile, snapshots and export, skill bar, handoff card, provenance diff |
+| `p7.mjs` | 84 | Response median, win rate (queued excluded), funnel, shortcuts, settings landing on the resume tab (sidebar and ⌘K share one entry point), 390 px mobile, snapshots and export, skill bar, handoff card, provenance diff |
 
 Core techniques: assert on **persisted state** (re-read over HTTP), not just the DOM; DOM assertions go through `data-testid`; browser permissions via CDP.
 

@@ -311,6 +311,27 @@ async function main() {
     await page.keyboard.press('Escape')
     await page.waitForFunction(() => !document.querySelector('[data-testid="apply-dialog"]'), { timeout: 5000 })
 
+    /* ------------------ 定制建议：按该投递绑定的版本 ------------------ */
+    section('定制建议：基础简历取该投递绑定的那版')
+    const variant = await api.post('/resumes', { title: '这岗定制版', templateId: 'classic', data: RESUME })
+    const tailorJob = await api.post('/jobs', {
+      companyId: company.id,
+      title: '前端工程师（定制建议）',
+      jdText: 'React TypeScript GraphQL',
+    })
+    await api.post('/applications', { jobId: tailorJob.id, resumeId: variant.id, status: 'queued' })
+    const autoPlan = await api.get(`/jobs/${tailorJob.id}/tailor-plan`)
+    eq(autoPlan.resumeId, variant.id, '不传 resumeId 时取投递绑定的定制版，而不是母版')
+    eq(autoPlan.resumeSource, 'application', '接口标记来源是「投递绑定」')
+    await openPage(page, `${base}/jobs/${tailorJob.id}`, '[data-testid="job-tailor"]')
+    await page.click('[data-testid="job-tailor"]')
+    await page.waitForSelector('[data-testid="tailor-resume"]', { timeout: 8000 })
+    ok(
+      (await text(page, '[data-testid="tailor-resume"]')).includes('这岗定制版'),
+      '抽屉里写的是「本次投递用的简历：这岗定制版」',
+      await text(page, '[data-testid="tailor-resume"]'),
+    )
+
     section('Web：岗位库「直接投递」弹窗完整流程')
     await openPage(page, `${base}/jobs`, '[data-testid="job-row-title"]')
     await page.waitForSelector(`[data-testid="direct-apply-${job2.id}"]`, { timeout: 8000 })

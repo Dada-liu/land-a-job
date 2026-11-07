@@ -470,7 +470,7 @@ score = Σ(weight_i × subScore_i)  // 每项 0..1，缺失项不计入分母
 | GET/POST/PATCH | `/offers` `/offers/:id` | Offer |
 | POST | `/offers/compare` | 传 ids + weights，返回对比结果 |
 | GET | `/stats/dashboard` | 北极星、漏斗、趋势、今日待办 |
-| GET | `/stats/resume-performance` | 版本胜率 |
+| GET | `/stats/resume-performance` | 版本胜率（只算已投，待投不进分母） |
 | POST | `/apply/sessions` | 打开官网、返回 session + 字段计划 |
 | POST | `/apply/sessions/:id/fill` | 执行填充 |
 | POST | `/apply/sessions/:id/submit` | 确认提交（需 `confirm: true`）+ 截图 |

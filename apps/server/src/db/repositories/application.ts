@@ -150,6 +150,30 @@ function activeApplicationId(db: Db, jobId: string): string | null {
   return row?.id ?? null
 }
 
+/**
+ * 这个岗位的投递实际绑的是哪版简历。
+ *
+ * 定制建议要基于「投出去的那一版」分析缺口，而不是随手抓一份母版——
+ * 定制版已经改过措辞，拿母版算出来的覆盖率不是这次投递的真实情况。
+ *
+ * 活跃投递优先，已结束的（挂在/rejected…）按最近一条兜底；软删的简历不算，
+ * 绑定关系可能还留着但简历已经不在库里了。一个岗位最多一条活跃投递
+ * （createApplication 有唯一约束），所以不存在「该取哪条」的歧义。
+ */
+export function boundResumeForJob(db: Db, jobId: string): string | null {
+  const row = db
+    .prepare(
+      `SELECT a.resume_id AS resumeId
+       FROM application a
+       JOIN resume r ON r.id = a.resume_id AND r.deleted_at IS NULL
+       WHERE a.job_id = ? AND a.deleted_at IS NULL AND a.resume_id IS NOT NULL
+       ORDER BY CASE WHEN ${ACTIVE_SQL} THEN 0 ELSE 1 END, a.status_at DESC, a.id DESC
+       LIMIT 1`,
+    )
+    .get(jobId) as { resumeId: string } | undefined
+  return row?.resumeId ?? null
+}
+
 export function createApplication(db: Db, input: Record<string, unknown>): ApplicationDto {
   const jobId = String(input.jobId)
   assertJobExists(db, jobId)

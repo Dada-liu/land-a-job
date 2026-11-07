@@ -61,6 +61,7 @@ const dict: Dict = {
   'JD 里的技术词，简历能对上多少': 'How much of the JD tech stack your resume covers',
   '{a}/{b} 个词在简历里有证据': '{a}/{b} keywords have evidence in your resume',
   '基础简历：{title}': 'Base resume: {title}',
+  '本次投递用的简历：{title}': 'Resume used for this application: {title}',
   '简历开头的自我描述里，建议提这些词（都来自你真实做过的项目）':
     'Work these into the opening summary (all drawn from projects you actually shipped)',
   建议调整顺序: 'Suggested order',

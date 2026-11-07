@@ -14,7 +14,7 @@
 
 **官网**：[dada-liu.github.io/land-a-job](https://dada-liu.github.io/land-a-job/index.zh-CN.html) · **交给 Agent 的安装说明**：[agent-install.zh-CN.md](https://dada-liu.github.io/land-a-job/agent-install.zh-CN.md) · 如果对你有帮助，点个 star。
 
-> 当前状态：**P7 完成（八个阶段全部交付）**。数据层、接口、简历、投递看板、JD 定制、投递助手、MCP/Skill、面试与 Offer、指标与打磨全部可用；单测 280 例、端到端 369 项断言全绿。
+> 当前状态：**P7 完成（八个阶段全部交付）**。数据层、接口、简历、投递看板、JD 定制、投递助手、MCP/Skill、面试与 Offer、指标与打磨全部可用；单测 286 例、端到端 373 项断言全绿。
 
 ## 界面截图
 
@@ -61,7 +61,7 @@ npm run import:legacy -- --file /path/to/store.json
 # 测试（core 单元 + resume-kit 单元 + server 契约 + 模板目录一致性 + DDL 漂移检查）
 npm test
 
-# 端到端：真服务 + 真 Chrome，按阶段顺序跑（P3→P7，共 369 项断言）
+# 端到端：真服务 + 真 Chrome，按阶段顺序跑（P3→P7，共 373 项断言）
 npm run e2e
 npm run e2e:p3          # 也可以只跑某一段
 
@@ -112,7 +112,7 @@ npm run skills:install
 ## 详细使用方式
 
 > 上面的「快速开始」是最短路径。本节按「装好 → 跑起来 → 接 Agent → 走一遍全流程 → 备份 / 排障」展开。
-> 文中数字以当前仓库为准：MCP 43 工具 / 9 Skill / schema v2 / 单测 280 例 / E2E 369 项断言。
+> 文中数字以当前仓库为准：MCP 43 工具 / 9 Skill / schema v2 / 单测 286 例 / E2E 373 项断言。
 
 ### 1. 环境与前置
 
@@ -300,10 +300,10 @@ curl --noproxy '*' -H "X-Land-Token: $TOKEN" http://127.0.0.1:4399/api/jobs
 | `npm run seed` / `npm run seed -- --reset` | 灌 / 重建样例数据（3 公司 / 5 岗位 / 3 投递 / 1 面试） |
 | `npm run import:legacy` | 从旧项目 `.resume-mcp/store.json` 导简历，保留原 id |
 | `npm run import:legacy -- --file /path/to/store.json` | 指定来源文件 |
-| `npm test` | Vitest 全量单测（含 DDL 漂移检查）280 例 |
+| `npm test` | Vitest 全量单测（含 DDL 漂移检查）286 例 |
 | `npm run test:core` / `npm run test:server` | 只跑某一层 |
 | `npm run typecheck` | 编译 core / server + `tsc --noEmit` 检查 web |
-| `npm run e2e` | 先 build，再顺序跑 P3–P7（369 项断言） |
+| `npm run e2e` | 先 build，再顺序跑 P3–P7（373 项断言） |
 | `npm run e2e:p3` … `npm run e2e:p7` | 单跑某一段 |
 | `npm run skills:install` | 软链 Skill 到本机 Agent 目录 |
 | `npm run mcp` | 直接起 MCP stdio server（调试用） |
@@ -389,7 +389,7 @@ data/                 运行期生成：land.db、.token、logs/、files/、snap
 | 北极星：本周有效投递 | 本周投递 **且** 关联了简历 **且** 岗位 fit ≥ 60 |
 | 漏斗各档 | 按**到达过**该阶段统计，不按当前停留（否则一路走到 offer 的人会从前面每档里消失） |
 | 响应时长 | 投递 → **首次进入 screening 或更后**的耗时；仍在等的单独计 `waiting` 不计入中位数 |
-| 版本胜率 | 按 `resume_id` 聚合；样本 < 3 显示「样本不足」，不给百分比 |
+| 版本胜率 | 按 `resume_id` 聚合，**只算真正投出去的**（待投不算，否则分母虚高、转化率被稀释）；样本 < 3 显示「样本不足」，不给百分比 |
 
 响应时长放宽到「更后阶段」是因为内推/直跳面试的人不会经历 screening，卡死口径会把他们当成没响应。
 
@@ -632,7 +632,7 @@ stateDiagram-v2
 | `GET/POST/PATCH /api/offers` | Offer（一个投递只能一份） |
 | `GET /api/stats/overview` | 各表计数与状态分布 |
 | `GET /api/stats/dashboard` | 北极星、漏斗、今日待办、本周新增、响应时长分位与 `waiting`（`?now=` 可回看） |
-| `GET /api/stats/resume-performance` | 简历版本胜率（样本 < 3 不给转化率） |
+| `GET /api/stats/resume-performance` | 简历版本胜率（待投不进分母；样本 < 3 不给转化率） |
 | `GET/POST /api/data/snapshots` | 列出 / 创建数据库快照（`data/snapshots/`，保留 7 份，创建时用 `db.backup()`） |
 | `GET /api/data/export` | 全库 JSON（原始列 + 行数 + schema 版本）；`?download=1` 直接带文件名流回 |
 | `GET /api/skills` | Skill 登记表 + 本机 SKILL.md 版本 + 各 Agent 目录安装情况 |
@@ -641,7 +641,7 @@ stateDiagram-v2
 | `POST /api/jobs/:id/import-jd` | 粘贴 / Agent 浏览器读回的 JD 正文（抓不到时的降级入口），与抓取走同一套抽取与快照；`capturedBy` 区分来源 |
 | `GET /api/jobs?jdUrl=…` | 按归一化链接查重复岗位（忽略追踪参数与锚点；岗位号在 hash 里的 SPA 链接会保留 hash） |
 | `POST /api/jobs/:id/score` | 规则 fit 打分（可复算） |
-| `GET /api/jobs/:id/tailor-plan` | 定制计划 + 缺口清单 + 可复制给 Agent 的指令 |
+| `GET /api/jobs/:id/tailor-plan` | 定制计划 + 缺口清单 + 可复制给 Agent 的指令；不传 `resumeId` 时取该岗位投递绑定的那版简历，没有投递才回落到默认母版 |
 | `POST /api/tailor/validate` | 编造校验：条目数/公司/时间/学位不可变 |
 | `GET/POST/DELETE /api/apply/sessions[/:id]` | 投递助手会话（单例、15min 空闲回收） |
 | `POST /api/apply/sessions/:id/{inspect,fill,submit}` | 重扫字段 / 逐字段填充 / 提交（须 `confirm: true`，必截图存证） |

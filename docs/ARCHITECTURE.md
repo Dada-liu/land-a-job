@@ -471,7 +471,7 @@ The engine is a pure function `evaluate(applications, interviews, offers, now) â
 | GET/POST/PATCH | `/offers` `/offers/:id` | Offers |
 | POST | `/offers/compare` | ids + weights â†’ comparison |
 | GET | `/stats/dashboard` | North star, funnel, trend, today's actions |
-| GET | `/stats/resume-performance` | Resume win rate |
+| GET | `/stats/resume-performance` | Resume win rate (submitted applications only; queued excluded) |
 | POST | `/apply/sessions` | Open a site, return session + field plan |
 | POST | `/apply/sessions/:id/fill` | Execute the fill |
 | POST | `/apply/sessions/:id/submit` | Confirm and submit (`confirm: true`) + screenshot |

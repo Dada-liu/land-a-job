@@ -8,7 +8,7 @@
 | 关联 | [PRD.zh-CN.md](./PRD.zh-CN.md) · [ARCHITECTURE.zh-CN.md](./ARCHITECTURE.zh-CN.md) |
 | 总工期 | 约 8 周（单人，25–30 h/周，约 40 人日） |
 | 前置环境 | Node ≥ 22（已验证 v22.22.2）、npm ≥ 10、Chrome（导出/自动化） |
-| 实现进度 | P0–P7 全部完成：`npm test` 280 例、`npm run e2e` 369 项断言全绿 |
+| 实现进度 | P0–P7 全部完成：`npm test` 286 例、`npm run e2e` 373 项断言全绿 |
 
 ---
 
@@ -519,6 +519,7 @@ export async function inspectForm(page: Page): Promise<FieldInfo[]> {
 5. **改写在应用外、校验在应用内**：item 数量、公司名、在职时间、学位四项一律不可变，重排/重述/加粗放行。
 6. **`summaryHints` 的证据面是简历全文**（技能名、项目技术栈、经历描述都算），不是只有 `skills` 一栏——否则「重构增长链路」里的「增长」会被误判成编造。
 7. **演示表单 `/apply-demo` 不挂 `/api` 前缀也不需要令牌**：它是给浏览器直接打开的页面，也是 E2E 的靶子；拿真实公司官网当测试场既不稳定也不礼貌。
+8. **定制建议分析的是「这岗实际投出去的那版」**：不传 `resumeId` 时，`/tailor-plan` 先取该岗位投递绑定的简历（活跃优先），没有才回落到默认母版；**不能拿 `listResumes({limit:1})` 当母版**——它按 `updated_at` 排，最后改过的常常是某个定制版。响应带 `resumeSource`，页面据此写「本次投递用的简历」还是「基础简历」。
 
 **踩过的坑**：
 
@@ -773,7 +774,7 @@ export function computeOffer(o: OfferInput): OfferResult { /* 按 ARCHITECTURE 5
 | # | 任务 | 验收 |
 | --- | --- | --- |
 | P7-1 | `/stats/dashboard` 与漏斗 | 与手工统计一致 |
-| P7-2 | 版本胜率（简历 → 面试转化） | 按 resume_id 聚合，样本 < 3 时显示「样本不足」 |
+| P7-2 | 版本胜率（简历 → 面试转化） | 按 resume_id 聚合，**只算已投**（与漏斗首阶段同源，待投不算），样本 < 3 时显示「样本不足」 |
 | P7-3 | 响应时长中位数 | 口径：applied_at → 首次到 screening 的时间差 |
 | P7-4 | 全局 `⌘K` 与快捷键 | 新建/搜索/推进状态无需鼠标 |
 | P7-5 | 移动端适配 | iPhone 390px 下看板可读 |
@@ -786,12 +787,12 @@ export function computeOffer(o: OfferInput): OfferResult { /* 按 ARCHITECTURE 5
 
 ### 8.1 完成情况（实测）
 
-`npm test` **280 例全绿**（22 个文件，含 JD 采集分层管线、飞书/北森适配器、来源持久化与可改的本周目标用例）；`node scripts/e2e/p7.mjs` **83 项断言通过**。全套 `npm run e2e`（P3→P7）一次跑通：**42 + 78 + 104 + 62 + 83 = 369 项断言**，无失败项。
+`npm test` **286 例全绿**（22 个文件，含 JD 采集分层管线、飞书/北森适配器、来源持久化与可改的本周目标用例）；`node scripts/e2e/p7.mjs` **84 项断言通过**。全套 `npm run e2e`（P3→P7）一次跑通：**42 + 81 + 104 + 62 + 84 = 373 项断言**，无失败项。
 
 | # | 结果 | 落地位置 / 证据 |
 | --- | --- | --- |
 | P7-1 | ✅ | `routes/stats.ts` + `repositories/stats.ts`：漏斗按「到达过该阶段」统计（不是当前停留），`MIN_SAMPLE_SIZE = 3` |
-| P7-2 | ✅ | 版本胜率按 `resume_id` 聚合，样本 < 3 显示「样本不足」不给结论；`data-testid="resume-performance"` |
+| P7-2 | ✅ | 版本胜率按 `resume_id` 聚合，只算已投、样本 < 3 显示「样本不足」不给结论；`data-testid="resume-performance"` |
 | P7-3 | ✅ | `core/funnel.ts::responseTimeStats`：首次进入 `screening` 及更后阶段的耗时，线性插值分位数，`waiting` 单独计数，随结果返回 3 条口径；`data-testid="response-median"` |
 | P7-4 | ✅ | `hooks/useShortcuts.ts`：两键序列（`g` + 字母，1.2s 超时，输入类元素不接管，Esc 取消）+ `⌘K` 面板 |
 | P7-5 | ✅ | `App.tsx` 侧栏 390px 变抽屉（`sidebar` / `nav-toggle` / `nav-close` + 遮罩），看板横向滚动不溢出 |
@@ -851,10 +852,10 @@ export function computeOffer(o: OfferInput): OfferResult { /* 按 ARCHITECTURE 5
 | 脚本 | 断言数 | 覆盖 |
 | --- | --- | --- |
 | `p3.mjs` | 42 | 指标口径、本周目标可改（hover → 编辑 → Esc 取消）、⌘K 建岗、fit 排序、看板拖拽（含非法跃迁拦截）、时间线/备注、WS 自动刷新 |
-| `p4.mjs` | 78 | JD 抓取（含来源/元信息回写）、粘贴降级、浏览器兜底入库与 Web 可见、规则打分、定制计划与编造校验、投递助手扫描/填充/提交、验证码拦截 |
+| `p4.mjs` | 81 | JD 抓取（含来源/元信息回写）、粘贴降级、浏览器兜底入库与 Web 可见、规则打分、定制计划（默认取投递绑定的版本）与编造校验、投递助手扫描/填充/提交、验证码拦截 |
 | `p5.mjs` | 104 | MCP 工具清单（含 JD 采集工具）、自动拉起、写路径、provenance 闸门、资源读取、stdout 协议干净、五个 Skill 包结构与浏览器兜底说明 |
 | `p6.mjs` | 62 | Offer 总包口径（手算绝对值）、权重滑块重排、定性评分、题库筛选与雷达、复盘待办消失 |
-| `p7.mjs` | 83 | 响应中位数、版本胜率、漏斗、快捷键、设置默认落在简历 tab（侧栏与 ⌘K 同一入口）、390px 移动端、快照与导出、Skill 状态条、交接卡、provenance 差异 |
+| `p7.mjs` | 84 | 响应中位数、版本胜率（待投不算）、漏斗、快捷键、设置默认落在简历 tab（侧栏与 ⌘K 同一入口）、390px 移动端、快照与导出、Skill 状态条、交接卡、provenance 差异 |
 
 关键手法：断言优先读**落库结果**（HTTP 再查一次）而不是只读 DOM；DOM 断言一律走 `data-testid`；需要「复制成功」这类浏览器权限时用 CDP `Browser.grantPermissions`。
 

@@ -67,9 +67,11 @@ describe('buildResumePerformance', () => {
   const row = (resumeId: string, interviewed: boolean, offered = false) => ({
     resumeId,
     resumeTitle: `简历 ${resumeId}`,
+    reachedApplied: true,
     reachedInterview: interviewed,
     reachedOffer: offered,
   })
+  const queued = (resumeId: string) => ({ ...row(resumeId, false), reachedApplied: false })
 
   it('样本不足时不给转化率', () => {
     const result = buildResumePerformance([row('r1', true), row('r1', true)])
@@ -89,6 +91,22 @@ describe('buildResumePerformance', () => {
     const result = buildResumePerformance([row('r1', true), { ...row('r2', true), resumeId: null }])
     expect(result).toHaveLength(1)
     expect(result[0]!.applied).toBe(1)
+  })
+
+  it('待投不进分母：5 投 1 面不会被 2 条 queued 稀释成 7 投 1 面', () => {
+    const applied = [row('r1', true), row('r1', false), row('r1', false), row('r1', false), row('r1', false)]
+    const result = buildResumePerformance([...applied, queued('r1'), queued('r1')])
+    expect(result[0]!.applied).toBe(5)
+    expect(result[0]!.interviewRate).toBeCloseTo(1 / 5)
+  })
+
+  it('只有待投的简历不出现在榜上', () => {
+    const result = buildResumePerformance([row('r1', true), queued('r2'), queued('r2')])
+    expect(result.map((item) => item.resumeId)).toEqual(['r1'])
+  })
+
+  it('全部都是待投时返回空数组而不是一行 0 投', () => {
+    expect(buildResumePerformance([queued('r1'), queued('r1')])).toEqual([])
   })
 })
 

@@ -53,6 +53,18 @@ export function getResume(db: Db, id: string): ResumeDto {
   return toDto(row)
 }
 
+/**
+ * 默认母版的 id。定制建议没有绑定简历时用它兜底。
+ * 不要拿 `listResumes({limit:1})` 当「母版」：那个按 updated_at 排，
+ * 最后改过的往往是某个定制版，拿它当基础简历等于拿变体去生成变体。
+ */
+export function defaultResumeId(db: Db): string | null {
+  const row = db
+    .prepare('SELECT id FROM resume WHERE deleted_at IS NULL AND is_default = 1 ORDER BY updated_at DESC LIMIT 1')
+    .get() as { id: string } | undefined
+  return row?.id ?? null
+}
+
 /** 默认简历全局唯一：设置新的默认时清掉旧的，否则导出/投递会随机挑一份 */
 function clearDefault(db: Db): void {
   db.prepare('UPDATE resume SET is_default = 0 WHERE is_default = 1 AND deleted_at IS NULL').run()

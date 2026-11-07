@@ -656,3 +656,86 @@ describe('Skill 状态与版本胜率（P5）', () => {
     expect(result.body.data).toEqual([])
   })
 })
+
+describe('简历口径：投递数与定制建议的基础版本', () => {
+  const makeResume = async (title: string, isDefault = false): Promise<string> => {
+    const created = await app.call('POST', '/resumes', {
+      title,
+      templateId: 'classic',
+      data: { personalInfo: { name: '张三' }, skills: [{ name: 'React' }] },
+      isDefault,
+    })
+    expect(created.status).toBe(201)
+    return created.body.data.id as string
+  }
+
+  const makeJob = async (companyId: string, title: string): Promise<string> => {
+    const created = await app.call('POST', '/jobs', { companyId, title, jdText: 'React TypeScript GraphQL' })
+    expect(created.status).toBe(201)
+    return created.body.data.id as string
+  }
+
+  const makeApplication = async (jobId: string, resumeId: string, status: 'queued' | 'applied'): Promise<void> => {
+    // 状态为「已投」时 schema 要求带投递时间，否则 400；待投绝不能写这个字段
+    const created = await app.call('POST', '/applications', {
+      jobId,
+      resumeId,
+      status,
+      ...(status === 'applied' ? { appliedAt: new Date().toISOString() } : {}),
+    })
+    expect(created.status).toBe(201)
+  }
+
+  it('版本胜率只算已投：待投不进分母，也不会单独上榜', async () => {
+    const { companyId } = await seedJob()
+    const master = await makeResume('母版')
+    const draftOnly = await makeResume('只排在待投里')
+    for (let i = 0; i < 3; i += 1) {
+      await makeApplication(await makeJob(companyId, `已投 ${i}`), master, 'applied')
+    }
+    // 这两条正是用户看到的「母版 7 投，其实只投了 5 份」里的水分
+    for (let i = 0; i < 2; i += 1) {
+      await makeApplication(await makeJob(companyId, `待投 ${i}`), master, 'queued')
+    }
+    await makeApplication(await makeJob(companyId, '待投专用'), draftOnly, 'queued')
+
+    const result = await app.call('GET', '/stats/resume-performance')
+    expect(result.status).toBe(200)
+    const rows = result.body.data as { resumeId: string; applied: number; enough: boolean }[]
+    const row = rows.find((item) => item.resumeId === master)
+    expect(row?.applied).toBe(3)
+    expect(row?.enough).toBe(true)
+    expect(rows.some((item) => item.resumeId === draftOnly)).toBe(false)
+  })
+
+  it('定制建议默认取该投递绑定的那版，显式指定时仍然优先', async () => {
+    const { companyId } = await seedJob()
+    const master = await makeResume('默认母版', true)
+    const variant = await makeResume('这岗定制版')
+    const jobId = await makeJob(companyId, '绑定了定制版的岗位')
+    await makeApplication(jobId, variant, 'queued')
+
+    const plan = await app.call('GET', `/jobs/${jobId}/tailor-plan`)
+    expect(plan.status).toBe(200)
+    expect(plan.body.data.resumeId).toBe(variant)
+    expect(plan.body.data.resumeTitle).toBe('这岗定制版')
+    expect(plan.body.data.resumeSource).toBe('application')
+
+    const explicit = await app.call('GET', `/jobs/${jobId}/tailor-plan?resumeId=${master}`)
+    expect(explicit.status).toBe(200)
+    expect(explicit.body.data.resumeId).toBe(master)
+    expect(explicit.body.data.resumeSource).toBe('explicit')
+  })
+
+  it('没有投递时回落到默认母版，而不是最近更新的变体', async () => {
+    const { companyId } = await seedJob()
+    const master = await makeResume('默认母版', true)
+    await makeResume('后建的变体')
+    const jobId = await makeJob(companyId, '还没有投递的岗位')
+
+    const plan = await app.call('GET', `/jobs/${jobId}/tailor-plan`)
+    expect(plan.status).toBe(200)
+    expect(plan.body.data.resumeId).toBe(master)
+    expect(plan.body.data.resumeSource).toBe('master')
+  })
+})

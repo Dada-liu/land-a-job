@@ -122,7 +122,7 @@ export function buildFunnel(applications: FunnelApplication[], events: FunnelEve
 export interface ResumePerformance {
   resumeId: string
   resumeTitle: string
-  /** 投递数 */
+  /** 真正投出去的次数（待投不算） */
   applied: number
   /** 到达面试及以后的数量 */
   interviewed: number
@@ -140,14 +140,24 @@ export const MIN_SAMPLE_SIZE = 3
 /**
  * 版本胜率：哪份简历更容易过筛（P7-2）。
  *
+ * `reachedApplied` 必须和漏斗首阶段同源（见 maxStage）：**进了待投队列、还没投出去的
+ * 不算一次投递**。分母里混进 queued 会把转化率稀释掉，看起来像「这版简历不行」，
+ * 实际只是还没投；反过来，只有待投的简历也不该出现在榜上。
+ *
  * 样本 < 3 不下结论：1 投 1 面看起来是 100%，照着优化只会过拟合。
  */
 export function buildResumePerformance(
-  rows: { resumeId: string | null; resumeTitle: string | null; reachedInterview: boolean; reachedOffer: boolean }[],
+  rows: {
+    resumeId: string | null
+    resumeTitle: string | null
+    reachedApplied: boolean
+    reachedInterview: boolean
+    reachedOffer: boolean
+  }[],
 ): ResumePerformance[] {
   const buckets = new Map<string, { title: string; applied: number; interviewed: number; offered: number }>()
   for (const row of rows) {
-    if (!row.resumeId) continue
+    if (!row.resumeId || !row.reachedApplied) continue
     const bucket = buckets.get(row.resumeId) ?? {
       title: row.resumeTitle ?? '未命名简历',
       applied: 0,

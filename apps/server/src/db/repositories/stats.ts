@@ -230,8 +230,11 @@ function stageOrder(status: string | null | undefined): number {
 /**
  * 版本胜率（P7-2 的数据部分，P5 就有工具要用）。
  *
- * 「到达过面试」的判定必须和漏斗同源：只看当前 status 会把「进过三面后挂了」
+ * 「到达过某阶段」的判定必须和漏斗同源：只看当前 status 会把「进过三面后挂了」
  * 那条算成没进面试，简历版本胜率就会系统性偏低。
+ *
+ * 分母也用同一把尺子：`order >= applied` 才算投出去过。待投（queued）只是排队，
+ * 把它算成一次投递会稀释转化率——母版「7 投 1 面」和「5 投 1 面」是两个结论。
  */
 export function resumePerformance(db: Db): ResumePerformance[] {
   const applications = loadApplications(db)
@@ -242,15 +245,17 @@ export function resumePerformance(db: Db): ResumePerformance[] {
     if (list) list.push(event)
     else byApp.set(event.applicationId, [event])
   }
+  const appliedOrder = STAGE_ORDER.applied ?? 100
 
   return buildResumePerformance(
     applications.map((app) => {
       let order = stageOrder(app.status)
       for (const event of byApp.get(app.id) ?? []) order = Math.max(order, stageOrder(event.toStatus))
-      if (order < (STAGE_ORDER.applied ?? 0) && app.appliedAt) order = STAGE_ORDER.applied ?? 0
+      if (order < appliedOrder && app.appliedAt) order = appliedOrder
       return {
         resumeId: app.resumeId,
         resumeTitle: app.resumeTitle,
+        reachedApplied: order >= appliedOrder,
         reachedInterview: order >= (STAGE_ORDER.interview ?? Infinity),
         reachedOffer: order >= (STAGE_ORDER.offer ?? Infinity),
       }

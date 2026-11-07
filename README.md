@@ -14,7 +14,7 @@ A local-first, agent-native job-search pipeline: target companies → JD matchin
 
 **Website**: [dada-liu.github.io/land-a-job](https://dada-liu.github.io/land-a-job/) · **Install notes for your agent**: [agent-install.md](https://dada-liu.github.io/land-a-job/agent-install.md) · A star is appreciated if this helps.
 
-> Status: **P7 complete — all eight stages delivered.** Data layer, API, resumes, pipeline board, JD tailoring, apply assistant, MCP/skills, interviews and offers, metrics and polish are all in place. 280 unit tests and 369 end-to-end assertions pass.
+> Status: **P7 complete — all eight stages delivered.** Data layer, API, resumes, pipeline board, JD tailoring, apply assistant, MCP/skills, interviews and offers, metrics and polish are all in place. 286 unit tests and 373 end-to-end assertions pass.
 
 ## Screenshots
 
@@ -61,7 +61,7 @@ npm run import:legacy -- --file /path/to/store.json
 # Tests (core + resume-kit units, server contracts, template catalog consistency, DDL drift)
 npm test
 
-# End-to-end: real server + real Chrome, run by stage (P3→P7, 369 assertions)
+# End-to-end: real server + real Chrome, run by stage (P3→P7, 373 assertions)
 npm run e2e
 npm run e2e:p3          # or run a single stage
 
@@ -110,7 +110,7 @@ Hard rules (enforced by both skills and MCP):
 ## Detailed usage
 
 > Quick start above is the shortest path. This section goes: install → run → connect an agent → walk the full loop → backup / troubleshooting.
-> Numbers reflect the current repo: 43 MCP tools / 9 skills / schema v2 / 280 unit tests / 369 E2E assertions.
+> Numbers reflect the current repo: 43 MCP tools / 9 skills / schema v2 / 286 unit tests / 373 E2E assertions.
 
 ### 1. Requirements
 
@@ -296,10 +296,10 @@ Supported official channels: Greenhouse, Lever, Feishu Recruiting, Beisen iTalen
 | `npm run seed` / `npm run seed -- --reset` | Seed / rebuild sample data (3 companies / 5 jobs / 3 applications / 1 interview) |
 | `npm run import:legacy` | Import resumes from the old project's `.resume-mcp/store.json`, keeping ids |
 | `npm run import:legacy -- --file /path/to/store.json` | Point at a specific file |
-| `npm test` | Full Vitest suite (including DDL drift checks), 280 tests |
+| `npm test` | Full Vitest suite (including DDL drift checks), 286 tests |
 | `npm run test:core` / `npm run test:server` | Run one layer only |
 | `npm run typecheck` | Compile core / server and `tsc --noEmit` the web app |
-| `npm run e2e` | Build, then run P3–P7 in order (369 assertions) |
+| `npm run e2e` | Build, then run P3–P7 in order (373 assertions) |
 | `npm run e2e:p3` … `npm run e2e:p7` | Run a single stage |
 | `npm run skills:install` | Symlink skills into local agent directories |
 | `npm run mcp` | Start the MCP stdio server directly (for debugging) |
@@ -385,7 +385,7 @@ data/                 Runtime data: land.db, .token, logs/, files/, snapshots/
 | North star: effective applications this week | Applied this week **and** linked to a resume **and** job fit ≥ 60 |
 | Funnel stages | Count **ever reached**, not currently sitting there (otherwise people who reach offer disappear from every earlier stage) |
 | Response time | Applied → **first entry into screening or later**; those still waiting are counted separately as `waiting` and excluded from the median |
-| Resume win rate | Aggregated by `resume_id`; below 3 samples it says "not enough data" instead of a percentage |
+| Resume win rate | Aggregated by `resume_id`; **only applications actually submitted count** (queued does not); below 3 samples it says "not enough data" instead of a percentage |
 
 Response time is widened to "or later" because referrals and skipped rounds never pass through screening; a strict definition would count them as never answered.
 
@@ -628,7 +628,7 @@ Responses are `{ data, meta? }`; failures are `{ error: { code, message, details
 | `GET/POST/PATCH /api/offers` | Offers (one per application) |
 | `GET /api/stats/overview` | Table counts and status distribution |
 | `GET /api/stats/dashboard` | North star, funnel, today's actions, new this week, response percentiles and `waiting` (`?now=` to look back) |
-| `GET /api/stats/resume-performance` | Resume win rate (no rate below 3 samples) |
+| `GET /api/stats/resume-performance` | Resume win rate: queued applications are excluded from the denominator; no rate below 3 samples |
 | `GET/POST /api/data/snapshots` | List / create database snapshots (`data/snapshots/`, 7 kept, uses `db.backup()`) |
 | `GET /api/data/export` | Full-database JSON (raw columns + row count + schema version); `?download=1` streams it with a filename |
 | `GET /api/skills` | Skill registry + local SKILL.md versions + install status per agent directory |
@@ -637,7 +637,7 @@ Responses are `{ data, meta? }`; failures are `{ error: { code, message, details
 | `POST /api/jobs/:id/import-jd` | JD text from paste or agent browser read-back (the fallback entry), sharing the same extraction and snapshot; `capturedBy` records the origin |
 | `GET /api/jobs?jdUrl=…` | Find a duplicate by canonicalized URL (tracking params and fragments dropped; SPA hashes carrying an id are kept) |
 | `POST /api/jobs/:id/score` | Rule-based fit score (reproducible) |
-| `GET /api/jobs/:id/tailor-plan` | Tailoring plan + gap list + a copyable instruction for the agent |
+| `GET /api/jobs/:id/tailor-plan` | Tailoring plan + gap list + a copyable instruction; without `resumeId` it uses the resume bound to this job’s application (else the default master) |
 | `POST /api/tailor/validate` | Fabrication check: item count, company, dates and degrees are immutable |
 | `GET/POST/DELETE /api/apply/sessions[/:id]` | Apply assistant sessions (singleton, 15-minute idle reaping) |
 | `POST /api/apply/sessions/:id/{inspect,fill,submit}` | Re-scan fields / fill field by field / submit (requires `confirm: true`, always screenshots) |

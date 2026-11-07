@@ -181,7 +181,7 @@ Reuse the editor core from `resume-generator-2` (React 19 + three templates + PD
 | FR-4.2 | Timeline | Full event stream per application (created, status change, note, interview, offer, reminder), append-only |
 | FR-4.3 | Follow-up rules | 7 days applied with no update → follow up; 3 days after an interview → thank-you note; 2 days before an offer deadline → strong reminder |
 | FR-4.4 | Today | Interviews, follow-ups, pending submissions, deadline countdowns; readable by the agent |
-| FR-4.5 | Funnel | Stage counts, conversion rates, channel comparison, resume win rate, median response time |
+| FR-4.5 | Funnel | Stage counts, conversion rates, channel comparison, resume win rate (submitted applications only), median response time |
 | FR-4.6 | Silent-loss detection | Past a threshold with no update → candidate `ghosted`, requires user confirmation |
 
 ### FR-5 Offer comparison and negotiation (P0)

@@ -123,6 +123,18 @@ async function main() {
     const singleJob = await api.post('/jobs', { companyId: company.id, title: '单投岗位', jdText: 'React' })
     await api.post('/applications', { jobId: singleJob.id, resumeId: single.id, status: 'applied', appliedAt: daysAgo(2) })
 
+    // 口径回归：待投只是排队，不是一次投递。母版真实投了 4 家，再挂两条 queued
+    // 不该显示成 6 投；还有一份「只排在待投里」的简历更不该出现在胜率表上。
+    const draftOnly = await api.post('/resumes', { title: '只排在待投里', templateId: 'classic', data: RESUME })
+    for (const [title, resumeId] of [
+      ['待投甲', resume.id],
+      ['待投乙', resume.id],
+      ['待投丙', draftOnly.id],
+    ]) {
+      const queuedJob = await api.post('/jobs', { companyId: company.id, title, jdText: 'React' })
+      await api.post('/applications', { jobId: queuedJob.id, resumeId, status: 'queued' })
+    }
+
     const perf = await api.get('/stats/resume-performance')
     const variantPerf = perf.find((row) => row.resumeId === variant.id)
     eq(variantPerf?.applied, 3, '变体投了 3 家')
@@ -130,7 +142,8 @@ async function main() {
     ok(variantPerf?.enough === true, '3 份样本达到下限，可以给转化率')
     ok(Math.abs((variantPerf?.interviewRate ?? 0) - 1 / 3) < 0.001, '进面率 = 1/3')
     const masterPerf = perf.find((row) => row.resumeId === resume.id)
-    eq(masterPerf?.applied, 4, '母版投了 4 家（响应时长那批）')
+    eq(masterPerf?.applied, 4, '母版仍是 4 投：两条待投没被算进分母')
+    ok(!perf.some((row) => row.resumeId === draftOnly.id), '只有待投的简历不出现在胜率表里')
     ok(masterPerf?.enough === true && masterPerf?.interviewRate === 0.25, '母版进面率 = 1/4')
     const singlePerf = perf.find((row) => row.resumeId === single.id)
     ok(singlePerf?.enough === false && singlePerf?.interviewRate === null, '只有 1 份样本的简历不给转化率')
@@ -144,7 +157,8 @@ async function main() {
     section('漏斗与手工统计一致')
     const dash2 = await api.get('/stats/dashboard')
     const funnel = new Map(dash2.funnel.map((step) => [step.stage, step.reached]))
-    // 8 条投递：4 条响应测试（a12/a6 筛过、a20 直跳面试、a4 只有投递）+ 3 条变体（1 条进面）+ 1 条单投
+    // 8 条已投：4 条响应测试（a12/a6 筛过、a20 直跳面试、a4 只有投递）+ 3 条变体（1 条进面）+ 1 条单投
+    // 另外 3 条待投只进了队列，漏斗和版本胜率都不该算它们
     eq(funnel.get('applied'), 8, '已投递 = 8（全部有 appliedAt）')
     eq(funnel.get('screening'), 4, '筛选中 = 4（a12 + a6 + a20（直跳面试也算过筛）+ 变体那条）')
     eq(funnel.get('interview'), 2, '面试 = 2（a20 直跳 + 变体 1 条）')
@@ -276,7 +290,7 @@ async function main() {
       '导出包含全部业务表',
       Object.keys(dump.tables),
     )
-    eq(dump.counts.application, 8, '导出里的投递行数 = 8')
+    eq(dump.counts.application, 11, '导出里的投递行数 = 11（8 条已投 + 3 条待投）')
     eq(dump.tables.company.length, dump.counts.company, '计数与行数一致')
     ok(dump.app.schemaVersion >= 1 && dump.app.version, '导出带 schema 版本与应用版本')
     const raw = await fetch(`${base}/api/data/export?download=1`, { headers: { 'x-land-token': server.token } })
@@ -286,7 +300,7 @@ async function main() {
       raw.headers.get('content-disposition'),
     )
     const rawDump = await raw.json()
-    eq(rawDump.counts.application, 8, '下载到的 JSON 与信封接口内容一致')
+    eq(rawDump.counts.application, dump.counts.application, '下载到的 JSON 与信封接口内容一致')
 
     await openPage(page, `${base}/settings`, '[data-testid="snapshot-list"] li')
     await waitFor(
@@ -368,7 +382,8 @@ async function main() {
       '筛「人工」能看到母版',
     )
     await page.click('[data-testid="resume-filter-all"]')
-    await waitFor(async () => (await count(page, '[data-testid="resume-grid"] article')) === 3, '回到全部 3 份')
+    // 4 份 = 母版 + 定制版 + 单投简历 + 只排在待投里的那份
+    await waitFor(async () => (await count(page, '[data-testid="resume-grid"] article')) === 4, '回到全部 4 份')
 
     await page.click('[data-testid="resume-compare"]')
     await page.waitForSelector('[data-testid="resume-diff"]', { timeout: 6000 })

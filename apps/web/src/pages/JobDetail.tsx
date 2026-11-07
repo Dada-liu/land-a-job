@@ -139,7 +139,8 @@ export default function JobDetail() {
   })
 
   const tailor = useQuery({
-    queryKey: ['tailor-plan', id],
+    // 带上投递绑定的简历只是缓存键：换成另一版简历时重算，别拿旧计划糊人
+    queryKey: ['tailor-plan', id, active?.resumeId ?? null],
     queryFn: () => getTailorPlan(id),
     enabled: tailorOpen,
   })
@@ -450,8 +451,10 @@ export default function JobDetail() {
                   })}
                 </span>
               </div>
-              <div className="mt-1 text-[11px] text-stone-500">
-                {t('基础简历：{title}', { title: tailor.data.resumeTitle })}
+              <div className="mt-1 text-[11px] text-stone-500" data-testid="tailor-resume">
+                {tailor.data.resumeSource === 'application'
+                  ? t('本次投递用的简历：{title}', { title: tailor.data.resumeTitle })
+                  : t('基础简历：{title}', { title: tailor.data.resumeTitle })}
               </div>
             </div>
 
