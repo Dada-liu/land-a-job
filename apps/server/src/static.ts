@@ -37,6 +37,9 @@ export async function registerStatic(app: FastifyInstance, webRoot: string): Pro
         reply.header('cache-control', 'no-store')
       } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
         reply.header('cache-control', 'public, max-age=31536000, immutable')
+      } else if (filePath.endsWith('favicon.svg')) {
+        // 图标不带哈希，给一天缓存即可；过长的缓存会让换图标后旧图一直挂着
+        reply.header('cache-control', 'public, max-age=86400')
       }
     },
   })
