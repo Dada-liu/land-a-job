@@ -21,11 +21,15 @@
 | --- | --- | --- | --- |
 | PR 记录 | `docs/pr/` | `NNNN-短标题.md` | 一次可评审的变更：背景、改动、影响面、验证、风险与回滚；编号四位递增，不复用 |
 | PR 模板 | `docs/pull-request-template.md` | — | 新建 PR 记录时复制填写；用 GitHub PR 时可把正文搬进 `.github/PULL_REQUEST_TEMPLATE.md` |
-| 变更提案 | `docs/proposals/` | `YYYY-MM-DD-短标题.md` | 尚未实施、需要讨论的方案；落地后改为引用对应 PR 记录 |
+| 变更提案 | `docs/proposals/`（**不在 main 上**） | `YYYY-MM-DD-短标题.md` | 尚未实施、需要讨论的方案；落地后改为引用对应 PR 记录。这些提案属于内部推演，不随仓库分发，只保存在本地分支 `local-proposals`（见下方说明） |
 | 评审纪要 / 复盘 | `docs/reviews/` | `YYYY-MM-DD-短标题.md` | 只记结论与待办，过程聊天记录不入库 |
 | 独立 ADR | `docs/adr/` | `NNNN-短标题.md` | 目前 ADR 摘要收在 `ARCHITECTURE.md` §12；单条决策需要展开论证时才独立成篇 |
 
 目录按需创建，不放空的占位文件。已有示例见 [pr/0001-jd-collect-and-cn-ats.md](./pr/0001-jd-collect-and-cn-ats.md)。
+
+> **`docs/proposals/` 为什么不在 main 上**：提案是内部推演材料（商业模式、远程服务设想等），对外分发没有价值，也容易被误当成路线图。它们整体保存在本地分支 `local-proposals`——`git switch local-proposals` 可以查看或继续写，但**这个分支不推送到远程**。在 main 上写新提案前，先切到该分支。
+>
+> 注意：不要用 `git push --all` 或 `git push origin local-proposals`，那会把它变成公开分支，与这条约定冲突。
 
 ## 写 PR 记录的最低要求
 
