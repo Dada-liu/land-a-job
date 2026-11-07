@@ -2,7 +2,7 @@
  * P7 端到端：指标、打磨与联调。
  *
  * 覆盖：响应时长中位数（口径可手算）→ 版本胜率（样本不足不瞎给结论）→ 漏斗与手工统计一致
- * → 快捷键与 ⌘K → 设置分区二级 tab 的导航层级 → 移动端 390px（侧栏抽屉、无横向溢出）
+ * → 快捷键与 ⌘K → 设置分区二级 tab 的导航层级（点「设置」落在默认的简历 tab） → 移动端 390px（侧栏抽屉、无横向溢出）
  * → 快照保留 7 份 + 全库导出可解析
  * → Agent 交接组件（指令带 id、复制有反馈、Skill 未装给安装命令）→ Skill 状态条
  * → provenance 可见（AI/人工筛选 + 母版差异）。
@@ -159,7 +159,7 @@ async function main() {
     await waitFor(async () => new URL(page.url()).pathname === '/offers', 'g → o 跳到 Offer 对比')
     await page.keyboard.press('g')
     await page.keyboard.press('s')
-    await waitFor(async () => new URL(page.url()).pathname === '/settings', 'g → s 跳到设置')
+    await waitFor(async () => new URL(page.url()).pathname === '/resumes', 'g → s 进设置分区，落在默认的简历 tab')
 
     await page.keyboard.press('n')
     await page.waitForSelector('[data-testid="palette-input"]', { timeout: 4000 })
@@ -205,6 +205,31 @@ async function main() {
       '题库页高亮「题库」tab',
     )
     eq(await count(page, '[data-testid="settings-tabs"] a'), 4, '题库页同样带二级 tab')
+
+    // 「设置」是一级分区、没有自己的落地页：点它应该进默认 tab（简历），
+    // 而 /settings 依旧是「数据和 Agent 连接」那一页的地址，不能被顶掉
+    await page.click('[data-testid="nav-settings"]')
+    await waitFor(async () => new URL(page.url()).pathname === '/resumes', '从题库点侧栏「设置」落在简历 tab')
+    // 与上面同理：URL 先变、React 后重渲染，顶栏与高亮都要等状态落地
+    await waitFor(async () => (await text(page, 'h1')) === '设置 · 简历', '落地后顶栏是「设置 · 简历」')
+    await waitFor(
+      async () =>
+        (await page.$$eval('[data-testid="settings-tab-resumes"]', (els) => els[0]?.getAttribute('aria-current') ?? null)) ===
+        'page',
+      '落地后高亮的是「简历」而不是最后那个 tab',
+    )
+
+    // ⌘K 空态列表与侧栏同源：「设置」与「设置 · 简历」是同一个去处，只列一条
+    await page.keyboard.press('n')
+    await page.waitForSelector('[data-testid="palette-input"]', { timeout: 4000 })
+    const paletteLabels = await page.$$eval('[data-testid="palette-input"] ~ ul li button > span:first-child', (els) =>
+      els.map((el) => (el.textContent ?? '').trim()),
+    )
+    eq(paletteLabels.filter((label) => label === '设置').length, 1, '⌘K 里只有一个「设置」')
+    eq(paletteLabels.includes('设置 · 简历'), false, '⌘K 不重复列「设置 · 简历」（与「设置」同一个地址）')
+    ok(paletteLabels.includes('设置 · 数据和 Agent 连接'), '⌘K 仍能直达「数据和 Agent 连接」')
+    await page.keyboard.press('Escape')
+    await waitFor(async () => (await count(page, '[data-testid="palette-input"]')) === 0, 'Esc 收起 ⌘K')
 
     /* --------------------------- 移动端 --------------------------- */
     section('移动端 390px：侧栏变抽屉、不横向溢出')

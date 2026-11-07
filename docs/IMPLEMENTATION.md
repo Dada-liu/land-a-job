@@ -8,7 +8,7 @@
 | Related | [PRD.md](./PRD.md) · [ARCHITECTURE.md](./ARCHITECTURE.md) |
 | Timeline | ~8 weeks (one person, 25–30 h/week, ~40 person-days) |
 | Prerequisites | Node ≥ 22 (verified v22.22.2), npm ≥ 10, Chrome (export/automation) |
-| Status | P0–P7 complete: 280 unit tests, 362 E2E assertions, all green |
+| Status | P0–P7 complete: 280 unit tests, 369 E2E assertions, all green |
 
 ---
 
@@ -654,7 +654,7 @@ export interface OfferResult { firstYearCash: number; annualCash: number; fourYe
 
 ### 8.1 Results
 
-280 tests green across 22 files (including the layered JD pipeline, Feishu/Beisen adapters and the editable weekly target); `p7.mjs` passes 76 assertions. Full `npm run e2e` (P3→P7) passes in one run: **42 + 78 + 104 + 62 + 76 = 362 assertions**, zero failures.
+280 tests green across 22 files (including the layered JD pipeline, Feishu/Beisen adapters and the editable weekly target); `p7.mjs` passes 83 assertions. Full `npm run e2e` (P3→P7) passes in one run: **42 + 78 + 104 + 62 + 83 = 369 assertions**, zero failures.
 
 **Key decisions**
 
@@ -708,7 +708,7 @@ Planned as Playwright Test, delivered as `scripts/e2e/*.mjs` with a hand-rolled 
 | `p4.mjs` | 78 | JD fetch (source and metadata write-back), paste fallback, browser fallback persistence, rule scoring, tailoring plan and fabrication checks, apply scan/fill/submit, CAPTCHA abort |
 | `p5.mjs` | 104 | MCP tool inventory, auto-spawn, write paths, provenance gate, resource reads, clean stdout, nine skill packages and their browser notes |
 | `p6.mjs` | 62 | Comp assumptions (hand-computed absolutes), weight-driven re-ranking, qualitative scores, question filters and radar, debrief to-dos disappearing |
-| `p7.mjs` | 76 | Response median, win rate, funnel, shortcuts, 390 px mobile, snapshots and export, skill bar, handoff card, provenance diff |
+| `p7.mjs` | 83 | Response median, win rate, funnel, shortcuts, settings landing on the resume tab (sidebar and ⌘K share one entry point), 390 px mobile, snapshots and export, skill bar, handoff card, provenance diff |
 
 Core techniques: assert on **persisted state** (re-read over HTTP), not just the DOM; DOM assertions go through `data-testid`; browser permissions via CDP.
 

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createCompany, createJob, fetchJd, listCompanies, listJobs, scoreJob } from '../lib/api'
 import { qk } from '../lib/queries'
-import { PRIMARY_NAV, SETTINGS_TABS } from '../lib/navigation'
+import { PRIMARY_NAV, SETTINGS_TABS, navEntryTo } from '../lib/navigation'
 import { errorText, useToast } from './Toast'
 
 /**
@@ -61,16 +61,18 @@ export function parseQuickInput(raw: string): QuickParse {
   return { raw, company, title, salaryMin, salaryMax, city, url }
 }
 
-// 从导航配置生成，不再手抄一份列表：一级项全列，设置下的二级页也保留直达入口
-// （收进侧栏不等于要从 ⌘K 里消失，否则「会打字的人」反而要多点一层）。
-const NAV_SHORTCUTS: { label: string; to: string; hint: string }[] = [
-  ...PRIMARY_NAV.map((item) => ({ label: item.label, to: item.to, hint: '前往' })),
-  ...SETTINGS_TABS.filter((item) => item.to !== '/settings').map((item) => ({
-    label: `设置 · ${item.label}`,
-    to: item.to,
-    hint: '设置下的二级页',
-  })),
-]
+// 从导航配置生成，不再手抄一份列表：一级项按「进入点」算（点「设置」落的是简历），
+// 设置下的四个二级页也保留直达入口（收进侧栏不等于要从 ⌘K 里消失，否则「会打字的人」反而要多点一层）。
+// 同一个地址只留第一条：「设置」与「设置 · 简历」现在指向同一页，空态列表里列两遍像 bug。
+const NAV_SHORTCUTS: { label: string; to: string; hint: string }[] = (() => {
+  const rows: { label: string; to: string; hint: string }[] = []
+  const add = (row: { label: string; to: string; hint: string }) => {
+    if (!rows.some((existing) => existing.to === row.to)) rows.push(row)
+  }
+  for (const item of PRIMARY_NAV) add({ label: item.label, to: navEntryTo(item), hint: '前往' })
+  for (const item of SETTINGS_TABS) add({ label: `设置 · ${item.label}`, to: item.to, hint: '设置下的二级页' })
+  return rows
+})()
 
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [value, setValue] = useState('')

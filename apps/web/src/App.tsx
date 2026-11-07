@@ -8,7 +8,7 @@ import { useHealth } from './hooks/useHealth'
 import { useRealtime } from './hooks/useRealtime'
 import { useInvalidateFromWs } from './lib/queries'
 import { GITHUB_URL } from './lib/links'
-import { PRIMARY_NAV, primaryNavFor, settingsTabFor } from './lib/navigation'
+import { PRIMARY_NAV, SETTINGS_ENTRY, navEntryTo, primaryNavFor, settingsTabFor } from './lib/navigation'
 import { SettingsTabs } from './components/SettingsTabs'
 import Dashboard from './pages/Dashboard'
 import Bank from './pages/Bank'
@@ -112,6 +112,7 @@ export default function App() {
 
   // g 开头的两键序列：不需要鼠标就能在页面间跳；n 直接开录入。
   // g c / g r / g b 现在指向「设置」下的二级页，URL 与快捷键都保持不变。
+  // g s 进的是「设置」这个分区，落在默认的简历 tab（与侧栏点「设置」一致）。
   useShortcuts({
     n: () => setPaletteOpen(true),
     'g d': () => navigate('/'),
@@ -122,7 +123,7 @@ export default function App() {
     'g r': () => navigate('/resumes'),
     'g o': () => navigate('/offers'),
     'g b': () => navigate('/bank'),
-    'g s': () => navigate('/settings'),
+    'g s': () => navigate(SETTINGS_ENTRY),
   })
 
   // 换页时收起移动端抽屉，否则点完还要再点一次关闭
@@ -183,7 +184,7 @@ export default function App() {
           {PRIMARY_NAV.map((item) => (
             <NavLink
               key={item.key}
-              to={item.to}
+              to={navEntryTo(item)}
               end={item.end}
               data-testid={`nav-${item.key}`}
               className={({ isActive }) =>

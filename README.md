@@ -10,7 +10,7 @@ A local-first, agent-native job-search pipeline: target companies → JD matchin
 
 **Website**: [dada-liu.github.io/land-a-job](https://dada-liu.github.io/land-a-job/) · **Install notes for your agent**: [agent-install.md](https://dada-liu.github.io/land-a-job/agent-install.md) · A star is appreciated if this helps.
 
-> Status: **P7 complete — all eight stages delivered.** Data layer, API, resumes, pipeline board, JD tailoring, apply assistant, MCP/skills, interviews and offers, metrics and polish are all in place. 280 unit tests and 362 end-to-end assertions pass.
+> Status: **P7 complete — all eight stages delivered.** Data layer, API, resumes, pipeline board, JD tailoring, apply assistant, MCP/skills, interviews and offers, metrics and polish are all in place. 280 unit tests and 369 end-to-end assertions pass.
 
 ### Documentation
 
@@ -45,7 +45,7 @@ npm run import:legacy -- --file /path/to/store.json
 # Tests (core + resume-kit units, server contracts, template catalog consistency, DDL drift)
 npm test
 
-# End-to-end: real server + real Chrome, run by stage (P3→P7, 362 assertions)
+# End-to-end: real server + real Chrome, run by stage (P3→P7, 369 assertions)
 npm run e2e
 npm run e2e:p3          # or run a single stage
 
@@ -94,7 +94,7 @@ Hard rules (enforced by both skills and MCP):
 ## Detailed usage
 
 > Quick start above is the shortest path. This section goes: install → run → connect an agent → walk the full loop → backup / troubleshooting.
-> Numbers reflect the current repo: 43 MCP tools / 9 skills / schema v2 / 280 unit tests / 362 E2E assertions.
+> Numbers reflect the current repo: 43 MCP tools / 9 skills / schema v2 / 280 unit tests / 369 E2E assertions.
 
 ### 1. Requirements
 
@@ -283,7 +283,7 @@ Supported official channels: Greenhouse, Lever, Feishu Recruiting, Beisen iTalen
 | `npm test` | Full Vitest suite (including DDL drift checks), 280 tests |
 | `npm run test:core` / `npm run test:server` | Run one layer only |
 | `npm run typecheck` | Compile core / server and `tsc --noEmit` the web app |
-| `npm run e2e` | Build, then run P3–P7 in order (362 assertions) |
+| `npm run e2e` | Build, then run P3–P7 in order (369 assertions) |
 | `npm run e2e:p3` … `npm run e2e:p7` | Run a single stage |
 | `npm run skills:install` | Symlink skills into local agent directories |
 | `npm run mcp` | Start the MCP stdio server directly (for debugging) |

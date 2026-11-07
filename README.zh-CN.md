@@ -10,7 +10,7 @@
 
 **官网**：[dada-liu.github.io/land-a-job](https://dada-liu.github.io/land-a-job/index.zh-CN.html) · **交给 Agent 的安装说明**：[agent-install.zh-CN.md](https://dada-liu.github.io/land-a-job/agent-install.zh-CN.md) · 如果对你有帮助，点个 star。
 
-> 当前状态：**P7 完成（八个阶段全部交付）**。数据层、接口、简历、投递看板、JD 定制、投递助手、MCP/Skill、面试与 Offer、指标与打磨全部可用；单测 280 例、端到端 362 项断言全绿。
+> 当前状态：**P7 完成（八个阶段全部交付）**。数据层、接口、简历、投递看板、JD 定制、投递助手、MCP/Skill、面试与 Offer、指标与打磨全部可用；单测 280 例、端到端 369 项断言全绿。
 
 ### 文档导航
 
@@ -45,7 +45,7 @@ npm run import:legacy -- --file /path/to/store.json
 # 测试（core 单元 + resume-kit 单元 + server 契约 + 模板目录一致性 + DDL 漂移检查）
 npm test
 
-# 端到端：真服务 + 真 Chrome，按阶段顺序跑（P3→P7，共 362 项断言）
+# 端到端：真服务 + 真 Chrome，按阶段顺序跑（P3→P7，共 369 项断言）
 npm run e2e
 npm run e2e:p3          # 也可以只跑某一段
 
@@ -96,7 +96,7 @@ npm run skills:install
 ## 详细使用方式
 
 > 上面的「快速开始」是最短路径。本节按「装好 → 跑起来 → 接 Agent → 走一遍全流程 → 备份 / 排障」展开。
-> 文中数字以当前仓库为准：MCP 43 工具 / 9 Skill / schema v2 / 单测 280 例 / E2E 362 项断言。
+> 文中数字以当前仓库为准：MCP 43 工具 / 9 Skill / schema v2 / 单测 280 例 / E2E 369 项断言。
 
 ### 1. 环境与前置
 
@@ -287,7 +287,7 @@ curl --noproxy '*' -H "X-Land-Token: $TOKEN" http://127.0.0.1:4399/api/jobs
 | `npm test` | Vitest 全量单测（含 DDL 漂移检查）280 例 |
 | `npm run test:core` / `npm run test:server` | 只跑某一层 |
 | `npm run typecheck` | 编译 core / server + `tsc --noEmit` 检查 web |
-| `npm run e2e` | 先 build，再顺序跑 P3–P7（362 项断言） |
+| `npm run e2e` | 先 build，再顺序跑 P3–P7（369 项断言） |
 | `npm run e2e:p3` … `npm run e2e:p7` | 单跑某一段 |
 | `npm run skills:install` | 软链 Skill 到本机 Agent 目录 |
 | `npm run mcp` | 直接起 MCP stdio server（调试用） |
