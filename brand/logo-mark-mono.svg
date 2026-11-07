@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Land a Job">
+  <title>Land a Job — single colour</title>
+  <!-- 单色版：发票、雕刻、丝印、favicon 灰度等只有一色的场合。
+       落点与 L 同为白色，靠留白而不是颜色区分。 -->
+  <rect width="64" height="64" rx="15" fill="#1c1917"/>
+  <path
+    d="M19.8 18v28h17"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="6.4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="41.8" cy="27" r="6.2" fill="#ffffff"/>
+</svg>

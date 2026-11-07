@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 40" role="img" aria-label="Land a Job">
+  <title>Land a Job — wordmark</title>
+  <!-- 纯文字锁定版：只有空间放一行字时用（页脚、署名、水印）。
+       基线 y=29、字号 26：与标记 26px 高时的光学重心对齐。 -->
+  <text
+    x="0"
+    y="29"
+    fill="#1c1917"
+    font-family="ui-sans-serif, -apple-system, 'SF Pro Text', 'PingFang SC', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif"
+    font-size="26"
+    font-weight="600"
+    letter-spacing="-0.5"
+  >Land a Job</text>
+</svg>

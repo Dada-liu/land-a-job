@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Land a Job · 品牌标识</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        --bg: #fbfaf8;
+        --surface: #ffffff;
+        --ink: #1c1917;
+        --ink-2: #3f3b38;
+        --muted: #78716c;
+        --faint: #a8a29e;
+        --line: #e7e5e4;
+        --soft: #f4f2ef;
+        --green: #047857;
+        --green-light: #34d399;
+        --green-wash: #d6efe1;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+          "Microsoft YaHei", "Segoe UI", sans-serif;
+        line-height: 1.7;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .wrap { max-width: 940px; margin: 0 auto; padding: 56px 28px 96px; }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .eyebrow i {
+        width: 6px; height: 6px; border-radius: 50%;
+        background: var(--green); display: block;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 15px;
+        font-weight: 400;
+        color: var(--muted);
+        letter-spacing: 0.01em;
+      }
+
+      .hero {
+        display: flex;
+        align-items: center;
+        gap: 26px;
+        padding: 44px 40px;
+        margin: 0 0 14px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+      }
+      .hero svg { flex-shrink: 0; }
+      .hero-text strong {
+        display: block;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      .hero-text span { color: var(--muted); font-size: 13px; }
+
+      h2 {
+        margin: 56px 0 6px;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: var(--faint);
+      }
+      h2 + .note { margin: 0 0 18px; color: var(--muted); font-size: 14px; }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 26px 28px;
+      }
+
+      .idea { font-size: 15px; color: var(--ink-2); }
+      .idea b { color: var(--ink); font-weight: 600; }
+      .idea code {
+        background: var(--soft);
+        border-radius: 5px;
+        padding: 1px 5px;
+        font-size: 13px;
+      }
+
+      /* 尺寸阶梯 */
+      .sizes {
+        display: flex;
+        align-items: flex-end;
+        gap: 34px;
+        flex-wrap: wrap;
+      }
+      .size { text-align: center; }
+      .size .slot {
+        display: grid;
+        place-items: center;
+        margin-bottom: 10px;
+      }
+      .size small {
+        display: block;
+        color: var(--faint);
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* 底色场景 */
+      .swatches {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+        gap: 12px;
+      }
+      .swatch {
+        display: grid;
+        place-items: center;
+        height: 132px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+      }
+      .swatch.paper { background: #fbfaf8; }
+      .swatch.white { background: #ffffff; }
+      .swatch.ink { background: #1c1917; border-color: #1c1917; }
+      .swatch.green { background: #047857; border-color: #047857; }
+      .swatch-name {
+        margin-top: 8px;
+        color: var(--faint);
+        font-size: 11px;
+        text-align: center;
+      }
+
+      /* 组合 */
+      .lockups {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 12px;
+      }
+      .lockup {
+        display: grid;
+        place-items: center;
+        min-height: 150px;
+        padding: 22px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+      .lockup.dark { background: #1c1917; border-color: #1c1917; }
+      .lockup img { width: 100%; max-width: 200px; }
+
+      /* 色板 */
+      .colors {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+      }
+      .color {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--surface);
+      }
+      .color .chip { height: 62px; }
+      .color .meta { padding: 9px 12px 11px; }
+      .color .meta strong { display: block; font-size: 12px; font-weight: 600; }
+      .color .meta span {
+        font-size: 11px;
+        color: var(--faint);
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+      }
+
+      /* 误用 */
+      .wrongs {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+      }
+      .wrong {
+        padding: 18px 16px 14px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        text-align: center;
+      }
+      .wrong .stage {
+        display: grid;
+        place-items: center;
+        height: 74px;
+        margin-bottom: 10px;
+      }
+      .wrong p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .wrong p b { color: #b91c1c; font-weight: 600; }
+
+      /* 文件清单 */
+      table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+      th {
+        text-align: left;
+        font-weight: 500;
+        color: var(--faint);
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 0 12px 10px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      td { padding: 11px 12px 11px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+      tr:last-child td { border-bottom: 0; }
+      td code {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 12.5px;
+        background: var(--soft);
+        padding: 1px 6px;
+        border-radius: 5px;
+        white-space: nowrap;
+      }
+      td:last-child { color: var(--muted); }
+
+      footer {
+        margin-top: 56px;
+        padding-top: 20px;
+        border-top: 1px solid var(--line);
+        color: var(--faint);
+        font-size: 12px;
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <p class="eyebrow"><i></i>Brand identity</p>
+      <h1>Land a Job · 品牌标识</h1>
+
+      <!-- HERO -->
+      <div class="hero">
+        <svg width="104" height="104" viewBox="0 0 64 64" aria-hidden="true">
+          <rect width="64" height="64" rx="15" fill="#1c1917" />
+          <path d="M19.8 18v28h17" fill="none" stroke="#fff" stroke-width="6.4"
+            stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="41.8" cy="27" r="6.2" fill="#34d399" />
+        </svg>
+        <div class="hero-text">
+          <strong>一个大写 L，和一颗落定的点。</strong>
+          <span>L 是 Land 的起笔，也画出了这件事的姿势：一路往下投，最后有一条横线接住。<br />臂弯里的绿点是 offer——整条投递漏斗最终要落到它上面。</span>
+        </div>
+      </div>
+
+      <!-- 构成 -->
+      <h2>标志构成</h2>
+      <p class="note">64 网格。竖笔画落在 x = 19.8，横笔画压到 y = 46，转角圆角 3.2（等于笔画半径）。</p>
+      <div class="card">
+        <div style="display:flex;gap:40px;align-items:center;flex-wrap:wrap">
+          <svg width="212" height="212" viewBox="-10 -10 84 84" aria-label="几何构造">
+            <defs>
+              <pattern id="grid" x="-10" y="-10" width="4" height="4" patternUnits="userSpaceOnUse">
+                <path d="M4 0H0V4" fill="none" stroke="#d6d3d1" stroke-width="0.25" />
+              </pattern>
+            </defs>
+            <rect x="-10" y="-10" width="84" height="84" fill="#fbfaf8" />
+            <rect x="-10" y="-10" width="84" height="84" fill="url(#grid)" />
+            <rect width="64" height="64" rx="15" fill="#1c1917" />
+            <path d="M19.8 18v28h17" fill="none" stroke="#fff" stroke-width="6.4"
+              stroke-linecap="round" stroke-linejoin="round" />
+            <circle cx="41.8" cy="27" r="6.2" fill="#34d399" />
+          </svg>
+          <div class="idea" style="flex:1;min-width:260px">
+            <p style="margin:0 0 12px">
+              笔画宽 <code>6.4</code>（网格的 1/10），圆头收笔。横画的落点与绿点圆心同处
+              <code>y = 27</code> 这条水平线——所以点看起来是「搁在横画的延长线上」，
+              而不是随便飘在右上角。
+            </p>
+            <p style="margin:0 0 12px">
+              整体外框 <code>x 16.6–48</code>、<code>y 14.8–49.2</code>，中心 (32.3, 32)：
+              几何居中，不靠肉眼挪。
+            </p>
+            <p style="margin:0;color:var(--muted)">
+              方块圆角 <code>15 / 64</code> ≈ 23.4%，在 16px 下仍是干净的圆角矩形而不是圆点。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 尺寸 -->
+      <h2>尺寸阶梯</h2>
+      <p class="note">16 与 32 用 <code>favicon.svg</code>（按 32 网格重排），其余用 <code>logo-mark.svg</code> 缩放。</p>
+      <div class="card">
+        <div class="sizes">
+          <div class="size">
+            <div class="slot"><img src="./logo-mark.svg" width="96" height="96" alt="96" /></div>
+            <small>96</small>
+          </div>
+          <div class="size">
+            <div class="slot"><img src="./logo-mark.svg" width="64" height="64" alt="64" /></div>
+            <small>64</small>
+          </div>
+          <div class="size">
+            <div class="slot"><img src="./logo-mark.svg" width="40" height="40" alt="40" /></div>
+            <small>40</small>
+          </div>
+          <div class="size">
+            <div class="slot"><img src="./favicon.svg" width="32" height="32" alt="32" /></div>
+            <small>32</small>
+          </div>
+          <div class="size">
+            <div class="slot"><img src="./favicon.svg" width="16" height="16" alt="16" /></div>
+            <small>16</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- 底色 -->
+      <h2>底色场景</h2>
+      <p class="note">深底用亮翡翠 <code>#34d399</code>；浅底换深翡翠 <code>#047857</code>，否则绿点在纸白上只有 1.6:1，会糊成灰点。</p>
+      <div class="swatches">
+        <div>
+          <div class="swatch paper"><img src="./logo-mark.svg" width="56" height="56" alt="" /></div>
+          <div class="swatch-name">Paper #FBFAF8</div>
+        </div>
+        <div>
+          <div class="swatch white"><img src="./logo-mark-light.svg" width="56" height="56" alt="" /></div>
+          <div class="swatch-name">White · logo-mark-light</div>
+        </div>
+        <div>
+          <div class="swatch ink"><img src="./logo-glyph-dark.svg" width="56" height="56" alt="" /></div>
+          <div class="swatch-name">Ink #1C1917 · glyph-dark</div>
+        </div>
+        <div>
+          <div class="swatch green"><img src="./logo-mark-mono.svg" width="56" height="56" alt="" /></div>
+          <div class="swatch-name">Green #047857 · mono</div>
+        </div>
+      </div>
+
+      <!-- 组合 -->
+      <h2>组合形式</h2>
+      <p class="note">横向优先；方形位用竖排；只有一行字的空间用 wordmark。</p>
+      <div class="lockups">
+        <div class="lockup"><img src="./logo-lockup.svg" width="252" alt="横排" /></div>
+        <div class="lockup dark"><img src="./logo-lockup-dark.svg" width="252" alt="深底横排" /></div>
+        <div class="lockup"><img src="./logo-stacked.svg" width="150" alt="竖排" /></div>
+        <div class="lockup"><img src="./logo-wordmark.svg" width="180" alt="文字标" /></div>
+      </div>
+
+      <!-- 色板 -->
+      <h2>色板</h2>
+      <p class="note">沿用应用既有色值，不为 logo 另造一套。</p>
+      <div class="colors">
+        <div class="color">
+          <div class="chip" style="background:#1c1917"></div>
+          <div class="meta"><strong>Ink</strong><span>#1C1917</span></div>
+        </div>
+        <div class="color">
+          <div class="chip" style="background:#fbfaf8;border-bottom:1px solid var(--line)"></div>
+          <div class="meta"><strong>Paper</strong><span>#FBFAF8</span></div>
+        </div>
+        <div class="color">
+          <div class="chip" style="background:#34d399"></div>
+          <div class="meta"><strong>Emerald 400</strong><span>#34D399</span></div>
+        </div>
+        <div class="color">
+          <div class="chip" style="background:#047857"></div>
+          <div class="meta"><strong>Emerald 600</strong><span>#047857</span></div>
+        </div>
+        <div class="color">
+          <div class="chip" style="background:#e7e5e4"></div>
+          <div class="meta"><strong>Line</strong><span>#E7E5E4</span></div>
+        </div>
+      </div>
+
+      <!-- 误用 -->
+      <h2>别这么用</h2>
+      <p class="note">下面四种是实际项目里最容易出现的走形。</p>
+      <div class="wrongs">
+        <div class="wrong">
+          <div class="stage">
+            <svg width="76" height="52" viewBox="0 0 64 44" aria-hidden="true">
+              <rect width="64" height="44" rx="15" fill="#1c1917" />
+              <path d="M19.8 8v28h17" fill="none" stroke="#fff" stroke-width="6.4"
+                stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="41.8" cy="17" r="6.2" fill="#34d399" />
+            </svg>
+          </div>
+          <p><b>别拉伸。</b>方块必须是正方形，等比缩放。</p>
+        </div>
+        <div class="wrong">
+          <div class="stage">
+            <svg width="70" height="70" viewBox="0 0 64 64" aria-hidden="true">
+              <rect width="64" height="64" rx="15" fill="#1c1917" />
+              <path d="M19.8 18v28h17" fill="none" stroke="#fff" stroke-width="6.4"
+                stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="41.8" cy="27" r="6.2" fill="#ef4444" />
+            </svg>
+          </div>
+          <p><b>别换点色。</b>绿点是品牌唯一的高饱和色。</p>
+        </div>
+        <div class="wrong">
+          <div class="stage">
+            <div style="background:#d6d3d1;border-radius:8px;padding:0;line-height:0">
+              <svg width="70" height="70" viewBox="0 0 64 64" aria-hidden="true">
+                <rect width="64" height="64" rx="15" fill="#ffffff" />
+                <path d="M19.8 18v28h17" fill="none" stroke="#ffffff" stroke-width="6.4"
+                  stroke-linecap="round" stroke-linejoin="round" />
+                <circle cx="41.8" cy="27" r="6.2" fill="#e7e5e4" />
+              </svg>
+            </div>
+          </div>
+          <p><b>别白底白笔。</b>浅底就换 logo-mark-light。</p>
+        </div>
+        <div class="wrong">
+          <div class="stage">
+            <svg width="70" height="70" viewBox="0 0 64 64" aria-hidden="true">
+              <rect width="64" height="64" rx="15" fill="#1c1917" />
+              <path d="M19.8 18v28h17" fill="none" stroke="#fff" stroke-width="6.4"
+                stroke-linecap="round" stroke-linejoin="round"
+                style="filter:drop-shadow(0 0 9px #34d399)" />
+              <circle cx="41.8" cy="27" r="6.2" fill="#34d399" />
+            </svg>
+          </div>
+          <p><b>别加发光。</b>不加阴影、渐变、描边、旋转。</p>
+        </div>
+      </div>
+
+      <!-- 文件 -->
+      <h2>文件</h2>
+      <p class="note">全部为纯 SVG，无字体依赖（文字部分排系统字体）。</p>
+      <div class="card">
+        <table>
+          <thead>
+            <tr><th>文件</th><th>用途</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code>logo-mark.svg</code></td><td>主标。深底方块，多数场合直接用这个</td></tr>
+            <tr><td><code>logo-mark-light.svg</code></td><td>浅底方块 + 墨黑笔画 + 深翡翠点</td></tr>
+            <tr><td><code>logo-mark-mono.svg</code></td><td>单色版，发票/丝印/灰度</td></tr>
+            <tr><td><code>logo-glyph.svg</code></td><td>无底图形，单独放置在页面或名片上</td></tr>
+            <tr><td><code>logo-glyph-dark.svg</code></td><td>无底图形，深色背景用</td></tr>
+            <tr><td><code>logo-lockup.svg</code></td><td>横排组合（浅底）</td></tr>
+            <tr><td><code>logo-lockup-dark.svg</code></td><td>横排组合（深底）</td></tr>
+            <tr><td><code>logo-stacked.svg</code></td><td>竖排组合，方形位</td></tr>
+            <tr><td><code>logo-wordmark.svg</code></td><td>纯文字，一行字的空间</td></tr>
+            <tr><td><code>favicon.svg</code></td><td>16/32 小尺寸专用，按 32 网格重排</td></tr>
+            <tr><td><code>og-image.svg</code></td><td>社交分享图源文件（1200×630），导出成 <code>site/og.png</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <footer>
+        <span>Land a Job · brand</span>
+        <span>AGPL-3.0-or-later</span>
+      </footer>
+    </div>
+  </body>
+</html>

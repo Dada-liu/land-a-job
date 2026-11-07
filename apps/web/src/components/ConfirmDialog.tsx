@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react'
 import { Modal } from './Modal'
 import { Button } from './ui'
+import { useT } from '../i18n'
 
 /**
  * 二次确认。
@@ -28,6 +29,7 @@ const ConfirmContext = createContext<ConfirmFn | null>(null)
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [request, setRequest] = useState<ConfirmOptions | null>(null)
   const resolver = useRef<((confirmed: boolean) => void) | null>(null)
+  const t = useT()
 
   const settle = useCallback((confirmed: boolean) => {
     const resolve = resolver.current
@@ -57,20 +59,20 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
         footer={
           <div className="flex justify-end gap-2">
             <Button data-testid="confirm-cancel" onClick={() => settle(false)}>
-              {request?.cancelText ?? '取消'}
+              {request?.cancelText ?? t('取消')}
             </Button>
             <Button
               data-testid="confirm-accept"
               variant={request?.danger ? 'danger-solid' : 'primary'}
               onClick={() => settle(true)}
             >
-              {request?.confirmText ?? '确认'}
+              {request?.confirmText ?? t('确认')}
             </Button>
           </div>
         }
       >
         <p className="text-xs leading-relaxed text-stone-600">
-          {request?.description ?? (request?.danger ? '此操作不可撤销，请确认。' : '请确认是否继续。')}
+          {request?.description ?? (request?.danger ? t('此操作不可撤销，请确认。') : t('请确认是否继续。'))}
         </p>
       </Modal>
     </ConfirmContext.Provider>

@@ -9,13 +9,23 @@
       content="One pipeline for target companies, JD matching, resume tailoring, applications, follow-ups, interviews and offers. Your data stays on your own machine, the AI runs in your own agent, and the app makes zero model calls."
     />
     <meta name="theme-color" content="#fbfaf8" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://dada-liu.github.io/land-a-job/" />
     <meta property="og:title" content="Land a Job · A local-first, agent-native job-search pipeline" />
     <meta property="og:description" content="Job hunting isn't a pile of spreadsheets, it's a pipeline with conversion rates. Data on your machine, AI in your own agent." />
     <meta property="og:locale" content="en_US" />
+    <!-- 1200×630，与 brand/og-image.svg 同源；改了那张图要重新导出 site/og.png -->
+    <meta property="og:image" content="https://dada-liu.github.io/land-a-job/og.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Land a Job — a local-first, agent-native job-search pipeline" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="alternate" hreflang="en" href="https://dada-liu.github.io/land-a-job/" />
     <link rel="alternate" hreflang="zh-CN" href="https://dada-liu.github.io/land-a-job/index.zh-CN.html" />
     <link rel="alternate" hreflang="x-default" href="https://dada-liu.github.io/land-a-job/" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -24,13 +34,20 @@
     <header class="nav">
       <div class="nav-inner">
         <a class="brand" href="#top">
-          <span class="brand-mark">LJ</span>
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" focusable="false">
+              <rect width="32" height="32" rx="7.5" fill="#1c1917" />
+              <path d="M9.9 9v14h8.5" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="20.9" cy="13.5" r="3.2" fill="#34d399" />
+            </svg>
+          </span>
           <span class="brand-text">
             <strong>Land a Job</strong>
             <small>job pipeline</small>
           </span>
         </a>
         <nav class="nav-links" aria-label="Page navigation">
+          <a href="#shots">Screenshots</a>
           <a href="#install">Install</a>
           <a href="#usage">Usage</a>
           <a href="#design">Design</a>
@@ -89,6 +106,46 @@ npm run skills:install</code></pre>
             <a href="agent-install.md">install guide</a> itself.
           </p>
         </div>
+      </section>
+
+      <section class="section shots" id="shots">
+        <div class="section-head">
+          <h2>See it in action</h2>
+          <p>
+            Real screenshots of the local app running on seeded data — no account, no hosted demo, no mockups.
+            The interface ships in both English and 中文; switch it from the control in the top-right corner.
+          </p>
+        </div>
+        <div class="shot-grid">
+          <figure class="shot">
+            <a href="screenshots/en/dashboard.jpg" target="_blank" rel="noreferrer">
+              <img src="screenshots/en/dashboard.jpg" width="1200" height="833" loading="lazy" alt="Overview: weekly target, conversion funnel and today's to-dos" />
+            </a>
+            <figcaption><strong>Overview</strong> — this week's effective applications, funnel conversion, and the follow-ups due today.</figcaption>
+          </figure>
+          <figure class="shot">
+            <a href="screenshots/en/job-detail.jpg" target="_blank" rel="noreferrer">
+              <img src="screenshots/en/job-detail.jpg" width="1200" height="750" loading="lazy" alt="Job detail with a fit score broken down by factor" />
+            </a>
+            <figcaption><strong>Fit score</strong> — every factor comes with its evidence, so you can see exactly why a role scored 84.</figcaption>
+          </figure>
+          <figure class="shot">
+            <a href="screenshots/en/jobs.jpg" target="_blank" rel="noreferrer">
+              <img src="screenshots/en/jobs.jpg" width="1200" height="750" loading="lazy" alt="Job library sorted by fit score" />
+            </a>
+            <figcaption><strong>Job library</strong> — sorted by fit, with JD source badges and a direct-apply action on every row.</figcaption>
+          </figure>
+          <figure class="shot shot--wide">
+            <a href="screenshots/en/pipeline.jpg" target="_blank" rel="noreferrer">
+              <img src="screenshots/en/pipeline.jpg" width="1200" height="360" loading="lazy" alt="Seven-column application pipeline" />
+            </a>
+            <figcaption><strong>Pipeline</strong> — seven stages from lead to offer, dragged one column at a time.</figcaption>
+          </figure>
+        </div>
+        <p class="shots-note">
+          <a href="screenshots/en/demo.gif">Watch the 15-second tour (GIF)</a> ·
+          <a href="https://github.com/Dada-liu/land-a-job/tree/main/docs/screenshots/en">Full-resolution screenshots on GitHub</a>
+        </p>
       </section>
 
       <section class="section flow" id="flow">
@@ -330,7 +387,16 @@ Requirements:
     <footer class="footer">
       <div class="footer-main">
         <div>
-          <div class="footer-brand"><span class="brand-mark">LJ</span> Land a Job</div>
+          <div class="footer-brand">
+            <span class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 32 32" focusable="false">
+                <rect width="32" height="32" rx="7.5" fill="#1c1917" />
+                <path d="M9.9 9v14h8.5" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+                <circle cx="20.9" cy="13.5" r="3.2" fill="#34d399" />
+              </svg>
+            </span>
+            Land a Job
+          </div>
           <p>A local-first, agent-native job-search pipeline. Your data stays yours.</p>
         </div>
         <div class="footer-links">

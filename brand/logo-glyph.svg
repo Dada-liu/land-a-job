@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Land a Job">
+  <title>Land a Job — glyph</title>
+  <!-- 无底图形。单独放在页面/名片/水印上时用它，避免和背景裁切打架。
+       画布与主标同为 64 网格，两者可以原地互换。 -->
+  <path
+    d="M19.8 18v28h17"
+    fill="none"
+    stroke="#1c1917"
+    stroke-width="6.4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="41.8" cy="27" r="6.2" fill="#047857"/>
+</svg>

@@ -19,6 +19,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { Check, ChevronDown } from 'lucide-react'
+import { useT } from '../i18n'
 
 /** 一层薄薄的样式原子：只统一边框/圆角/字号，不引入组件库 */
 
@@ -131,6 +132,7 @@ type SelectProps = Omit<
  */
 export function Select(props: SelectProps) {
   const { value, onChange, options, children, className = '', disabled, onClick, ...rest } = props
+  const t = useT()
   const items = useMemo(() => options ?? optionsFromChildren(children), [options, children])
   const currentValue = value === undefined || value === null ? '' : String(value)
   const current = items.find((item) => item.value === currentValue)
@@ -286,7 +288,7 @@ export function Select(props: SelectProps) {
               className="z-[60] overflow-y-auto overflow-x-hidden rounded-lg border border-stone-200 bg-white py-1 shadow-lg shadow-stone-900/5"
             >
               {items.length === 0 ? (
-                <div className="px-2.5 py-1.5 text-xs text-stone-400">没有可选项</div>
+                <div className="px-2.5 py-1.5 text-xs text-stone-400">{t('没有可选项')}</div>
               ) : (
                 items.map((item, index) => {
                   const selected = item.value === currentValue

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 64" role="img" aria-label="Land a Job">
+  <title>Land a Job — on dark</title>
+  <!-- 横排组合（深底）。这里刻意去掉方块：深色页面的底色常常就接近 #1c1917，
+       方块会整个融进去，只剩一支漂着的 L。直接上无底图形 + 白字，放哪都成立。
+       图形左缘 x=4，落点右缘 x=35.4，与文字间距 24（与浅底版一致）。 -->
+  <path
+    d="M7.2 18v28h17"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="6.4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="29.2" cy="27" r="6.2" fill="#34d399"/>
+  <text
+    x="59.4"
+    y="42"
+    fill="#ffffff"
+    font-family="ui-sans-serif, -apple-system, 'SF Pro Text', 'PingFang SC', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif"
+    font-size="28"
+    font-weight="600"
+    letter-spacing="-0.5"
+  >Land a Job</text>
+</svg>

@@ -1,3 +1,5 @@
+import { detectLocale, translate } from '../i18n'
+
 export interface HealthPayload {
   ok: boolean
   service: string
@@ -57,13 +59,22 @@ async function fetchBootstrapToken(): Promise<string> {
   const res = await fetch('/api/bootstrap', { cache: 'no-store', signal: AbortSignal.timeout(BOOTSTRAP_TIMEOUT_MS) })
   if (!res.ok) {
     throw new ApiError(
-      `无法获取本机令牌（HTTP ${res.status}）：本地服务未就绪，确认 npm run dev 的 server 已启动（日志 data/logs/server.log）`,
+      translate(
+        detectLocale(),
+        '无法获取本机令牌（HTTP {status}）：本地服务未就绪，确认 npm run dev 的 server 已启动（日志 data/logs/server.log）',
+        { status: res.status },
+      ),
       res.status,
       'BOOTSTRAP_FAILED',
     )
   }
   const body = (await res.json()) as { token?: string }
-  if (!body.token) throw new ApiError('bootstrap 未返回令牌', res.status, 'BOOTSTRAP_EMPTY')
+  if (!body.token)
+    throw new ApiError(
+      translate(detectLocale(), 'bootstrap 未返回令牌'),
+      res.status,
+      'BOOTSTRAP_EMPTY',
+    )
   return body.token
 }
 

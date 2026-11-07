@@ -10,6 +10,8 @@ import { useInvalidateFromWs } from './lib/queries'
 import { GITHUB_URL } from './lib/links'
 import { PRIMARY_NAV, navEntryTo, primaryNavFor, settingsTabFor } from './lib/navigation'
 import { SettingsTabs } from './components/SettingsTabs'
+import { LanguageSwitch } from './components/LanguageSwitch'
+import { useT } from './i18n'
 import Dashboard from './pages/Dashboard'
 import Bank from './pages/Bank'
 import Companies from './pages/Companies'
@@ -39,12 +41,35 @@ function GithubMark({ className }: { className?: string }) {
   )
 }
 
+/**
+ * 品牌标记：与 public/favicon.svg、官网 site/favicon.svg 是同一份几何。
+ * 这里走的是 32 网格的那一版——小尺寸专门重排过，不是把 64 网格缩下来，
+ * 否则笔画会被压到亚像素、圆头起毛。三处要一起改。
+ */
+function BrandMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" aria-hidden="true" className={className}>
+      <rect width="32" height="32" rx="7.5" fill="#1c1917" />
+      <path
+        d="M9.9 9v14h8.5"
+        fill="none"
+        stroke="#ffffff"
+        strokeWidth="3.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="20.9" cy="13.5" r="3.2" fill="#34d399" />
+    </svg>
+  )
+}
+
 function StatusPill({ status }: { status: 'loading' | 'online' | 'offline' }) {
+  const t = useT()
   const map = {
-    loading: { dot: 'bg-stone-300', text: '启动中', color: 'text-stone-500' },
+    loading: { dot: 'bg-stone-300', text: t('启动中'), color: 'text-stone-500' },
     // 「服务正常」听起来像在线服务；这个进程就在本机，说「后台正在运行」更准确
-    online: { dot: 'bg-emerald-500', text: '后台正在运行', color: 'text-emerald-700' },
-    offline: { dot: 'bg-red-500', text: '后台未运行', color: 'text-red-600' },
+    online: { dot: 'bg-emerald-500', text: t('后台正在运行'), color: 'text-emerald-700' },
+    offline: { dot: 'bg-red-500', text: t('后台未运行'), color: 'text-red-600' },
   }[status]
 
   return (
@@ -57,6 +82,7 @@ function StatusPill({ status }: { status: 'loading' | 'online' | 'offline' }) {
 
 export default function App() {
   const health = useHealth()
+  const t = useT()
   const invalidateFromWs = useInvalidateFromWs()
   const [paletteOpen, setPaletteOpen] = useState(false)
 
@@ -144,7 +170,7 @@ export default function App() {
       {navOpen ? (
         <button
           type="button"
-          aria-label="关闭导航"
+          aria-label={t('关闭导航')}
           onClick={() => setNavOpen(false)}
           className="fixed inset-0 z-40 bg-stone-900/30 lg:hidden"
         />
@@ -160,19 +186,17 @@ export default function App() {
         <div className="px-5 pt-6 pb-5">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2.5">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-stone-900 text-sm font-semibold text-white">
-                LJ
-              </span>
+              <BrandMark className="h-8 w-8 shrink-0" />
               <div className="leading-tight">
                 <div className="text-sm font-semibold tracking-tight">Land a Job</div>
-                <div className="text-[11px] text-stone-500">求职流水线</div>
+                <div className="text-[11px] text-stone-500">{t('求职流水线')}</div>
               </div>
             </div>
             {/* 抽屉展开后汉堡按钮被侧栏盖住，必须有一个自己的关闭按钮 */}
             <button
               type="button"
               data-testid="nav-close"
-              aria-label="关闭导航"
+              aria-label={t('关闭导航')}
               onClick={() => setNavOpen(false)}
               className="-mr-1 rounded p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700 lg:hidden"
             >
@@ -198,7 +222,7 @@ export default function App() {
                 ].join(' ')
               }
             >
-              <span>{item.label}</span>
+              <span>{t(item.label)}</span>
               {item.phase ? <span className="text-[10px] font-normal text-stone-400">{item.phase}</span> : null}
             </NavLink>
           ))}
@@ -210,12 +234,12 @@ export default function App() {
             onClick={() => setPaletteOpen(true)}
             className="mb-2.5 flex w-full items-center justify-between rounded-md border border-stone-200 px-2.5 py-1.5 text-[11px] text-stone-500 hover:bg-stone-50"
           >
-            <span>快速录入 / 搜索</span>
+            <span>{t('快速录入 / 搜索')}</span>
             <kbd className="rounded bg-stone-100 px-1 font-mono text-[10px] text-stone-500">⌘K</kbd>
           </button>
           <SkillBar />
           <p className="mt-2.5 text-[10px] leading-relaxed text-stone-400">
-            AI 在 Agent 里跑，本应用不调用模型。
+            {t('AI 在 Agent 里跑，本应用不调用模型。')}
           </p>
         </div>
       </aside>
@@ -226,7 +250,7 @@ export default function App() {
             <button
               type="button"
               data-testid="nav-toggle"
-              aria-label={navOpen ? '关闭导航' : '打开导航'}
+              aria-label={navOpen ? t('关闭导航') : t('打开导航')}
               onClick={() => setNavOpen((open) => !open)}
               className="-ml-1 shrink-0 rounded p-1.5 text-stone-500 hover:bg-stone-100 lg:hidden"
             >
@@ -234,7 +258,11 @@ export default function App() {
             </button>
             <h1 className="truncate text-sm font-medium text-stone-900">
               {/* 设置分区里的每页都标出所属二级 tab；二级 tab 名已经与「设置」不同，不会出现「设置 · 设置」 */}
-              {activeTab ? `设置 · ${activeTab.label}` : (current?.label ?? '页面不存在')}
+              {activeTab
+                ? t('设置 · {tab}', { tab: t(activeTab.label) })
+                : current
+                  ? t(current.label)
+                  : t('页面不存在')}
             </h1>
             <span className="hidden text-xs text-stone-400 sm:inline">
               {health.status === 'online' && health.data
@@ -244,16 +272,17 @@ export default function App() {
           </div>
           <div className="flex items-center gap-2">
             {/* 实时通道（WebSocket）只用于另一端的增量刷新，用户不需要知道它叫什么，所以不做状态展示 */}
+            <LanguageSwitch compact />
             <a
               href={GITHUB_URL}
               target="_blank"
               rel="noreferrer"
               data-testid="github-link"
-              title="到 GitHub 看源码、提 issue，或点个 star"
+              title={t('到 GitHub 看源码、提 issue，或点个 star')}
               className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3 py-1 text-xs text-stone-600 transition-colors hover:border-stone-300 hover:bg-stone-50 hover:text-stone-900"
             >
               <GithubMark className="h-3.5 w-3.5 shrink-0" />
-              <span className="hidden whitespace-nowrap md:inline">如果对你有帮助，点个 star 吧</span>
+              <span className="hidden whitespace-nowrap md:inline">{t('如果对你有帮助，点个 star 吧')}</span>
             </a>
             <StatusPill status={health.status} />
           </div>
@@ -276,7 +305,7 @@ export default function App() {
               <Route
                 path="/resumes/:id"
                 element={
-                  <Suspense fallback={<div className="p-6 text-sm text-stone-400">加载编辑器…</div>}>
+                  <Suspense fallback={<div className="p-6 text-sm text-stone-400">{t('加载编辑器…')}</div>}>
                     <ResumeEditor />
                   </Suspense>
                 }

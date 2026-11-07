@@ -1,6 +1,10 @@
-# Land a Job
+<p align="center">
+  <img src="./brand/png/logo-mark-256.png" width="96" height="96" alt="Land a Job" />
+</p>
 
-**English** · [简体中文](./README.zh-CN.md)
+<h1 align="center">Land a Job</h1>
+
+<p align="center"><b>English</b> · <a href="./README.zh-CN.md">简体中文</a></p>
 
 A local-first, agent-native job-search pipeline: target companies → JD matching → resume tailoring → applications → follow-ups → interviews → offer negotiation.
 
@@ -11,6 +15,18 @@ A local-first, agent-native job-search pipeline: target companies → JD matchin
 **Website**: [dada-liu.github.io/land-a-job](https://dada-liu.github.io/land-a-job/) · **Install notes for your agent**: [agent-install.md](https://dada-liu.github.io/land-a-job/agent-install.md) · A star is appreciated if this helps.
 
 > Status: **P7 complete — all eight stages delivered.** Data layer, API, resumes, pipeline board, JD tailoring, apply assistant, MCP/skills, interviews and offers, metrics and polish are all in place. 280 unit tests and 369 end-to-end assertions pass.
+
+## Screenshots
+
+The UI ships in **English and 中文** — switch from the 中文 / EN control in the top-right corner. These shots come from a seeded demo database (US companies); the [Chinese screenshot set](./docs/screenshots) uses a separate sample dataset.
+
+| ![Overview](./docs/screenshots/en/dashboard.png) | ![Fit score breakdown](./docs/screenshots/en/job-detail.png) |
+| --- | --- |
+| **Overview** — weekly effective applications, funnel conversion, today's to-dos | **Fit score** — every factor with its evidence |
+| ![Job library](./docs/screenshots/en/jobs.png) | ![Application pipeline](./docs/screenshots/en/pipeline.png) |
+| **Job library** — sorted by fit, with JD source badges | **Pipeline** — seven stages from lead to offer |
+
+[Watch the 15-second tour (GIF)](./docs/screenshots/en/demo.gif) — overview → job library → job detail → the tailoring plan drawer that hands an instruction to your agent.
 
 ### Documentation
 

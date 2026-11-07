@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <title>Land a Job — social card</title>
+  <!-- 社交分享图（OGP / Twitter card）。1200×630 是各平台通用的 1.91:1。
+       四周留 88 的边距：卡片在信息流里会被裁成圆角，图形贴边就没了。
+       底色沿用官网的纸白 #fbfaf8，和点进去看到的页面是同一张脸。 -->
+  <rect width="1200" height="630" fill="#fbfaf8" />
+
+  <!-- 主标，240px（64 网格 × 3.75），垂直居中于 315 -->
+  <g transform="translate(88 170) scale(3.75)">
+    <rect width="64" height="64" rx="15" fill="#1c1917" />
+    <path
+      d="M19.8 18v28h17"
+      fill="none"
+      stroke="#ffffff"
+      stroke-width="6.4"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <circle cx="41.8" cy="27" r="6.2" fill="#34d399" />
+  </g>
+
+  <text
+    x="384"
+    y="297"
+    fill="#1c1917"
+    font-family="'SF Pro Display', -apple-system, 'Helvetica Neue', 'PingFang SC', 'Segoe UI', sans-serif"
+    font-size="96"
+    font-weight="700"
+    letter-spacing="-2.5"
+  >Land a Job</text>
+
+  <text
+    x="388"
+    y="359"
+    fill="#78716c"
+    font-family="'SF Pro Text', -apple-system, 'Helvetica Neue', 'PingFang SC', 'Segoe UI', sans-serif"
+    font-size="31"
+    letter-spacing="-0.2"
+  >A local-first, agent-native job-search pipeline</text>
+
+  <line x1="88" y1="470" x2="1112" y2="470" stroke="#e7e5e4" stroke-width="1" />
+
+  <text
+    x="88"
+    y="524"
+    fill="#78716c"
+    font-family="'SF Pro Text', -apple-system, 'Helvetica Neue', 'PingFang SC', 'Segoe UI', sans-serif"
+    font-size="25"
+    letter-spacing="0.3"
+  >dada-liu.github.io/land-a-job</text>
+
+  <text
+    x="1112"
+    y="524"
+    text-anchor="end"
+    fill="#78716c"
+    font-family="'SF Pro Text', -apple-system, 'Helvetica Neue', 'PingFang SC', 'Segoe UI', sans-serif"
+    font-size="25"
+    letter-spacing="0.3"
+  >Your data stays on your machine</text>
+</svg>

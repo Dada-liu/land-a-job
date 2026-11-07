@@ -6,6 +6,7 @@ import App from './App'
 import { queryClient } from './lib/queryClient'
 import { ToastProvider } from './components/Toast'
 import { ConfirmProvider } from './components/ConfirmDialog'
+import { I18nProvider } from './i18n'
 import './index.css'
 
 const root = document.getElementById('root')
@@ -28,19 +29,23 @@ const isPrintMode = params.get('print') === '1' && Boolean(printMatch?.[1])
 createRoot(root).render(
   <StrictMode>
     {isPrintMode ? (
-      <Suspense fallback={null}>
-        <ResumePrint id={printMatch?.[1] ?? ''} />
-      </Suspense>
+      <I18nProvider>
+        <Suspense fallback={null}>
+          <ResumePrint id={printMatch?.[1] ?? ''} />
+        </Suspense>
+      </I18nProvider>
     ) : (
-      <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <ConfirmProvider>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
-          </ConfirmProvider>
-        </ToastProvider>
-      </QueryClientProvider>
+      <I18nProvider>
+        <QueryClientProvider client={queryClient}>
+          <ToastProvider>
+            <ConfirmProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </ConfirmProvider>
+          </ToastProvider>
+        </QueryClientProvider>
+      </I18nProvider>
     )}
   </StrictMode>,
 )

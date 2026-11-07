@@ -12,6 +12,7 @@ import {
   type InterviewDto,
 } from '../lib/api'
 import { qk } from '../lib/queries'
+import { useI18n } from '../i18n'
 import { Button, Card, EmptyState, Field, Input, PageHeader, Select, Textarea } from '../components/ui'
 import { Drawer } from '../components/Drawer'
 import { AgentHandoff } from '../components/AgentHandoff'
@@ -34,7 +35,8 @@ const RESULT_LABELS: Record<string, string> = {
   cancelled: '已取消',
 }
 
-const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
+const WEEKDAYS_ZH = ['一', '二', '三', '四', '五', '六', '日']
+const WEEKDAYS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 function pad(value: number): string {
   return String(value).padStart(2, '0')
@@ -101,7 +103,14 @@ export default function Interviews() {
   }, [applications.data])
 
   const months = useMemo(() => monthMatrix(cursor.year, cursor.month), [cursor])
-  const monthLabel = `${cursor.year} 年 ${cursor.month + 1} 月`
+  const { locale } = useI18n()
+  // 日历表头与月份标题按语言走 Intl，别把「2026 年 11 月」硬翻成 "2026 year 11 month"
+  const monthLabel = locale === 'zh'
+    ? `${cursor.year} 年 ${cursor.month + 1} 月`
+    : new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(
+        new Date(cursor.year, cursor.month, 1),
+      )
+  const weekdays = locale === 'zh' ? WEEKDAYS_ZH : WEEKDAYS_EN
 
   const byDay = useMemo(() => {
     const map = new Map<string, InterviewDto[]>()
@@ -263,7 +272,7 @@ export default function Interviews() {
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
         <Card className="p-3">
           <div className="grid grid-cols-7 gap-1">
-            {WEEKDAYS.map((day) => (
+            {(weekdays).map((day) => (
               <div key={day} className="pb-1 text-center text-[10px] text-stone-400">
                 {day}
               </div>

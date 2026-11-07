@@ -32,7 +32,22 @@ const MIME = {
   '.md': 'text/markdown; charset=utf-8',
   '.txt': 'text/plain; charset=utf-8',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
   '.ico': 'image/x-icon',
+}
+
+/** 体积统计要算上子目录（截图在 site/screenshots/ 下），否则日志会少报 1MB 多 */
+async function treeSize(target) {
+  const info = await stat(target)
+  if (info.isFile()) return info.size
+  let total = 0
+  for (const entry of await readdir(target, { withFileTypes: true })) {
+    total += await treeSize(join(target, entry.name))
+  }
+  return total
 }
 
 async function gitSha() {
@@ -59,8 +74,7 @@ async function build() {
   for (const name of sources) {
     const from = join(SRC, name)
     await cp(from, join(OUT, name), { recursive: true })
-    const info = await stat(from)
-    if (info.isFile()) bytes += info.size
+    bytes += await treeSize(from)
   }
 
   const info = {

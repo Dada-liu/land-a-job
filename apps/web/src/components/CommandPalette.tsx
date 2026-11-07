@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createCompany, createJob, fetchJd, listCompanies, listJobs, scoreJob } from '../lib/api'
 import { qk } from '../lib/queries'
 import { PRIMARY_NAV, SETTINGS_TABS, navEntryTo } from '../lib/navigation'
+import { useT } from '../i18n'
 import { errorText, useToast } from './Toast'
 
 /**
@@ -64,13 +65,14 @@ export function parseQuickInput(raw: string): QuickParse {
 // 从导航配置生成，不再手抄一份列表：一级项按「进入点」算（点「设置」落的是简历），
 // 设置下的四个二级页也保留直达入口（收进侧栏不等于要从 ⌘K 里消失，否则「会打字的人」反而要多点一层）。
 // 同一个地址只留第一条：「设置」与「设置 · 简历」现在指向同一页，空态列表里列两遍像 bug。
-const NAV_SHORTCUTS: { label: string; to: string; hint: string }[] = (() => {
-  const rows: { label: string; to: string; hint: string }[] = []
-  const add = (row: { label: string; to: string; hint: string }) => {
+const NAV_SHORTCUTS: { label: string; to: string; hint: string; underSettings?: boolean }[] = (() => {
+  const rows: { label: string; to: string; hint: string; underSettings?: boolean }[] = []
+  const add = (row: { label: string; to: string; hint: string; underSettings?: boolean }) => {
     if (!rows.some((existing) => existing.to === row.to)) rows.push(row)
   }
   for (const item of PRIMARY_NAV) add({ label: item.label, to: navEntryTo(item), hint: '前往' })
-  for (const item of SETTINGS_TABS) add({ label: `设置 · ${item.label}`, to: item.to, hint: '设置下的二级页' })
+  for (const item of SETTINGS_TABS)
+    add({ label: item.label, to: item.to, hint: '设置下的二级页', underSettings: true })
   return rows
 })()
 
@@ -81,6 +83,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   const navigate = useNavigate()
   const client = useQueryClient()
   const toast = useToast()
+  const t = useT()
 
   const parsed = useMemo(() => parseQuickInput(value), [value])
   const canCreate = parsed.company.length > 0 && parsed.title.length > 0
@@ -114,7 +117,12 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       })
     },
     onSuccess: (job) => {
-      toast.push(`已建岗位：${parsed.company} · ${job.title}${parsed.url ? '，正在抓取 JD' : ''}`, 'success')
+      toast.push(
+        parsed.url
+          ? t('已建岗位：{company} · {title}，正在抓取 JD', { company: parsed.company, title: job.title })
+          : t('已建岗位：{company} · {title}', { company: parsed.company, title: job.title }),
+        'success',
+      )
       void client.invalidateQueries({ queryKey: ['jobs'] })
       void client.invalidateQueries({ queryKey: ['companies'] })
       void client.invalidateQueries({ queryKey: qk.dashboard })
@@ -129,7 +137,10 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
             void client.invalidateQueries({ queryKey: ['jobs'] })
           })
           .catch((error: unknown) =>
-            toast.push(`岗位已建，但 JD 没抓到：${errorText(error)}；可在详情页粘贴正文`, 'error'),
+            toast.push(
+              t('岗位已建，但 JD 没抓到：{error}；可在详情页粘贴正文', { error: errorText(error) }),
+              'error',
+            ),
           )
       }
 
@@ -137,7 +148,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       onClose()
       navigate(`/jobs/${job.id}`)
     },
-    onError: (error) => toast.push(`创建失败：${errorText(error)}`, 'error'),
+    onError: (error) => toast.push(t('创建失败：{error}', { error: errorText(error) }), 'error'),
   })
 
   useEffect(() => {
@@ -164,8 +175,12 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   if (canCreate) {
     rows.push({
       key: 'create',
-      label: `新建岗位：${parsed.company} · ${parsed.title}`,
-      hint: [parsed.city, parsed.salaryMin ? `${parsed.salaryMin / 1000}-${(parsed.salaryMax ?? 0) / 1000}K` : null, parsed.url ? '带 JD 链接' : null]
+      label: t('新建岗位：{company} · {title}', { company: parsed.company, title: parsed.title }),
+      hint: [
+        parsed.city,
+        parsed.salaryMin ? `${parsed.salaryMin / 1000}-${(parsed.salaryMax ?? 0) / 1000}K` : null,
+        parsed.url ? t('带 JD 链接') : null,
+      ]
         .filter(Boolean)
         .join(' · '),
       run: () => create.mutate(),
@@ -174,8 +189,8 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
   for (const job of search.data?.jobs ?? []) {
     rows.push({
       key: `job-${job.id}`,
-      label: `${job.companyName ?? '未知公司'} · ${job.title}`,
-      hint: `岗位 · 匹配度 ${job.fitScore ?? '—'}`,
+      label: `${job.companyName ?? t('未知公司')} · ${job.title}`,
+      hint: t('岗位 · 匹配度 {score}', { score: job.fitScore ?? '—' }),
       run: () => {
         onClose()
         navigate(`/jobs/${job.id}`)
@@ -186,7 +201,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     rows.push({
       key: `company-${company.id}`,
       label: company.name,
-      hint: `公司 · ${company.jobCount ?? 0} 个岗位`,
+      hint: t('公司 · {n} 个岗位', { n: company.jobCount ?? 0 }),
       run: () => {
         onClose()
         navigate(`/companies?focus=${company.id}`)
@@ -197,8 +212,8 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     for (const item of NAV_SHORTCUTS) {
       rows.push({
         key: `nav-${item.to}`,
-        label: item.label,
-        hint: item.hint,
+        label: item.underSettings ? t('设置 · {tab}', { tab: t(item.label) }) : t(item.label),
+        hint: t(item.hint),
         run: () => {
           onClose()
           navigate(item.to)
@@ -211,7 +226,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
 
   return (
     <div className="fixed inset-0 z-[55] flex items-start justify-center pt-24">
-      <button type="button" aria-label="关闭" className="absolute inset-0 bg-stone-900/25" onClick={onClose} />
+      <button type="button" aria-label={t('关闭')} className="absolute inset-0 bg-stone-900/25" onClick={onClose} />
       <div className="relative w-[560px] max-w-[92vw] overflow-hidden rounded-xl border border-stone-200 bg-white shadow-2xl">
         <input
           ref={inputRef}
@@ -233,14 +248,14 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
               active?.run()
             }
           }}
-          placeholder="输入「公司 岗位 30-50k https://…」直接建岗位，或搜索"
+          placeholder={t('输入「公司 岗位 30-50k https://…」直接建岗位，或搜索')}
           className="w-full border-b border-stone-200 px-4 py-3 text-sm outline-none placeholder:text-stone-400"
         />
 
         {canCreate ? (
           <div className="border-b border-stone-100 bg-stone-50/60 px-4 py-2 text-[11px] text-stone-500">
-            识别为：公司 <span className="font-medium text-stone-800">{parsed.company}</span> · 岗位{' '}
-            <span className="font-medium text-stone-800">{parsed.title}</span>
+            {t('识别为：公司')} <span className="font-medium text-stone-800">{parsed.company}</span>{' '}
+            {t('· 岗位')} <span className="font-medium text-stone-800">{parsed.title}</span>
             {parsed.city ? ` · ${parsed.city}` : ''}
             {parsed.salaryMin ? ` · ${parsed.salaryMin / 1000}-${(parsed.salaryMax ?? 0) / 1000}K` : ''}
           </div>
@@ -265,14 +280,14 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
           ))}
           {rows.length === 0 ? (
             <li className="px-4 py-6 text-center text-[11px] text-stone-400">
-              没有匹配。试试「字节 后端工程师 30-50k」，会直接建好岗位。
+              {t('没有匹配。试试「字节 后端工程师 30-50k」，会直接建好岗位。')}
             </li>
           ) : null}
         </ul>
 
         <div className="flex items-center justify-between border-t border-stone-100 px-4 py-2 text-[10px] text-stone-400">
-          <span>↑↓ 选择 · Enter 执行 · Esc 关闭</span>
-          <span>不联网、不调模型，就在本地按规则识别</span>
+          <span>{t('↑↓ 选择 · Enter 执行 · Esc 关闭')}</span>
+          <span>{t('不联网、不调模型，就在本地按规则识别')}</span>
         </div>
       </div>
     </div>

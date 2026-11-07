@@ -9,13 +9,23 @@
       content="把目标公司、JD 匹配、简历定制、投递、跟进、面试、offer 串成一条流水线。数据只存在你自己的电脑上，AI 由你已有的 Agent 提供，应用零模型调用。"
     />
     <meta name="theme-color" content="#fbfaf8" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://dada-liu.github.io/land-a-job/index.zh-CN.html" />
     <meta property="og:title" content="Land a Job · 本地优先、Agent 原生的求职流水线" />
     <meta property="og:description" content="求职不是一堆表格，是一条有转化率的流水线。数据在本机，AI 在你自己的 Agent 里。" />
     <meta property="og:locale" content="zh_CN" />
+    <!-- 1200×630，与 brand/og-image.svg 同源；改了那张图要重新导出 site/og.png -->
+    <meta property="og:image" content="https://dada-liu.github.io/land-a-job/og.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Land a Job — 本地优先、Agent 原生的求职流水线" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="alternate" hreflang="en" href="https://dada-liu.github.io/land-a-job/" />
     <link rel="alternate" hreflang="zh-CN" href="https://dada-liu.github.io/land-a-job/index.zh-CN.html" />
     <link rel="alternate" hreflang="x-default" href="https://dada-liu.github.io/land-a-job/" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -24,13 +34,20 @@
     <header class="nav">
       <div class="nav-inner">
         <a class="brand" href="#top">
-          <span class="brand-mark">LJ</span>
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" focusable="false">
+              <rect width="32" height="32" rx="7.5" fill="#1c1917" />
+              <path d="M9.9 9v14h8.5" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+              <circle cx="20.9" cy="13.5" r="3.2" fill="#34d399" />
+            </svg>
+          </span>
           <span class="brand-text">
             <strong>Land a Job</strong>
             <small>求职流水线</small>
           </span>
         </a>
         <nav class="nav-links" aria-label="页面导航">
+          <a href="#shots">界面</a>
           <a href="#install">安装</a>
           <a href="#usage">使用</a>
           <a href="#design">设计</a>
@@ -89,6 +106,46 @@ npm run skills:install</code></pre>
             <a href="agent-install.zh-CN.md">安装说明</a>。
           </p>
         </div>
+      </section>
+
+      <section class="section shots" id="shots">
+        <div class="section-head">
+          <h2>它长什么样</h2>
+          <p>
+            下面都是本机应用跑在演示数据上的真实截图，不是设计稿，也没有托管演示站。
+            界面同时支持中文和 English，右上角一键切换；文档里的英文截图用的是另一套示例数据。
+          </p>
+        </div>
+        <div class="shot-grid">
+          <figure class="shot">
+            <a href="screenshots/zh/dashboard.jpg" target="_blank" rel="noreferrer">
+              <img src="screenshots/zh/dashboard.jpg" width="1200" height="833" loading="lazy" alt="总览：本周有效投递、转化漏斗与今日待办" />
+            </a>
+            <figcaption><strong>总览</strong> — 本周有效投递、漏斗转化率，以及今天该跟进谁。</figcaption>
+          </figure>
+          <figure class="shot">
+            <a href="screenshots/zh/job-detail.jpg" target="_blank" rel="noreferrer">
+              <img src="screenshots/zh/job-detail.jpg" width="1200" height="750" loading="lazy" alt="岗位详情与匹配度分项" />
+            </a>
+            <figcaption><strong>匹配度</strong> — 每个分项都带上证据，能看清楚这个岗位为什么是 84 分。</figcaption>
+          </figure>
+          <figure class="shot">
+            <a href="screenshots/zh/jobs.jpg" target="_blank" rel="noreferrer">
+              <img src="screenshots/zh/jobs.jpg" width="1200" height="750" loading="lazy" alt="按匹配度排序的岗位库" />
+            </a>
+            <figcaption><strong>岗位库</strong> — 按匹配度排序，带 JD 来源标记与每行「直接投递」。</figcaption>
+          </figure>
+          <figure class="shot shot--wide">
+            <a href="screenshots/zh/pipeline.jpg" target="_blank" rel="noreferrer">
+              <img src="screenshots/zh/pipeline.jpg" width="1200" height="360" loading="lazy" alt="七列投递看板" />
+            </a>
+            <figcaption><strong>投递看板</strong> — 从线索到 Offer 七个阶段，一次只能往右拖一列。</figcaption>
+          </figure>
+        </div>
+        <p class="shots-note">
+          <a href="screenshots/zh/demo.gif">看 15 秒的操作演示（GIF）</a> ·
+          <a href="https://github.com/Dada-liu/land-a-job/tree/main/docs/screenshots">在 GitHub 看原尺寸截图</a>
+        </p>
       </section>
 
       <section class="section flow" id="flow">
@@ -330,7 +387,16 @@ https://dada-liu.github.io/land-a-job/agent-install.zh-CN.md
     <footer class="footer">
       <div class="footer-main">
         <div>
-          <div class="footer-brand"><span class="brand-mark">LJ</span> Land a Job</div>
+          <div class="footer-brand">
+            <span class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 32 32" focusable="false">
+                <rect width="32" height="32" rx="7.5" fill="#1c1917" />
+                <path d="M9.9 9v14h8.5" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+                <circle cx="20.9" cy="13.5" r="3.2" fill="#34d399" />
+              </svg>
+            </span>
+            Land a Job
+          </div>
           <p>本地优先、Agent 原生的求职流水线。数据永远属于你。</p>
         </div>
         <div class="footer-links">

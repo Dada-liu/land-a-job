@@ -1,6 +1,10 @@
-# Land a Job
+<p align="center">
+  <img src="./brand/png/logo-mark-256.png" width="96" height="96" alt="Land a Job" />
+</p>
 
-[English](./README.md) · **简体中文**
+<h1 align="center">Land a Job</h1>
+
+<p align="center"><a href="./README.md">English</a> · <b>简体中文</b></p>
 
 本地优先、Agent 原生的求职流水线：目标公司 → JD 匹配 → 简历定制 → 投递 → 跟进 → 面试 → offer 谈判。
 
@@ -11,6 +15,18 @@
 **官网**：[dada-liu.github.io/land-a-job](https://dada-liu.github.io/land-a-job/index.zh-CN.html) · **交给 Agent 的安装说明**：[agent-install.zh-CN.md](https://dada-liu.github.io/land-a-job/agent-install.zh-CN.md) · 如果对你有帮助，点个 star。
 
 > 当前状态：**P7 完成（八个阶段全部交付）**。数据层、接口、简历、投递看板、JD 定制、投递助手、MCP/Skill、面试与 Offer、指标与打磨全部可用；单测 280 例、端到端 369 项断言全绿。
+
+## 界面截图
+
+界面同时支持**中文和 English**，右上角「中文 / EN」一键切换。下面这些图来自演示数据（中国公司）；[英文截图](./docs/screenshots/en)用的是另一套美国公司示例数据，官网中英文首页也分别用了对应语言的图。
+
+| ![总览](./docs/screenshots/dashboard.png) | ![匹配度拆解](./docs/screenshots/job-detail.png) |
+| --- | --- |
+| **总览** — 本周有效投递、转化漏斗、今日待办 | **匹配度** — 每个分项都带上证据 |
+| ![岗位库](./docs/screenshots/jobs.png) | ![投递看板](./docs/screenshots/pipeline.png) |
+| **岗位库** — 按匹配度排序，带 JD 来源标记 | **投递看板** — 从线索到 Offer 七个阶段 |
+
+[看 15 秒操作演示（GIF）](./docs/screenshots/demo.gif) — 总览 → 岗位库 → 岗位详情 → 把定制指令交给 Agent 的「定制建议」抽屉。
 
 ### 文档导航
 

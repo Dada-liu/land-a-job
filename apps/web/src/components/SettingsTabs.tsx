@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { SETTINGS_TABS, settingsTabFor } from '../lib/navigation'
+import { useT } from '../i18n'
 
 /**
  * 设置分区的二级 tab，四个页面共用一条。
@@ -14,13 +15,14 @@ import { SETTINGS_TABS, settingsTabFor } from '../lib/navigation'
  * 边框仍连续，竖向滚动条也就没了。
  */
 export function SettingsTabs() {
+  const t = useT()
   const location = useLocation()
   const active = settingsTabFor(location.pathname)
 
   return (
     <nav
       data-testid="settings-tabs"
-      aria-label="设置二级导航"
+      aria-label={t('设置二级导航')}
       className="mb-5 flex gap-5 overflow-x-auto border-b border-stone-200"
     >
       {SETTINGS_TABS.map((item) => {
@@ -39,7 +41,7 @@ export function SettingsTabs() {
                 : 'text-stone-500 hover:text-stone-800',
             ].join(' ')}
           >
-            {item.label}
+            {t(item.label)}
           </NavLink>
         )
       })}

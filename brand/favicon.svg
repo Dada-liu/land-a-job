@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Land a Job">
+  <title>Land a Job</title>
+  <!-- 小尺寸（16/32）专用：同样的图形，按 32 网格重排而不是把 64 版缩小——
+       缩小会把 6.4 的笔画压成 3.2 的亚像素，圆头变毛边。
+       这里笔画、圆角、落点都取整到 0.5，16px 下才不糊。 -->
+  <rect width="32" height="32" rx="7.5" fill="#1c1917"/>
+  <path
+    d="M9.9 9v14h8.5"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="3.2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="20.9" cy="13.5" r="3.2" fill="#34d399"/>
+</svg>

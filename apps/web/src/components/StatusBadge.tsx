@@ -1,4 +1,5 @@
 import { STATUS_LABELS, type Status } from '@land/core/application'
+import { useT } from '../i18n'
 
 /**
  * 状态徽标。配色按「推进得越远越暖」排列：
@@ -20,7 +21,8 @@ const STYLES: Record<string, string> = {
 }
 
 export function StatusBadge({ status, className = '' }: { status: string; className?: string }) {
-  const label = STATUS_LABELS[status as Status] ?? status
+  const t = useT()
+  const label = t(STATUS_LABELS[status as Status] ?? status)
   return (
     <span
       className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${STYLES[status] ?? STYLES.lead} ${className}`}

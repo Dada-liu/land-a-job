@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 268 64" role="img" aria-label="Land a Job">
+  <title>Land a Job</title>
+  <!-- 横排组合（浅底）。标记与文字间距 24 = L 的笔画宽度 6.4 的 3.75 倍，
+       在 24px 高时仍能看出是两块而不是一坨。
+       wordmark 直接排系统 UI 字体，不内嵌字库：开源项目不能带商业字体轮廓，
+       而且系统字体在各家机器上的观感本身就和产品界面一致。
+       若要印刷，请自行用有授权的字体重排文字部分，图形部分照用。 -->
+  <rect width="64" height="64" rx="15" fill="#1c1917"/>
+  <path
+    d="M19.8 18v28h17"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="6.4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="41.8" cy="27" r="6.2" fill="#34d399"/>
+  <text
+    x="88"
+    y="42"
+    fill="#1c1917"
+    font-family="ui-sans-serif, -apple-system, 'SF Pro Text', 'PingFang SC', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif"
+    font-size="28"
+    font-weight="600"
+    letter-spacing="-0.5"
+  >Land a Job</text>
+</svg>

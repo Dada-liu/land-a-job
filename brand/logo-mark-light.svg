@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Land a Job">
+  <title>Land a Job — light surface</title>
+  <!-- 浅底版。把方块换成纸白 + 一圈描边，L 转墨黑，落点改用深翡翠
+       （#34d399 在纸白上对比只有 1.6:1，会糊成灰点）。 -->
+  <rect x="0.5" y="0.5" width="63" height="63" rx="14.5" fill="#ffffff" stroke="#e7e5e4"/>
+  <path
+    d="M19.8 18v28h17"
+    fill="none"
+    stroke="#1c1917"
+    stroke-width="6.4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="41.8" cy="27" r="6.2" fill="#047857"/>
+</svg>

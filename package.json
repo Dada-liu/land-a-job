@@ -23,6 +23,7 @@
     "test:core": "vitest run packages/core",
     "test:server": "vitest run apps/server",
     "typecheck": "npm run build -w @land/resume-kit && tsc -b packages/core/tsconfig.json apps/server/tsconfig.json && tsc --noEmit -p apps/web/tsconfig.json",
+    "check:i18n": "node scripts/check-i18n.mjs",
     "import:legacy": "npm run import:legacy -w @land/server --",
     "e2e": "npm run build && node scripts/e2e/p3.mjs && node scripts/e2e/p4.mjs && node scripts/e2e/p5.mjs && node scripts/e2e/p6.mjs && node scripts/e2e/p7.mjs",
     "e2e:p3": "node scripts/e2e/p3.mjs",

@@ -24,6 +24,7 @@ import { qk } from '../lib/queries'
 import { Button, Card, EmptyState, PageHeader } from '../components/ui'
 import { ApplicationDrawer } from '../components/ApplicationDrawer'
 import { errorText, useToast } from '../components/Toast'
+import { useT } from '../i18n'
 
 /** 看板列：只放「还在推进」的状态；终态不参与拖拽，避免误操作把记录挪进黑洞 */
 const COLUMNS: { status: string; label: string; hint?: string }[] = [
@@ -38,7 +39,7 @@ const COLUMNS: { status: string; label: string; hint?: string }[] = [
 
 function daysLabel(days: number | undefined): string {
   if (days === undefined) return ''
-  return days === 0 ? '今天' : `${days} 天`
+  return days === 0 ? '今天' : '{days} 天'
 }
 
 function AppCard({
@@ -51,6 +52,7 @@ function AppCard({
   onOpen: () => void
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: app.id })
+  const t = useT()
   const style = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: 30 }
     : undefined
@@ -75,21 +77,23 @@ function AppCard({
       ].join(' ')}
     >
       <div className="flex items-start justify-between gap-1.5">
-        <span className="truncate text-[11px] text-stone-500">{app.companyName ?? '未知公司'}</span>
+        <span className="truncate text-[11px] text-stone-500">{app.companyName ?? t('未知公司')}</span>
         {app.resumeId ? (
-          <span className="shrink-0 rounded bg-emerald-50 px-1 text-[9px] text-emerald-700" title="已关联简历">
-            简历
+          <span className="shrink-0 rounded bg-emerald-50 px-1 text-[9px] text-emerald-700" title={t('已关联简历')}>
+            {t('有简历')}
           </span>
         ) : (
-          <span className="shrink-0 rounded bg-amber-50 px-1 text-[9px] text-amber-700" title="未关联简历，不算有效投递">
-            缺简历
+          <span className="shrink-0 rounded bg-amber-50 px-1 text-[9px] text-amber-700" title={t('未关联简历，不算有效投递')}>
+            {t('缺简历')}
           </span>
         )}
       </div>
-      <div className="mt-0.5 line-clamp-2 text-xs font-medium leading-snug text-stone-900">{app.jobTitle ?? '未知岗位'}</div>
+      <div className="mt-0.5 line-clamp-2 text-xs font-medium leading-snug text-stone-900">{app.jobTitle ?? t('未知岗位')}</div>
       <div className="mt-1 flex items-center justify-between text-[10px] text-stone-400">
-        <span className="font-mono" title="岗位匹配度">{fit === null ? '匹配度 —' : `匹配度 ${fit}`}</span>
-        <span>{daysLabel(app.daysInStatus)}</span>
+        <span className="font-mono" title={t('岗位匹配度')}>
+          {fit === null ? t('匹配度 —') : t('匹配度 {score}', { score: fit })}
+        </span>
+        <span>{t(daysLabel(app.daysInStatus), { days: app.daysInStatus ?? 0 })}</span>
       </div>
     </div>
   )
@@ -109,10 +113,11 @@ function Column({
   onOpen: (id: string) => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status })
+  const t = useT()
   return (
     <div className="flex w-[220px] shrink-0 flex-col">
       <div className="mb-2 flex items-baseline justify-between px-0.5">
-        <span className="text-xs font-medium text-stone-700">{label}</span>
+        <span className="text-xs font-medium text-stone-700">{t(label)}</span>
         <span className="font-mono text-[10px] text-stone-400">{items.length}</span>
       </div>
       <div
@@ -126,7 +131,7 @@ function Column({
           <AppCard key={app.id} app={app} fit={fits.get(app.jobId) ?? null} onOpen={() => onOpen(app.id)} />
         ))}
         {items.length === 0 ? (
-          <div className="px-1 py-6 text-center text-[10px] text-stone-300">拖到这里</div>
+          <div className="px-1 py-6 text-center text-[10px] text-stone-300">{t('拖到这里')}</div>
         ) : null}
       </div>
     </div>
