@@ -24,7 +24,8 @@ export interface NavItem {
 
 /**
  * 设置分区的默认落地页（= 第一个二级 tab）。
- * 侧栏、⌘K、`g s` 三处都从这里取，改默认 tab 只改这一行。
+ * 侧栏与 ⌘K 的「设置」都从这里取，改默认 tab 只改这一行。
+ * 快捷键 `g s` 不跟这里走：它刻意去 `/settings`（数据和 Agent 连接），见 App.tsx。
  */
 export const SETTINGS_ENTRY = '/resumes'
 

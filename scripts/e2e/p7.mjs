@@ -159,7 +159,7 @@ async function main() {
     await waitFor(async () => new URL(page.url()).pathname === '/offers', 'g → o 跳到 Offer 对比')
     await page.keyboard.press('g')
     await page.keyboard.press('s')
-    await waitFor(async () => new URL(page.url()).pathname === '/resumes', 'g → s 进设置分区，落在默认的简历 tab')
+    await waitFor(async () => new URL(page.url()).pathname === '/settings', 'g → s 直达「数据和 Agent 连接」')
 
     await page.keyboard.press('n')
     await page.waitForSelector('[data-testid="palette-input"]', { timeout: 4000 })
