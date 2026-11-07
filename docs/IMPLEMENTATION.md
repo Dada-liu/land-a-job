@@ -895,7 +895,7 @@ export function computeOffer(o: OfferInput): OfferResult { /* 按 ARCHITECTURE 5
 
 | 类别 | 内容 |
 | --- | --- |
-| 文档 | `PRD.md`、`ARCHITECTURE.md`、`IMPLEMENTATION.md`、`README.md`、`docs/apply-fieldnotes.md` |
+| 文档 | `README.md`（根目录入口）+ `docs/PRD.md`、`docs/ARCHITECTURE.md`、`docs/IMPLEMENTATION.md`、`docs/apply-fieldnotes.md` |
 | 代码 | `packages/core`、`packages/resume-kit`、`apps/server`、`apps/web`、`apps/mcp` |
 | 配置 | `.mcp.json`（MCP 注册）、`launchd` plist、`.env.example`（**不含模型配置**） |
 | Skill（AI 能力本体） | `skills/jd-collect/`、`skills/job-hunt/`、`skills/resume-tailor/`、`skills/job-prep/`、`skills/offer-decide/`；各含 `SKILL.md` + `references/`；`version` 写进 frontmatter |

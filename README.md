@@ -15,10 +15,10 @@
 | 文档 | 讲什么 | 什么时候看 |
 | --- | --- | --- |
 | **README.md（本文）** | 快速开始、详细使用方式、架构图、接口速查、约束 | 上手与日常查阅 |
-| [PRD.md](./PRD.md) | 需求、北极星指标、验收标准、已定决策 | 讨论「要不要做」 |
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | 设计原则、数据模型、API / MCP 契约、ADR | 改代码之前 |
-| [IMPLEMENTATION.md](./IMPLEMENTATION.md) | 8 周阶段计划、实测完成情况、测试口径 | 排期与验收 |
-| [docs/](./docs/README.md) | PR 记录与模板、提案 / 评审纪要的存放约定 | 提交或评审变更 |
+| [docs/PRD.md](./docs/PRD.md) | 需求、北极星指标、验收标准、已定决策 | 讨论「要不要做」 |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) | 设计原则、数据模型、API / MCP 契约、ADR | 改代码之前 |
+| [docs/IMPLEMENTATION.md](./docs/IMPLEMENTATION.md) | 8 周阶段计划、实测完成情况、测试口径 | 排期与验收 |
+| [docs/README.md](./docs/README.md) | 文档索引：主文档导航、PR 记录与模板、提案 / 评审纪要的约定 | 提交或评审变更 |
 
 ## 快速开始
 
@@ -338,7 +338,7 @@ scripts/build-site.mjs  官网构建（拷 site/ → site/dist + 写 build.json�
 scripts/install-launchd.sh  开机常驻 / 卸载 / 状态
 site/                 官网静态站：安装（给 Agent）/ 使用（给人）/ 设计说明；agent-install.md 是 Agent 读的纯文本
 .github/workflows/site.yml  推 main 时构建并发布到 GitHub Pages
-docs/                 PR 记录与模板、提案 / 评审纪要（见 docs/README.md）
+docs/                 主文档（PRD / ARCHITECTURE / IMPLEMENTATION）+ PR 记录、模板与提案（见 docs/README.md）
 data/                 运行期生成：land.db、.token、logs/、files/、snapshots/
 ```
 
@@ -387,7 +387,7 @@ data/                 运行期生成：land.db、.token、logs/、files/、snap
 
 ## 架构总览（详细）
 
-> 六张图从「谁和谁通信」一路拆到「一次写入怎么落库」。完整设计说明、DDL 与 API 契约见 [ARCHITECTURE.md](./ARCHITECTURE.md)，变更记录见 [docs/](./docs/README.md)。
+> 六张图从「谁和谁通信」一路拆到「一次写入怎么落库」。完整设计说明、DDL 与 API 契约见 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)，其余文档见 [docs/README.md](./docs/README.md)。
 > 下图用 Mermaid 书写，GitHub / 多数 Markdown 预览器可直接渲染；纯文本环境看图下的文字说明。
 
 ### 图 1 · 分层与进程总览

@@ -37,7 +37,7 @@
 - [ ] **Skill**：增删或升版本 → 同步 `SKILL_REGISTRY`、`SKILL.md` frontmatter、文档中的 Skill 数量；说明是否需要重跑 `scripts/install-skills.sh` 与重启 Agent
 - [ ] **API**：新增 / 变更路径 → 同步 `README.md`「本机接口」表与 `ARCHITECTURE.md` §6.2
 - [ ] **Web**：新增页面 / 路由 / 展示字段 → 说明是否涉及 `lazy()` 加载与 `data-testid`（E2E 依赖）
-- [ ] **文档**：`README.md` / `PRD.md` / `ARCHITECTURE.md` / `IMPLEMENTATION.md` / `docs/`
+- [ ] **文档**：`README.md`（根目录入口）与 `docs/`（PRD / ARCHITECTURE / IMPLEMENTATION 及 PR 记录）
 - [ ] **E2E**：断言数量变化 → 同步 `IMPLEMENTATION.md` §9.3 的阶段表格与合计数
 
 ## 验证
