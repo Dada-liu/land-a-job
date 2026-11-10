@@ -2,7 +2,7 @@ export interface PersonalInfo {
   name: string
   jobTitle: string
   workYears?: string
-  /** 期望城市：简历本身不一定要展示，但 fit 打分需要它（城市因子） */
+  /** 意向城市：模板在个人信息区展示（为空则不显示），fit 打分的城市因子也读它 */
   city?: string
   avatar?: string
   showAvatar?: boolean

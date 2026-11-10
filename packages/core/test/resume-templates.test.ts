@@ -21,7 +21,7 @@ describe('简历模板元数据', () => {
 
   it('未知 id 原样返回，方便页面在模板被删后仍能显示点什么', () => {
     expect(resumeTemplateLabel('legacy-template')).toBe('legacy-template')
-    expect(resumeTemplateLabel('classic')).toBe('经典模板')
+    expect(resumeTemplateLabel('classic')).toBe('现代简约')
   })
 
   it('isResumeTemplateId 拒绝非字符串与拼错的值', () => {

@@ -15,9 +15,8 @@ export interface ResumeTemplate {
   /** 一句话说明模板风格与适用场景，Agent 选模板时会读到 */
   description?: string
   component: FC<{ data: ResumeData }>
-  defaultResume: ResumeData
   editorModules: EditorModule[]
-  /** bleed = 左右分栏需要出血到纸边（经典模板的浅灰侧栏） */
+  /** bleed = 左右分栏需要出血到纸边（现代简约模板的浅灰侧栏） */
   contentLayout?: 'bleed' | 'inset'
 }
 

@@ -28,6 +28,8 @@ export {
 } from './model'
 export type { SectionKey } from './model'
 
+export { sampleResumeData } from './sample-resume'
+
 export {
   DEFAULT_TEMPLATE_ID,
   getTemplateById,

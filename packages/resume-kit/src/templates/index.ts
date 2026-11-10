@@ -2,19 +2,23 @@ import type { FC } from 'react'
 import type { ResumeData } from '../types/resume'
 import type { EditorModule, ResumeTemplate } from '../types/template'
 import { ClassicTemplate } from './classic/ClassicTemplate'
-import { classicDefaultResume, classicEditorModules } from './classic/resumeConfig'
+import { classicEditorModules } from './classic/resumeConfig'
 import { Template1 } from './template-1/Template1'
-import { template1DefaultResume, template1EditorModules } from './template-1/resumeConfig'
+import { template1EditorModules } from './template-1/resumeConfig'
 import { Template2 } from './template-2/Template2'
-import { template2DefaultResume, template2EditorModules } from './template-2/resumeConfig'
+import { template2EditorModules } from './template-2/resumeConfig'
 import { templateCatalog } from './meta'
 
 export { DEFAULT_TEMPLATE_ID, isTemplateId, templateCatalog, templateIds, templateName } from './meta'
 export type { TemplateMeta } from './meta'
 
+/**
+ * 模板定义里刻意没有「默认简历内容」：新建简历时填什么由 `sampleResumeData()` 决定，
+ * 三套模板共用同一份示例。以前每个模板各存一份 defaultResume，但没有任何地方读它，
+ * 改它也不会影响新建的简历——留着只会让人以为改这里就能改初始内容。
+ */
 interface TemplateDefinition {
   component: FC<{ data: ResumeData }>
-  defaultResume: ResumeData
   editorModules: EditorModule[]
   contentLayout?: 'bleed' | 'inset'
 }
@@ -22,18 +26,15 @@ interface TemplateDefinition {
 const definitions: Record<string, TemplateDefinition> = {
   classic: {
     component: ClassicTemplate,
-    defaultResume: classicDefaultResume,
     editorModules: classicEditorModules,
     contentLayout: 'bleed',
   },
   'template-1': {
     component: Template1,
-    defaultResume: template1DefaultResume,
     editorModules: template1EditorModules,
   },
   'template-2': {
     component: Template2,
-    defaultResume: template2DefaultResume,
     editorModules: template2EditorModules,
   },
 }

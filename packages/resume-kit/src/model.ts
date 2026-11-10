@@ -88,6 +88,9 @@ function normalizePersonalInfo(input: unknown): PersonalInfo {
   const info: PersonalInfo = { name: asString(raw.name), jobTitle: asString(raw.jobTitle) }
   const workYears = asOptionalString(raw.workYears)
   if (workYears) info.workYears = workYears
+  // 意向城市：编辑器表单、模板展示、fit 的城市因子都读它，别在规整时丢掉
+  const city = asOptionalString(raw.city)?.trim()
+  if (city) info.city = city
   const avatar = asOptionalString(raw.avatar)
   if (avatar) info.avatar = avatar
   if (typeof raw.showAvatar === 'boolean') info.showAvatar = raw.showAvatar

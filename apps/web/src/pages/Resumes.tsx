@@ -18,6 +18,8 @@ import {
   patchResume,
   type ResumeDto,
 } from '../lib/api'
+// 只取纯数据模块：走 index 会把编辑器与 PDF 库一起拉进首屏
+import { sampleResumeData } from '@land/resume-kit/sample-resume'
 import { diffResume } from '../lib/resumeDiff'
 import { Drawer } from '../components/Drawer'
 import { useConfirm } from '../components/ConfirmDialog'
@@ -49,6 +51,11 @@ export default function Resumes() {
   )
   const [newTitle, setNewTitle] = useState('')
   const [newTemplate, setNewTemplate] = useState<ResumeTemplateId>(RESUME_TEMPLATES[0])
+  /**
+   * 默认填一份示例内容：空白简历进编辑器只剩一张白纸，新用户看不出这套模板有哪几块。
+   * 想从零写的人取消勾选即可，所以这不是强制行为。
+   */
+  const [withSample, setWithSample] = useState(true)
 
   const reload = useCallback(async () => {
     try {
@@ -69,7 +76,11 @@ export default function Resumes() {
     if (!title) return
     setBusy('create')
     try {
-      const created = await createResume({ title, templateId: newTemplate })
+      const created = await createResume({
+        title,
+        templateId: newTemplate,
+        ...(withSample ? { data: sampleResumeData() } : {}),
+      })
       setCreating(false)
       setNewTitle('')
       navigate(`/resumes/${created.id}`)
@@ -206,6 +217,15 @@ export default function Resumes() {
               </button>
             ))}
           </div>
+          <label className="mt-3 flex w-fit cursor-pointer items-center gap-2 text-xs text-stone-600">
+            <input
+              type="checkbox"
+              checked={withSample}
+              onChange={(e) => setWithSample(e.target.checked)}
+              className="h-3.5 w-3.5 accent-stone-900"
+            />
+            先填一份示例内容，看清每块长什么样
+          </label>
         </section>
       ) : null}
 

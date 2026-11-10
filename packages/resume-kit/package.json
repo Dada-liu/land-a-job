@@ -10,6 +10,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./model": "./src/model.ts",
+    "./sample-resume": "./src/sample-resume.ts",
     "./templates": "./src/templates/index.ts",
     "./templates/meta": "./src/templates/meta.ts",
     "./editor/context": "./src/editor/context.tsx"

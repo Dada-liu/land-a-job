@@ -42,10 +42,13 @@ export function PersonalInfoEditor() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
+    const city = String(formData.get('city') ?? '').trim()
     updatePersonalInfo({
       name: formData.get('name') as string,
       jobTitle: formData.get('jobTitle') as string,
       workYears: formData.get('workYears') as string,
+      // 清空时置 undefined：整份 personalInfo 会被替换，JSON 序列化后这个键就不落库了
+      city: city || undefined,
       avatar: personalInfo.avatar,
       showAvatar: personalInfo.showAvatar,
       avatarShape: personalInfo.avatarShape,
@@ -193,6 +196,15 @@ export function PersonalInfoEditor() {
           defaultValue={personalInfo.workYears}
           className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm focus:border-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900"
           placeholder="如: 3年"
+        />
+      </div>
+      <div>
+        <label className="block text-xs text-stone-500 mb-1">意向城市</label>
+        <input
+          name="city"
+          defaultValue={personalInfo.city}
+          className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm focus:border-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900"
+          placeholder="如: 上海 / 远程"
         />
       </div>
       <div className="flex gap-2 pt-2">

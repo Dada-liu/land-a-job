@@ -48,6 +48,13 @@ describe('normalizeResumeData', () => {
     const data = normalizeResumeData({ skills: [{ id: 'skill-1', name: 'TS' }] })
     expect(data.skills[0]?.id).toBe('skill-1')
   })
+
+  it('意向城市不会被规整掉，纯空白当作没填', () => {
+    const data = normalizeResumeData({ personalInfo: { name: '李四', jobTitle: '前端', city: ' 上海 ' } })
+    expect(data.personalInfo.city).toBe('上海')
+    const blank = normalizeResumeData({ personalInfo: { name: '李四', jobTitle: '前端', city: '  ' } })
+    expect(blank.personalInfo.city).toBeUndefined()
+  })
 })
 
 describe('deepMerge', () => {
