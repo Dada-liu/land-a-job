@@ -524,14 +524,23 @@ export function scoreFit(job: FitJob, resume: FitResume, options: FitOptions = {
   if (jdTech.length > 0) {
     const matched = jdTech.filter((term) => resumeTerms.has(term))
     const missing = jdTech.filter((term) => !resumeTerms.has(term))
+    /**
+     * 只列前 6 个词，超过就补「等」。
+     *
+     * 不补的话会自相矛盾：写「命中 7 个」却只列出 6 个，读的人第一反应是
+     * 数字算错了，反而怀疑整条评分。分数本身一直是全量算的，这里只是把
+     * 展示截断说清楚。
+     */
+    const brief = (terms: string[], limit = 6) =>
+      terms.slice(0, limit).join('、') + (terms.length > limit ? '等' : '')
     factors.push({
       key: 'tech',
       weight: FIT_WEIGHTS.tech,
       score: matched.length / jdTech.length,
       evidence:
         `JD 技术词 ${jdTech.length} 个，命中 ${matched.length} 个` +
-        (matched.length > 0 ? `（${matched.slice(0, 6).join('、')}）` : '') +
-        (missing.length > 0 ? `；缺 ${missing.slice(0, 6).join('、')}` : ''),
+        (matched.length > 0 ? `（${brief(matched)}）` : '') +
+        (missing.length > 0 ? `；缺 ${brief(missing)}` : ''),
     })
   }
 

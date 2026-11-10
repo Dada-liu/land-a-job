@@ -249,3 +249,32 @@ describe('自我介绍参与打分', () => {
     expect(() => scoreFit(JOB, resume)).not.toThrow()
   })
 })
+
+describe('技术因子证据的展示截断', () => {
+  it('命中超过 6 个时补「等」，别让「命中 7 个」后面只列 6 个', () => {
+    const job = {
+      title: 'AI Agent 工程师',
+      jdText: 'React、TypeScript、Node.js、Docker、Kubernetes、CI/CD、Redis、PostgreSQL、RAG',
+      city: null,
+    }
+    const resume: FitResume = {
+      personalInfo: { jobTitle: 'AI Agent 工程师' },
+      skills: [
+        { name: 'React' }, { name: 'TypeScript' }, { name: 'Node.js' }, { name: 'Docker' },
+        { name: 'Kubernetes' }, { name: 'CI/CD' }, { name: 'Redis' }, { name: 'PostgreSQL' }, { name: 'RAG' },
+      ],
+    }
+    const tech = scoreFit(job, resume).factors.find((f) => f.key === 'tech')!
+    expect(tech.evidence).toContain('命中 9 个')
+    expect(tech.evidence).toContain('等')
+  })
+
+  it('不超过 6 个时不加「等」', () => {
+    const result = scoreFit(
+      { title: 'AI Agent 工程师', jdText: '熟悉 LangChain、Function Calling、MCP', city: null },
+      { personalInfo: { jobTitle: 'AI Agent 工程师' }, skills: [{ name: 'LangChain' }] },
+    )
+    const tech = result.factors.find((f) => f.key === 'tech')!
+    expect(tech.evidence).not.toContain('等')
+  })
+})
