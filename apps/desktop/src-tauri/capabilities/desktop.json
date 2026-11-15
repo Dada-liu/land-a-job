@@ -2,5 +2,15 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "desktop-local",
   "windows": ["main"],
-  "permissions": ["core:default", "store:default", "shell:allow-open"]
+  "permissions": [
+    "core:default",
+    "store:default",
+    "shell:allow-open",
+    "allow-get-saved-license",
+    "allow-activate-license",
+    "allow-deactivate-license",
+    "allow-verify-license",
+    "allow-get-renew-url",
+    "allow-get-agent-setup-info"
+  ]
 }

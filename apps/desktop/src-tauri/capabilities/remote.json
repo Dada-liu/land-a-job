@@ -5,5 +5,15 @@
   "remote": {
     "urls": ["http://127.0.0.1:*", "http://localhost:*"]
   },
-  "permissions": ["core:default", "store:default", "shell:allow-open"]
+  "permissions": [
+    "core:default",
+    "store:default",
+    "shell:allow-open",
+    "allow-get-saved-license",
+    "allow-activate-license",
+    "allow-deactivate-license",
+    "allow-verify-license",
+    "allow-get-renew-url",
+    "allow-get-agent-setup-info"
+  ]
 }
