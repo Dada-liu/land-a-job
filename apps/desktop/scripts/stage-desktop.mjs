@@ -73,9 +73,12 @@ async function main() {
   )
 
   console.log('[stage] 安装生产依赖…')
-  const npm = spawnSync('npm', ['install', '--omit=dev', '--no-audit', '--no-fund', '--loglevel=error'], {
+  // Windows 上 npm 是 npm.cmd，必须经 shell 启动；macOS/Linux 直接执行
+  const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+  const npm = spawnSync(npmCmd, ['install', '--omit=dev', '--no-audit', '--no-fund', '--loglevel=error'], {
     cwd: outDir,
     stdio: 'inherit',
+    shell: process.platform === 'win32',
   })
   if (npm.status !== 0) {
     console.error('[stage] 生产依赖安装失败')

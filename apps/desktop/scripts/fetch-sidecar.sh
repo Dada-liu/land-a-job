@@ -25,7 +25,7 @@ if [ -z "$TRIPLE" ]; then
 fi
 
 case "$TRIPLE" in
-  *-apple-darwin) DIST="node-v${NODE_VERSION}-darwin-$([ "${TRIPLE%%-*}" = "aarch64" ] && echo arm64 || echo x64)"; EXT="tar.gz"; BIN="node" ;;
+  *-apple-darwin) DIST="node-v${NODE_VERSION}-darwin-$([ "${TRIPLE%%-*}" = "aarch64" ] && echo arm64 || echo x64)"; EXT="tar.gz"; BIN="bin/node" ;;
   *-pc-windows-msvc) DIST="node-v${NODE_VERSION}-win-x64"; EXT="zip"; BIN="node.exe" ;;
   *) echo "未支持的 target triple：$TRIPLE" >&2; exit 1 ;;
 esac
