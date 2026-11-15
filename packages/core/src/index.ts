@@ -8,7 +8,7 @@
  * 校验方式：grep -rE "openai|@anthropic-ai|langchain" packages/core/package.json
  */
 
-export const VERSION = '0.1.0'
+export const VERSION = '0.2.0'
 
 /** MCP / Web / 日志共用的服务标识，用于端口探测时判断「是不是自己人」 */
 export const SERVICE_NAME = 'land-a-job'
