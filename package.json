@@ -6,7 +6,7 @@
   "type": "module",
   "description": "本地优先、Agent 原生的求职流水线",
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "workspaces": [
     "packages/*",
@@ -39,7 +39,7 @@
     "site:dev": "node scripts/build-site.mjs --serve"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
+    "@types/node": "^24",
     "concurrently": "^10.0.6",
     "typescript": "^6.0.3",
     "vitest": "^5.1.0"

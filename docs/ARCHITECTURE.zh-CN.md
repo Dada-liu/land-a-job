@@ -7,7 +7,7 @@
 | 版本 | v1.0 |
 | 对应 PRD | [PRD.zh-CN.md](./PRD.zh-CN.md) v1.0 |
 | 实施计划 | [IMPLEMENTATION.zh-CN.md](./IMPLEMENTATION.zh-CN.md) |
-| 目标环境 | Node ≥ 22 · macOS / Linux · 单用户本地优先 |
+| 目标环境 | Node ≥ 24 · macOS / Linux · 单用户本地优先 |
 
 ---
 
@@ -152,7 +152,7 @@ land-a-job/
 | 层 | 选择 | 理由 | 备选与否决原因 |
 | --- | --- | --- | --- |
 | 语言 | TypeScript 5.x strict | 全栈同语言，schema 可共享 | — |
-| 运行时 | Node 22 LTS | 本机已验证 v22.22；原生 fetch/WebSocket 客户端 | Bun：生态尚不稳 |
+| 运行时 | Node 24 LTS | 本机已验证 v24.19；原生 fetch/WebSocket 客户端 | Bun：生态尚不稳 |
 | 包管理 | npm workspaces | 已装 npm 10，零额外工具 | pnpm：更快但多一个依赖 |
 | HTTP | Fastify 5 | schema 校验、性能好、插件生态 | Express：无内建校验 |
 | DB | SQLite + better-sqlite3（WAL） | 同步 API 简单、事务可靠、单文件易备份 | `node:sqlite`：API 仍标 experimental，作降级备选；Postgres：本地过重 |

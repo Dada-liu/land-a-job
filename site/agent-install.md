@@ -16,7 +16,7 @@ Run the steps **in order**. Before each step, tell the user in one sentence what
 ## 0 · Check the environment first
 
 ```bash
-node -v   # needs >= 22
+node -v   # needs >= 24
 npm -v    # needs >= 10
 git --version
 ```
@@ -131,7 +131,7 @@ npm run launchd:uninstall   # remove
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `npm run build` reports TS errors | Node version too old | Confirm `node -v` ≥ 22 |
+| `npm run build` reports TS errors | Node version too old | Confirm `node -v` ≥ 24 |
 | Page won't open | Built but not started, or start failed | Check the terminal output and `data/logs/` |
 | API returns 401 | Missing `X-Land-Token` | The browser derives it same-origin; scripts read it from `data/.token` |
 | Agent says "can't reach the tools" | MCP path isn't absolute / not built | Use an absolute `apps/mcp/dist/index.js`; run `npm run build` first |

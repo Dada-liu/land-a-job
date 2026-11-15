@@ -275,7 +275,7 @@ By D2, the product's AI capability = installed skills × the user's agent × thi
 | Recoverability | Daily automatic snapshots, 7 kept; `land restore <snapshot>` |
 | Observability | Structured logs (file + stderr); every agent write records actor and source (mcp/web/cli) |
 | Privacy | Phone/email masked in lists; evidence screenshots stay local; exports masked by default |
-| Compatibility | macOS / Linux first; Node ≥ 22; Chrome/Edge/Safari latest two majors |
+| Compatibility | macOS / Linux first; Node ≥ 24; Chrome/Edge/Safari latest two majors |
 | Compliance | Respect target-site ToS and robots; never bypass CAPTCHAs; automated submission always human-confirmed |
 
 ---

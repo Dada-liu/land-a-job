@@ -118,7 +118,7 @@ npm run skills:install
 
 | 依赖 | 要求 | 说明 |
 | --- | --- | --- |
-| Node.js | ≥ 22 | `package.json` 的 `engines` 已锁定，先 `node -v` 确认 |
+| Node.js | ≥ 24 | `package.json` 的 `engines` 已锁定，先 `node -v` 确认 |
 | npm | ≥ 10 | npm workspaces，不需要 pnpm / yarn |
 | 操作系统 | macOS / Linux | `launchd` 常驻脚本仅 macOS；其它系统用 `npm start` 或自己的进程守护 |
 | Chrome / Edge | **可选** | 只有两处需要：无头导出简历 PDF、投递助手表单填充。缺了返回 `CHROME_NOT_FOUND` 并降级，不影响看板与 JD 采集 |

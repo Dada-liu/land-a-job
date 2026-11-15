@@ -116,7 +116,7 @@ Hard rules (enforced by both skills and MCP):
 
 | Dependency | Requirement | Notes |
 | --- | --- | --- |
-| Node.js | ≥ 22 | `engines` is pinned; check with `node -v` |
+| Node.js | ≥ 24 | `engines` is pinned; check with `node -v` |
 | npm | ≥ 10 | npm workspaces; no pnpm / yarn needed |
 | OS | macOS / Linux | The `launchd` script is macOS-only; elsewhere use `npm start` or your own supervisor |
 | Chrome / Edge | **Optional** | Only two features need it: headless PDF export and the apply assistant's form filling. Without it you get `CHROME_NOT_FOUND` and a graceful fallback; the board and JD fetching still work |

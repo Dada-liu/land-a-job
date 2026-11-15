@@ -7,7 +7,7 @@
 | Version | v1.0 |
 | Related | [PRD.md](./PRD.md) · [ARCHITECTURE.md](./ARCHITECTURE.md) |
 | Timeline | ~8 weeks (one person, 25–30 h/week, ~40 person-days) |
-| Prerequisites | Node ≥ 22 (verified v22.22.2), npm ≥ 10, Chrome (export/automation) |
+| Prerequisites | Node ≥ 24 (verified v24.19.0), npm ≥ 10, Chrome (export/automation) |
 | Status | P0–P7 complete: 286 unit tests, 373 E2E assertions, all green |
 
 ---

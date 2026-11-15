@@ -7,7 +7,7 @@
 | Version | v1.0 |
 | PRD | [PRD.md](./PRD.md) v1.0 |
 | Implementation | [IMPLEMENTATION.md](./IMPLEMENTATION.md) |
-| Target | Node ≥ 22 · macOS / Linux · single-user local-first |
+| Target | Node ≥ 24 · macOS / Linux · single-user local-first |
 
 ---
 
@@ -151,7 +151,7 @@ land-a-job/
 | Layer | Choice | Why | Alternatives rejected |
 | --- | --- | --- | --- |
 | Language | TypeScript 5.x strict | One language across the stack, shared schemas | — |
-| Runtime | Node 22 LTS | Verified v22.x locally; native fetch/WebSocket client | Bun: ecosystem not settled |
+| Runtime | Node 24 LTS | Verified v24.x locally; native fetch/WebSocket client | Bun: ecosystem not settled |
 | Package manager | npm workspaces | npm 10 already installed, zero extra tooling | pnpm: faster but another dependency |
 | HTTP | Fastify 5 | Schema validation, performance, plugin ecosystem | Express: no built-in validation |
 | Database | SQLite + better-sqlite3 (WAL) | Synchronous API, reliable transactions, single-file backup | `node:sqlite`: still experimental; Postgres: too heavy locally |

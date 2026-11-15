@@ -7,7 +7,7 @@
 | 版本 | v1.0 |
 | 关联 | [PRD.zh-CN.md](./PRD.zh-CN.md) · [ARCHITECTURE.zh-CN.md](./ARCHITECTURE.zh-CN.md) |
 | 总工期 | 约 8 周（单人，25–30 h/周，约 40 人日） |
-| 前置环境 | Node ≥ 22（已验证 v22.22.2）、npm ≥ 10、Chrome（导出/自动化） |
+| 前置环境 | Node ≥ 24（已验证 v24.19.0）、npm ≥ 10、Chrome（导出/自动化） |
 | 实现进度 | P0–P7 全部完成：`npm test` 286 例、`npm run e2e` 373 项断言全绿 |
 
 ---
@@ -75,7 +75,7 @@ npm init -y
     "typescript": "^5.7.0",
     "vitest": "^2.1.0",
     "@playwright/test": "^1.49.0",
-    "@types/node": "^22.10.0"
+    "@types/node": "^24"
   }
 }
 ```

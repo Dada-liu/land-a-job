@@ -16,7 +16,7 @@
 ## 0 · 先确认环境
 
 ```bash
-node -v   # 需要 >= 22
+node -v   # 需要 >= 24
 npm -v    # 需要 >= 10
 git --version
 ```
@@ -131,7 +131,7 @@ npm run launchd:uninstall   # 卸载
 
 | 现象 | 原因 | 处理 |
 | --- | --- | --- |
-| `npm run build` 报 TS 错误 | Node 版本太低 | 确认 `node -v` ≥ 22 |
+| `npm run build` 报 TS 错误 | Node 版本太低 | 确认 `node -v` ≥ 24 |
 | 页面打不开 | 只 build 没 start，或 start 失败 | 看终端输出与 `data/logs/` |
 | 接口 401 | 缺 `X-Land-Token` | 浏览器同源会自动取；脚本从 `data/.token` 读 |
 | Agent 说「工具连不上」 | MCP 路径不是绝对路径 / 没 build | 用绝对路径的 `apps/mcp/dist/index.js`，先 `npm run build` |

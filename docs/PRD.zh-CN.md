@@ -273,7 +273,7 @@
 | 可恢复 | 每日自动快照，保留 7 天；`land restore <snapshot>` 可回滚 |
 | 可观测 | 结构化日志（文件 + stderr）；每次 Agent 写操作记录 actor + 来源（mcp/web/cli） |
 | 隐私 | 手机号/邮箱在列表页脱敏；截图证据仅存本地；导出文件默认脱敏 |
-| 兼容 | macOS / Linux 优先；Node ≥ 22；浏览器 Chrome/Edge/Safari 最近两个大版本 |
+| 兼容 | macOS / Linux 优先；Node ≥ 24；浏览器 Chrome/Edge/Safari 最近两个大版本 |
 | 合规 | 遵守目标站点 ToS 与 robots；不绕过验证码；自动提交必须人工确认 |
 
 ---
