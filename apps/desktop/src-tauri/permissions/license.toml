@@ -1,0 +1,33 @@
+# 应用自定义命令的 ACL 权限（Tauri 2.11+ 起 app 命令受 capability 管控，
+# 必须在 permissions/ 里声明标识符，capability 才能引用 allow-*）。
+# 授权相关命令集中在这一份文件里维护。
+
+[[permission]]
+identifier = "allow-activate-license"
+description = "激活商城授权码（首次 verify 即绑定设备，一机一码）"
+commands.allow = ["activate_license"]
+
+[[permission]]
+identifier = "allow-verify-license"
+description = "启动时联网校验本地已保存的授权码"
+commands.allow = ["verify_license"]
+
+[[permission]]
+identifier = "allow-deactivate-license"
+description = "解绑本设备并清除本地授权记录"
+commands.allow = ["deactivate_license"]
+
+[[permission]]
+identifier = "allow-get-saved-license"
+description = "读取本地已保存的授权码（激活页展示用）"
+commands.allow = ["get_saved_license"]
+
+[[permission]]
+identifier = "allow-get-renew-url"
+description = "获取商城商品页地址（续费入口）"
+commands.allow = ["get_renew_url"]
+
+[[permission]]
+identifier = "allow-get-agent-setup-info"
+description = "获取 Agent 连接桌面应用所需的本机路径（数据目录/Skill 目录/MCP 入口）"
+commands.allow = ["get_agent_setup_info"]
