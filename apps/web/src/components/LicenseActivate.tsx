@@ -67,6 +67,8 @@ export default function LicenseActivate({
       setSavedKey(null)
       setKey('')
       toast.push('已解绑本设备', 'success')
+      // 让 Gate 重新校验：status 从 expired/invalid 回到 none，清掉到期提示
+      onActivated()
     } catch (error) {
       toast.push(`解绑失败：${errorText(error)}`, 'error')
     } finally {
