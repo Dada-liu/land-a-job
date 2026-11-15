@@ -353,7 +353,8 @@ fn main() {
         .expect("error while building tauri application")
         .run(|app, event| {
             if let tauri::RunEvent::Ready = event {
-                let app_handle = app.handle().clone();
+                // v2 的 run 回调里 app 本身就是 &AppHandle
+                let app_handle = app.clone();
                 tauri::async_runtime::spawn(async move {
                     let port = match start_backend(app_handle.clone()).await {
                         Ok(port) => port,
