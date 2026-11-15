@@ -1,0 +1,17 @@
+{
+  "name": "@land/desktop",
+  "version": "0.2.0",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "description": "Land a Job 桌面客户端（Tauri 壳 + 内嵌服务端）",
+  "scripts": {
+    "stage": "node scripts/stage-desktop.mjs",
+    "build": "tauri build",
+    "dev": "tauri dev",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.5.0"
+  }
+}

@@ -12,6 +12,7 @@ import { qk } from '../lib/queries'
 import { AGENT_INSTALL_URL_ZH, GITHUB_URL, SITE_URL_ZH } from '../lib/links'
 import { Button, Card, EmptyState, PageHeader, SectionTitle } from '../components/ui'
 import { errorText, useToast } from '../components/Toast'
+import { getAgentSetupInfo, isDesktop, type AgentSetupInfo } from '../lib/desktop'
 
 function bytes(value: number): string {
   if (value < 1024) return `${value} B`
@@ -33,6 +34,41 @@ export default function Settings() {
   const client = useQueryClient()
   const toast = useToast()
   const [downloading, setDownloading] = useState(false)
+  const [agentInfo, setAgentInfo] = useState<AgentSetupInfo | null>(null)
+
+  const desktop = isDesktop()
+  useEffect(() => {
+    if (!desktop) return
+    getAgentSetupInfo()
+      .then(setAgentInfo)
+      .catch(() => setAgentInfo(null))
+  }, [desktop])
+
+  const copy = async (text: string, what: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.push(`${what}已复制`, 'success')
+    } catch {
+      toast.push('复制失败，请手动选择复制', 'error')
+    }
+  }
+
+  const mcpConfig = agentInfo
+    ? JSON.stringify(
+        {
+          mcpServers: {
+            'land-a-job': {
+              type: 'stdio',
+              command: agentInfo.serverBin,
+              args: [agentInfo.mcpEntry],
+              env: { LAND_DATA_DIR: agentInfo.dataDir },
+            },
+          },
+        },
+        null,
+        2,
+      )
+    : ''
 
   const snapshots = useQuery({ queryKey: qk.snapshots, queryFn: listSnapshots })
   const skills = useQuery({ queryKey: qk.skills, queryFn: getSkills, staleTime: 60_000 })
@@ -82,6 +118,71 @@ export default function Settings() {
           </Button>
         }
       />
+
+      {desktop ? (
+        <Card className="p-4" data-testid="agent-connect">
+          <SectionTitle extra="桌面应用运行时">通过 Agent 连接桌面应用</SectionTitle>
+          <p className="mb-3 text-[11px] leading-relaxed text-stone-500">
+            桌面应用启动时本地服务已经在跑。Agent（WorkBuddy / Kimi 等）只要装好 Skill、注册下面的 MCP，
+            就能直接读写这里的数据——不需要再手动起服务。
+          </p>
+          <ol className="mb-3 list-decimal space-y-2.5 pl-4 text-[11px] leading-relaxed text-stone-600">
+            <li>
+              打开你的 Agent，把「数据目录」给它。这个目录装着你的本机数据，只交给本机的 Agent，不要发到网上。
+              <span className="mt-1 flex flex-wrap items-center gap-2">
+                <code className="break-all rounded bg-stone-50 px-1.5 py-0.5 font-mono text-[10px] text-stone-500">
+                  {agentInfo?.dataDir ?? '读取中…'}
+                </code>
+                <button
+                  type="button"
+                  disabled={!agentInfo}
+                  onClick={() => agentInfo && copy(agentInfo.dataDir, '数据目录')}
+                  className="text-stone-500 underline decoration-stone-300 underline-offset-2 hover:text-stone-800"
+                >
+                  复制
+                </button>
+              </span>
+            </li>
+            <li>
+              让 Agent 把「Skill 目录」软链到它的 skills 目录（如 ~/.workbuddy/skills、~/.claude/skills）；
+              装完<span className="font-medium text-stone-700">必须重启 Agent</span>才会加载。
+              <span className="mt-1 flex flex-wrap items-center gap-2">
+                <code className="break-all rounded bg-stone-50 px-1.5 py-0.5 font-mono text-[10px] text-stone-500">
+                  {agentInfo?.skillsDir ?? '读取中…'}
+                </code>
+                <button
+                  type="button"
+                  disabled={!agentInfo}
+                  onClick={() => agentInfo && copy(agentInfo.skillsDir, 'Skill 目录')}
+                  className="text-stone-500 underline decoration-stone-300 underline-offset-2 hover:text-stone-800"
+                >
+                  复制
+                </button>
+              </span>
+            </li>
+            <li>
+              把下面的 MCP 配置加进 Agent 的 MCP 配置（WorkBuddy 是 ~/.workbuddy/mcp.json）。
+              只加 mcpServers 这一项，<span className="font-medium text-stone-700">不要覆盖</span>已有的其它 server：
+              <pre className="mt-1 overflow-x-auto rounded bg-stone-50 p-2 font-mono text-[10px] leading-relaxed text-stone-600">{mcpConfig}</pre>
+              <button
+                type="button"
+                disabled={!mcpConfig}
+                onClick={() => copy(mcpConfig, 'MCP 配置')}
+                className="mt-1 text-stone-500 underline decoration-stone-300 underline-offset-2 hover:text-stone-800"
+              >
+                复制 MCP 配置
+              </button>
+            </li>
+            <li>
+              验证：对 Agent 说「调用 get_app_status 看看状态」，能返回服务与数据库状态即已连通；
+              再说「列出我的简历」确认能读写。
+            </li>
+          </ol>
+          <p className="text-[10px] leading-relaxed text-stone-400">
+            配置里用的是应用自带的运行时，本机不需要另外安装 Node。桌面应用没开时，MCP 会在第一次调用时自己把本地服务拉起。
+          </p>
+        </Card>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="p-4">

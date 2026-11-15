@@ -24,6 +24,7 @@ import Pipeline from './pages/Pipeline'
 import NotFound from './pages/NotFound'
 import Resumes from './pages/Resumes'
 import { CommandPalette } from './components/CommandPalette'
+import LicenseGate from './components/LicenseGate'
 
 // 编辑页带着 resume-kit（内含 jsPDF / html-to-image，约 500KB），按路由懒加载：
 // 只看总览或列表的人不该为此付出首屏时间。
@@ -165,7 +166,8 @@ export default function App() {
   const fullBleed = /^\/resumes\/[^/]+$/.test(location.pathname) || location.pathname === '/pipeline'
 
   return (
-    <div className="flex h-full">
+    <LicenseGate>
+      <div className="flex h-full">
       {/* 移动端：侧栏是浮层，点遮罩关闭；桌面端（lg 以上）恢复常驻 */}
       {navOpen ? (
         <button
@@ -320,6 +322,7 @@ export default function App() {
       </div>
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
-    </div>
+      </div>
+    </LicenseGate>
   )
 }
