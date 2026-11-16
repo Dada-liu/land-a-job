@@ -104,15 +104,14 @@ async function main() {
     process.exit(1)
   }
 
-  // 自检：服务端入口必须能解析 @land/core，否则打包出来的应用必然「打不开」
-  const entry = path.join(outDir, 'apps', 'server', 'dist', 'index.js')
-  const probe = spawnSync(
-    process.execPath,
-    ['--input-type=module', '-e', `import { createRequire } from 'node:module'; createRequire('${entry}').resolve('@land/core')`],
-    { encoding: 'utf8', timeout: 15000 },
-  )
+  // 自检：服务端入口必须能解析 @land/core，否则打包出来的应用必然「打不开」。
+  // 探针文件放进 node_modules 里运行（不在 -e 字符串里拼路径，Windows 转义易碎）。
+  const probeFile = path.join(outDir, 'node_modules', '.selfcheck.cjs')
+  await writeFile(probeFile, `try { require.resolve('@land/core') } catch (e) { console.error(e.code || e.message); process.exit(1) }`)
+  const probe = spawnSync(process.execPath, [probeFile], { encoding: 'utf8', timeout: 15000 })
+  await rm(probeFile, { force: true })
   if (probe.status !== 0) {
-    console.error(`[stage] 自检失败：服务端入口解析不到 @land/core：${probe.stderr?.trim() || `exit ${probe.status}`}`)
+    console.error(`[stage] 自检失败：解析不到 @land/core：${probe.stderr?.trim() || `exit ${probe.status}`}`)
     process.exit(1)
   }
 
