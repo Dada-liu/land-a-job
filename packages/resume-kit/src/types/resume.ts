@@ -49,6 +49,15 @@ export interface Contact {
   url?: string
 }
 
+/**
+ * 可加空行的区块。
+ *
+ * 空行的唯一作用是**撑开区块间距**：一行 = 一个正文行高，写在区块内容的最后面。
+ * 只有「经典模板（自由编辑）」会渲染它，但字段跟着 data 一起存整份 JSON，
+ * 其它模板读到也无害（忽略即可）。
+ */
+export type SectionSpacingKey = 'personal' | 'experiences' | 'projects' | 'educations' | 'skills' | 'summary'
+
 export interface ResumeData {
   personalInfo: PersonalInfo
   selfIntroduction: string
@@ -57,4 +66,6 @@ export interface ResumeData {
   skills: Skill[]
   projects: Project[]
   contacts: Contact[]
+  /** 每个区块末尾追加的空行数（缺省 = 0） */
+  sectionSpacing?: Partial<Record<SectionSpacingKey, number>>
 }
