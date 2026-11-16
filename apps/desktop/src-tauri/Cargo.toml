@@ -1,6 +1,6 @@
 [package]
 name = "land-a-job-desktop"
-version = "0.2.2"
+version = "0.3.0"
 description = "Land a Job 桌面客户端：本地优先、Agent 原生的求职流水线"
 edition = "2021"
 rust-version = "1.77.2"

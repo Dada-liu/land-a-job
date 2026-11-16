@@ -16,7 +16,7 @@ const desktopDir = path.resolve(here, '..')
 const repoRoot = path.resolve(desktopDir, '../..')
 const outDir = path.join(desktopDir, 'resources', 'app')
 
-const VERSION = '0.2.2'
+const VERSION = '0.3.0'
 
 async function mustExist(dir, hint) {
   try {
