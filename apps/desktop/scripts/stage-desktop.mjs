@@ -16,7 +16,7 @@ const desktopDir = path.resolve(here, '..')
 const repoRoot = path.resolve(desktopDir, '../..')
 const outDir = path.join(desktopDir, 'resources', 'app')
 
-const VERSION = '0.2.0'
+const VERSION = '0.2.1'
 
 async function mustExist(dir, hint) {
   try {
@@ -85,6 +85,14 @@ async function main() {
     process.exit(npm.status ?? 1)
   }
 
+  // @land/core 用 file: 依赖装进来的是符号链接（../../packages/core），
+  // Tauri 打包 resources 时会静默丢弃符号链接 → 安装后的应用缺包、sidecar 起不来。
+  // 这里把符号链接换成实体目录，确保 bundle 自包含。
+  const coreNmDir = path.join(outDir, 'node_modules', '@land', 'core')
+  await rm(coreNmDir, { force: true })
+  await mkdir(path.dirname(coreNmDir), { recursive: true })
+  await cp(coreOut, coreNmDir, { recursive: true })
+
   // 原生模块必须在当前平台可用，否则服务端起来即崩
   const sqliteNative = [
     path.join(outDir, 'node_modules/better-sqlite3/build/Release/better_sqlite3.node'),
@@ -93,6 +101,18 @@ async function main() {
   const hasNative = await Promise.all(sqliteNative.map((p) => access(p).then(() => true, () => false)))
   if (!hasNative.some(Boolean)) {
     console.error('[stage] better-sqlite3 原生绑定缺失，服务端将无法启动')
+    process.exit(1)
+  }
+
+  // 自检：服务端入口必须能解析 @land/core，否则打包出来的应用必然「打不开」
+  const entry = path.join(outDir, 'apps', 'server', 'dist', 'index.js')
+  const probe = spawnSync(
+    process.execPath,
+    ['--input-type=module', '-e', `import { createRequire } from 'node:module'; createRequire('${entry}').resolve('@land/core')`],
+    { encoding: 'utf8', timeout: 15000 },
+  )
+  if (probe.status !== 0) {
+    console.error(`[stage] 自检失败：服务端入口解析不到 @land/core：${probe.stderr?.trim() || `exit ${probe.status}`}`)
     process.exit(1)
   }
 

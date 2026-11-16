@@ -333,6 +333,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             // 第二个实例：把已有窗口拉到前台
             if let Some(window) = app.get_webview_window("main") {
@@ -359,8 +360,18 @@ fn main() {
                     let port = match start_backend(app_handle.clone()).await {
                         Ok(port) => port,
                         Err(e) => {
+                            // 本地服务起不来时不能退化成「连不上 4399 的白屏窗口」：
+                            // 明确提示并退出，避免用户看到「打不开」的假死状态。
                             eprintln!("[backend] 启动失败：{e}");
-                            4399
+                            use tauri_plugin_dialog::DialogExt;
+                            let _ = app_handle
+                                .dialog()
+                                .message(format!("本地服务启动失败：{e}\n\n请重启应用；若多次失败请联系支持。"))
+                                .title("Land a Job")
+                                .kind(tauri_plugin_dialog::MessageDialogKind::Error)
+                                .blocking_show();
+                            app_handle.exit(1);
+                            return;
                         }
                     };
                     let url = format!("http://127.0.0.1:{port}");
