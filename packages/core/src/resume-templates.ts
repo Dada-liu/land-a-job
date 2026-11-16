@@ -8,7 +8,7 @@
  *
  * 本文件刻意不 import zod：Web 端只想取几个字符串常量，不该把校验库拖进首屏。
  */
-export const RESUME_TEMPLATES = ['classic', 'template-1', 'template-2'] as const
+export const RESUME_TEMPLATES = ['classic', 'template-1', 'template-2', 'classic-freeform'] as const
 
 export type ResumeTemplateId = (typeof RESUME_TEMPLATES)[number]
 
@@ -16,6 +16,7 @@ export const RESUME_TEMPLATE_LABELS: Record<ResumeTemplateId, string> = {
   classic: '现代简约',
   'template-1': '经典模板',
   'template-2': '传统表格',
+  'classic-freeform': '经典模板（自由编辑）',
 }
 
 /** 一句话说明每个模板长什么样、适合投什么岗位（列表页选模板时要给人看的） */
@@ -23,6 +24,7 @@ export const RESUME_TEMPLATE_HINTS: Record<ResumeTemplateId, string> = {
   classic: '左侧浅灰侧栏放头像与联系方式，右侧主栏排经历，分栏清晰，适合互联网与设计类岗位',
   'template-1': '单栏通栏，顶部头像加横向联系方式，标题醒目、层次清楚，大多数岗位都能用',
   'template-2': '顶部信息表格，模块紧凑规整，适合国企和传统行业',
+  'classic-freeform': '版式同「经典模板」，区别是文字直接在纸面上改：点哪句改哪句，边看排版边抠字',
 }
 
 export const DEFAULT_RESUME_TEMPLATE: ResumeTemplateId = 'classic'

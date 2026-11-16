@@ -6,6 +6,7 @@ import {
   EDITOR_MODULES,
   EditorPanel,
   exportResumePdf,
+  FreeformEditProvider,
   normalizeResumeData,
   ResumeEditorProvider,
   ResumePreview,
@@ -286,6 +287,15 @@ export default function ResumeEditor() {
           <span className="hidden items-center gap-1 text-[11px] text-stone-400 sm:flex">
             <span className={`${SAVE_COLOR[saveState]}`}>{SAVE_LABEL[saveState]}</span>
             {saveState === 'saved' && savedAt ? <span className="text-stone-300">· {savedAt}</span> : null}
+            {/* 自由编辑模板不点一下不知道纸面能改，这里给一句提示。
+                分隔符「·」必须单独放一个 span：它跟文案在同一个文本节点里时，
+                整串（「· 纸面可…」）对不上字典 key，英文界面会漏中文。 */}
+            {resume.templateId === 'classic-freeform' ? (
+              <>
+                <span className="text-stone-300">·</span>
+                <span className="text-stone-400">纸面可直接点字修改；区块右下角可加减空行</span>
+              </>
+            ) : null}
           </span>
         </div>
 
@@ -387,12 +397,19 @@ export default function ResumeEditor() {
           activeEditor={activeEditor}
           onActiveEditorChange={setActiveEditor}
         >
-          <ResumePreview
-            ref={previewRef}
-            data={draft}
-            templateId={resume.templateId}
-            footer={saveState === 'saving' ? '正在保存…' : undefined}
-          />
+          {/*
+            「经典模板（自由编辑）」靠这层上下文把纸面上的改动写回 draft；
+            其它模板不消费它，包着也没有副作用。注意它必须包住 ResumePreview——
+            模板组件是被 ResumePages 渲染的，上下文靠 React 树传下去。
+          */}
+          <FreeformEditProvider value={draft} onChange={handleChange}>
+            <ResumePreview
+              ref={previewRef}
+              data={draft}
+              templateId={resume.templateId}
+              footer={saveState === 'saving' ? '正在保存…' : undefined}
+            />
+          </FreeformEditProvider>
           {panelOpen ? (
             <div className="hidden shrink-0 md:block">
               <EditorPanel

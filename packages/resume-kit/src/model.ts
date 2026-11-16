@@ -5,6 +5,7 @@ import type {
   PersonalInfo,
   Project,
   ResumeData,
+  SectionSpacingKey,
   Skill,
 } from './types/resume'
 
@@ -167,7 +168,30 @@ export function normalizeResumeData(input: unknown): ResumeData {
     skills: toArray(raw.skills).map(normalizeSkill),
     projects: toArray(raw.projects).map(normalizeProject),
     contacts: toArray(raw.contacts ?? raw.contact).map(normalizeContact),
+    ...normalizeSectionSpacing(raw.sectionSpacing),
   }
+}
+
+const SPACING_KEYS: readonly SectionSpacingKey[] = ['personal', 'experiences', 'projects', 'educations', 'skills', 'summary']
+
+/** 空行数上限：再多已经超过一页，属于误操作，不让人一眼看不到底 */
+export const MAX_SECTION_SPACING = 8
+
+/**
+ * 区块末尾的空行数。
+ *
+ * 必须在这里收口：编辑器载入时会跑一遍 normalizeResumeData，它只返回认识的字段——
+ * 不在这里转正的话，`sectionSpacing` 一刷新就被丢掉，用户加的空行白加。
+ */
+function normalizeSectionSpacing(input: unknown): Pick<ResumeData, 'sectionSpacing'> {
+  const raw = asRecord(input)
+  const spacing: Partial<Record<SectionSpacingKey, number>> = {}
+  for (const key of SPACING_KEYS) {
+    const value = Number(raw[key])
+    if (!Number.isFinite(value) || value <= 0) continue
+    spacing[key] = Math.min(MAX_SECTION_SPACING, Math.round(value))
+  }
+  return Object.keys(spacing).length > 0 ? { sectionSpacing: spacing } : {}
 }
 
 export function normalizeSectionItem(section: SectionKey, input: unknown) {
