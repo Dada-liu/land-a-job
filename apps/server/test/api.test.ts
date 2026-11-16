@@ -173,6 +173,23 @@ describe('岗位 CRUD', () => {
     expect(list.body.data[0].applicationId).toBe(application.body.data.id)
   })
 
+  it('按城市筛选岗位，搜索也能命中城市', async () => {
+    const company = await app.call('POST', '/companies', { name: '城市测试公司', priority: 3 })
+    const companyId = company.body.data.id
+    await app.call('POST', '/jobs', { companyId, title: '前端工程师', city: '上海·浦东' })
+    await app.call('POST', '/jobs', { companyId, title: '后端工程师', city: '北京' })
+
+    // 下拉给的是完整城市名，用户手打的是「上海」——包含匹配让两种写法都可用
+    const shanghai = await app.call('GET', `/jobs?city=${encodeURIComponent('上海')}`)
+    expect(shanghai.body.data.map((job: { city: string }) => job.city)).toEqual(['上海·浦东'])
+
+    const byText = await app.call('GET', `/jobs?q=${encodeURIComponent('北京')}`)
+    expect(byText.body.data.map((job: { title: string }) => job.title)).toEqual(['后端工程师'])
+
+    const cities = await app.call('GET', '/jobs/cities')
+    expect(cities.body.data.map((item: { city: string }) => item.city)).toEqual(['上海·浦东', '北京'])
+  })
+
   it('有投递记录的岗位不能删除', async () => {
     const { jobId } = await seedJob()
     await app.call('POST', '/applications', { jobId, status: 'queued' })
@@ -306,10 +323,21 @@ describe('投递流水线', () => {
     expect(all.body.data).toHaveLength(1)
   })
 
+  it('只有已撤回的投递可以删除', async () => {
+    const { jobId } = await seedJob()
+    const created = await app.call('POST', '/applications', { jobId, status: 'queued' })
+    const id = created.body.data.id
+
+    const blocked = await app.call('DELETE', `/applications/${id}`)
+    expect(blocked.status).toBe(409)
+    expect(blocked.body.error.message).toContain('已撤回')
+  })
+
   it('删除投递是软删且留 deleted 事件', async () => {
     const { jobId } = await seedJob()
     const created = await app.call('POST', '/applications', { jobId, status: 'queued' })
     const id = created.body.data.id
+    await app.call('POST', `/applications/${id}/status`, { to: 'withdrawn' })
     await app.call('DELETE', `/applications/${id}`)
 
     const detail = await app.call('GET', `/applications/${id}`)

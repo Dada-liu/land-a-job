@@ -276,6 +276,7 @@ export interface JobListParams {
   q?: string
   companyId?: string
   status?: string
+  city?: string
   minFit?: number
   sort?: 'fit' | 'priority' | 'updated'
   withApplication?: boolean
@@ -291,6 +292,9 @@ export const listJobs = async (params: JobListParams = {}): Promise<JobSummaryDt
   return apiGet<JobSummaryDto[]>(`/jobs?${search.toString()}`)
 }
 export const getJob = (id: string): Promise<JobDto> => apiGet<JobDto>(`/jobs/${id}`)
+/** 岗位库里出现过的城市（带岗位数），岗位库的城市筛选下拉用 */
+export const listJobCities = (): Promise<{ city: string; count: number }[]> =>
+  apiGet<{ city: string; count: number }[]>('/jobs/cities')
 export const createJob = (body: JobInput): Promise<JobDto> => apiPost<JobDto>('/jobs', body)
 export const patchJob = (id: string, body: Partial<JobInput> & Record<string, unknown>): Promise<JobDto> =>
   apiPatch<JobDto>(`/jobs/${id}`, body)

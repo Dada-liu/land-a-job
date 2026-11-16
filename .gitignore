@@ -8,6 +8,9 @@ coverage/
 .env
 .env.local
 .vite/
+# WXT 扩展（extensions/boss-bridge）的生成产物
+.output/
+.wxt/
 playwright-report/
 test-results/
 # 本机的 Agent 会话与记忆，不属于项目源码

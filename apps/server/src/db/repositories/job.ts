@@ -32,6 +32,8 @@ export interface JobListQuery {
   companyId?: string
   status?: string
   q?: string
+  /** 城市筛选：用包含匹配，让「上海」也能命中「上海·浦东」这类写法 */
+  city?: string
   minFit?: number
   withApplication?: boolean
   /** 按 JD 链接去重：同一个岗位被 Agent 或 ⌘K 重复登记时能先查出来 */
@@ -62,10 +64,15 @@ export function listJobs(db: Db, query: JobListQuery): Page<JobSummaryDto> {
     where.push('fit_score >= ?')
     params.push(query.minFit)
   }
+  if (query.city) {
+    where.push('city LIKE ?')
+    params.push(`%${query.city}%`)
+  }
   if (query.q) {
-    where.push('(title LIKE ? OR keywords_json LIKE ? OR jd_text LIKE ?)')
+    // 城市也算「岗位信息」：想找「杭州」的岗位，不该因为 JD 正文没提这两个字就搜不到
+    where.push('(title LIKE ? OR keywords_json LIKE ? OR jd_text LIKE ? OR city LIKE ?)')
     const like = `%${query.q}%`
-    params.push(like, like, like)
+    params.push(like, like, like, like)
   }
   if (query.jdUrl) {
     // 库里存的是用户给的原始链接，而 utm_/hash/尾斜杠不该影响「是不是同一个岗位」。
@@ -94,6 +101,23 @@ export function listJobs(db: Db, query: JobListQuery): Page<JobSummaryDto> {
   attachCompanyNames(db, items)
   if (query.withApplication) attachActiveApplications(db, items)
   return { items, nextCursor }
+}
+
+/**
+ * 库里出现过的城市，供筛选下拉用。
+ *
+ * 为什么单独查而不是让前端从列表里凑：列表是分页的，只从首页取城市会漏掉后面的城市，
+ * 用户会以为「明明有上海的岗位，筛选项里却没有」。按岗位数降序，常去的城市排前面。
+ */
+export function listJobCities(db: Db): { city: string; count: number }[] {
+  return db
+    .prepare(
+      `SELECT city, COUNT(*) AS count FROM job
+       WHERE deleted_at IS NULL AND city IS NOT NULL AND trim(city) <> ''
+       GROUP BY city
+       ORDER BY count DESC, city ASC`,
+    )
+    .all() as { city: string; count: number }[]
 }
 
 /** 批量补公司名（最多 limit 条），避免 join 与游标别名打架 */
