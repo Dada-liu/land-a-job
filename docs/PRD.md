@@ -7,7 +7,7 @@
 | Product | Land a Job |
 | Version | v1.0 |
 | Status | In review |
-| Updated | 2026-11-04 |
+| Updated | 2026-11-12 |
 | Related | [ARCHITECTURE.md](./ARCHITECTURE.md) · [IMPLEMENTATION.md](./IMPLEMENTATION.md) |
 
 ---
@@ -127,7 +127,7 @@ New grads spraying applications (they need volume, not quality), non-knowledge r
 
 | Compared with | What it does | What's different here |
 | --- | --- | --- |
-| Job boards (BOSS, Lagou) | Apply inside the platform | We manage **off-platform** site applications and the full status lifecycle, not tied to one channel |
+| Job boards (BOSS, Lagou) | Apply inside the platform | We manage the **full status lifecycle**: off-platform site applications as before, plus in-platform applications logged after batch confirmation by the user; still not tied to one channel |
 | Resume tools | Layout and export | The resume is one stage of a pipeline, sharing data with JDs, applications and questions |
 | Spreadsheets (Notion/Excel) | Free-form records | State machine, reminders, metrics, and directly readable by an agent |
 | Chat | One-off generation | Persistent context (your resume library + application history), no re-explaining |
@@ -166,7 +166,7 @@ Reuse the editor core from `resume-generator-2` (React 19 + three templates + PD
 | # | Requirement | Acceptance |
 | --- | --- | --- |
 | FR-3.1 | Company library | Name, site, industry, size, location, apply entry, notes, priority |
-| FR-3.2 | Job management | Title, JD, link, salary range, city, channel, priority, under a company |
+| FR-3.2 | Job management | Title, JD, link, salary range, city, channel (company site / referral / job board / BOSS Zhipin), priority, under a company |
 | FR-3.3 | State machine | `lead → queued → applied → screening → assessment → interview → offer → accepted`, branches `rejected / ghosted / withdrawn`; illegal transitions rejected with an explanation |
 | FR-3.4 | Manual logging | Log what you applied to, with which resume, via which channel, when — in three clicks; generates a timeline event |
 | FR-3.5 | Apply assistant (semi-automatic) | Open the site form → output a field mapping plan → prefill → **human confirms submission** → screenshot evidence; dry-run by default |
@@ -317,7 +317,7 @@ erDiagram
 
 - **AI inside the web app / model calls on the server**: no LLM SDK, no API keys, no model routing. AI happens only in the user's agent (§4.1, §5.9).
 - **Multi-user / SaaS / accounts / cloud sync**: single user, single machine. Move machines by exporting JSON or copying `data/`.
-- **Automated mass-applying on job platforms** (BOSS/Lagou/Liepin): violates platform terms, CAPTCHAs can't be bypassed, account risk is high. In-platform applications are logged manually only.
+- **Unattended mass-applying on job platforms** (BOSS/Lagou/Liepin): violates platform terms, CAPTCHAs cannot be bypassed, and the account risk is high. The supported form is **human-confirmed semi-automated in-platform applying**: the agent or browser extension only reads JDs, prepares materials and pre-fills; greeting and resume sending are confirmed by the user in batches before being logged. No CAPTCHA, risk-control or private chat protocol bypass (see the BOSS Zhipin bridge proposal).
 - Unattended bulk form submission: always human-confirmed in v1.
 - Voice mock interviews or transcription (P2).
 - Automatic email/calendar parsing (P2; `task` and `interview` carry the structure already).

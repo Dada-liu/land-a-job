@@ -206,7 +206,7 @@ CREATE TABLE job (
   jd_text       TEXT,
   jd_url        TEXT,
   jd_snapshot   TEXT,             -- data/files/jd/<id>.html relative path
-  channel       TEXT NOT NULL DEFAULT 'official', -- official|referral|platform|other
+  channel       TEXT NOT NULL DEFAULT 'official', -- official|referral|platform|boss|other
   city          TEXT,
   salary_min    INTEGER,          -- CNY per month
   salary_max    INTEGER,
@@ -845,7 +845,7 @@ npm run start            # server, then open http://127.0.0.1:4399
 ```
 
 - **Port**: `LAND_PORT` (default 4399). If taken by something else, it increments by one and writes `data/.port`, which MCP reads.
-- **Environment**: `LAND_PORT`, `LAND_DATA_DIR`, `LAND_CHROME`, `LAND_APPLY_HEADLESS`, `LAND_LOG_LEVEL`. **No model settings** (D2).
+- **Environment**: `LAND_PORT`, `LAND_DATA_DIR`, `LAND_CHROME`, `LAND_APPLY_HEADLESS`, `LAND_LOG_LEVEL`, `LAND_EXTENSION_ORIGINS` (Chrome extension ID allowlist for cross-origin API calls; empty by default). **No model settings** (D2).
 - **No cloud deployment planned** (D1): local single-user is the product shape, not a stepping stone. Move machines by exporting the whole database as JSON; no sync protocol, no conflict merging.
 
 ---
