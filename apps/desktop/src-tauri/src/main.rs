@@ -382,7 +382,13 @@ fn main() {
                         .resizable(true)
                         .build()
                     {
-                        Ok(_) => {}
+                        Ok(window) => {
+                            // macOS 下应用未激活时创建的窗口不会自动上屏（表现为
+                            // 「打不开」），这里主动拉到前台；对已激活场景是无害重复。
+                            let _ = window.unminimize();
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
                         Err(e) => eprintln!("[window] 创建失败：{e}"),
                     }
                 });
