@@ -11,6 +11,7 @@ export function Drawer({
   open,
   onClose,
   title,
+  titleExtra,
   subtitle,
   width = 'w-[520px]',
   children,
@@ -19,6 +20,8 @@ export function Drawer({
   open: boolean
   onClose: () => void
   title: ReactNode
+  /** 标题行右侧的小动作（比如「新标签页打开关联对象」），与标题同一行、不参与截断 */
+  titleExtra?: ReactNode
   subtitle?: ReactNode
   width?: string
   children: ReactNode
@@ -46,7 +49,10 @@ export function Drawer({
       <aside className={`relative flex h-full max-w-full flex-col bg-white shadow-2xl ${width}`}>
         <header className="flex items-start justify-between gap-3 border-b border-stone-200 px-5 py-4">
           <div className="min-w-0">
-            <div className="truncate text-sm font-medium text-stone-900">{title}</div>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <div className="truncate text-sm font-medium text-stone-900">{title}</div>
+              {titleExtra ? <div className="shrink-0">{titleExtra}</div> : null}
+            </div>
             {subtitle ? <div className="mt-0.5 truncate text-[11px] text-stone-500">{subtitle}</div> : null}
           </div>
           <button

@@ -301,26 +301,37 @@ export default function Pipeline() {
         </DndContext>
       )}
 
-      {showClosed && closed.length > 0 ? (
+      {/* 点开「显示已结束」但一条都没有时也要出这块：否则按钮像没生效，
+          用户会以为点击丢了，而不是「确实还没有已结束的投递」 */}
+      {showClosed ? (
         <div className="mt-3 rounded-lg border border-stone-200 bg-white p-3">
           <div className="mb-2 text-[11px] font-medium text-stone-600">已结束（不参与拖拽）</div>
-          <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
-            {closed.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => openDrawer(item.id)}
-                className="flex items-center justify-between rounded border border-stone-200 px-2 py-1.5 text-left hover:bg-stone-50"
-              >
-                <span className="truncate text-[11px] text-stone-700">
-                  {item.companyName} · {item.jobTitle}
-                </span>
-                <span className="ml-2 shrink-0 text-[10px] text-stone-400">
-                  {STATUS_LABELS[item.status as Status] ?? item.status}
-                </span>
-              </button>
-            ))}
-          </div>
+          {closed.length === 0 ? (
+            <div
+              data-testid="closed-empty"
+              className="rounded border border-dashed border-stone-200 px-3 py-4 text-center text-[11px] text-stone-400"
+            >
+              还没有已结束的投递。撤回、被拒、已入职、已失联的投递会收在这里，不参与拖拽。
+            </div>
+          ) : (
+            <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
+              {closed.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => openDrawer(item.id)}
+                  className="flex items-center justify-between rounded border border-stone-200 px-2 py-1.5 text-left hover:bg-stone-50"
+                >
+                  <span className="truncate text-[11px] text-stone-700">
+                    {item.companyName} · {item.jobTitle}
+                  </span>
+                  <span className="ml-2 shrink-0 text-[10px] text-stone-400">
+                    {STATUS_LABELS[item.status as Status] ?? item.status}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       ) : null}
 

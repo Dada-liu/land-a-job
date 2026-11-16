@@ -54,10 +54,13 @@ const dict: Dict = {
   官网: 'Company site',
   内推: 'Referral',
   招聘平台: 'Job board',
+  BOSS直聘: 'BOSS Zhipin',
   其他: 'Other',
 
   // ——— 通用动作 ———
   没有可选项: 'No options',
+  没有匹配的选项: 'No matching options',
+  搜索选项: 'Search options',
   取消: 'Cancel',
   确认: 'Confirm',
   条: 'items',
