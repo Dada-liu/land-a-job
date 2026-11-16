@@ -71,6 +71,10 @@ const NON_TOOL_BACKTICKS = new Set([
   'dom_cua_get_visible_dom',
   'dom_cua_scroll',
   'cua_execute',
+  // job-search-batch §2/§3：WebSearch 参数与 MCP 返回字段，不是工具名。
+  'blocked_domains',
+  'full_page',
+  'jd_text',
 ])
 
 function captureRegistrations(): { tools: string[]; resources: string[] } {

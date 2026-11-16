@@ -66,7 +66,7 @@ export const SKILL_REGISTRY: readonly SkillMeta[] = [
   },
   {
     name: 'job-search-batch',
-    version: '1.2.0',
+    version: '1.3.0',
     minVersion: '1.0.0',
     title: '批量搜岗',
     purpose: '按城市用 WebSearch 找 10 家本地公司的岗位并入库，可翻倍继续搜',

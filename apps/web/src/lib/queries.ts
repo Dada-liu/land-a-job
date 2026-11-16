@@ -13,6 +13,8 @@ export const qk = {
   companies: ['companies'] as const,
   company: (id: string) => ['company', id] as const,
   jobs: (params: JobListParams) => ['jobs', params] as const,
+  /** 岗位库的城市下拉：挂在 jobs 前缀下，岗位增删改后跟着失效 */
+  jobCities: ['jobs', 'cities'] as const,
   job: (id: string) => ['job', id] as const,
   applications: ['applications'] as const,
   application: (id: string) => ['application', id] as const,

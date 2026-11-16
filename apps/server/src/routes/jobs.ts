@@ -15,7 +15,7 @@ import {
   type JdSignals,
   type JobDto,
 } from '@land/core'
-import { createJob, deleteJob, getJob, listJobs, updateJob } from '../db/repositories/job.js'
+import { createJob, deleteJob, getJob, listJobCities, listJobs, updateJob } from '../db/repositories/job.js'
 import { getCompany } from '../db/repositories/company.js'
 import { getResume, listResumes } from '../db/repositories/resume.js'
 import type { Db } from '../db/index.js'
@@ -37,6 +37,8 @@ import type { RouteDeps } from './index.js'
 const listQuery = zListQuery.extend({
   companyId: zId.optional(),
   status: z.enum(JOB_STATUSES).optional(),
+  /** 城市：支持模糊（「上海」命中「上海·浦东」）；空串视同不筛，别让 Agent 传空值就 400 */
+  city: z.string().trim().max(60).optional(),
   minFit: z.coerce.number().int().min(0).max(100).optional(),
   sort: z.enum(['fit', 'priority', 'updated']).optional(),
   jdUrl: z.string().trim().max(2048).optional(),
@@ -109,6 +111,9 @@ export function registerJobRoutes(app: FastifyInstance, { db, ws }: RouteDeps): 
     const page = listJobs(db, query)
     return paginated(page.items, query.limit, page.nextCursor)
   })
+
+  // 必须注册在 `/api/jobs/:id` 之前读起来才不别扭（Fastify 静态段本就优先于参数段）
+  app.get('/api/jobs/cities', async () => ok(listJobCities(db)))
 
   app.get('/api/jobs/:id', async (request) => {
     const { id } = z.object({ id: zId }).parse(request.params)

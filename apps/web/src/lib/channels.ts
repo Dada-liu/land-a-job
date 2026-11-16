@@ -3,6 +3,7 @@ export const CHANNEL_OPTIONS = [
   { value: 'official', label: '官网' },
   { value: 'referral', label: '内推' },
   { value: 'platform', label: '招聘平台' },
+  { value: 'boss', label: 'BOSS直聘' },
   { value: 'other', label: '其他' },
 ]
 

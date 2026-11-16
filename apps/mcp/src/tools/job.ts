@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import { JOB_STATUSES } from '@land/core'
+import { CHANNELS, JOB_STATUSES } from '@land/core'
 import { client } from '../client.js'
 import { guard, ok } from '../result.js'
 import { fitFactorSummary, pickAll, qs } from './shared.js'
@@ -88,7 +88,7 @@ export function registerJobTools(server: McpServer): void {
         salaryMin: z.number().int().min(0).optional().describe('月薪下限，单位元'),
         salaryMax: z.number().int().min(0).optional(),
         level: z.string().optional(),
-        channel: z.enum(['official', 'referral', 'platform', 'other']).optional(),
+        channel: z.enum(CHANNELS).optional(),
         priority: z.number().int().min(1).max(5).optional(),
         fetchJd: z.boolean().optional().describe('有 jdUrl 时是否抓正文并打分，默认 true'),
       },

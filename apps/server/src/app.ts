@@ -1,6 +1,8 @@
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify'
 import { closeAllSessions } from './apply/session.js'
 import { registerAuth } from './auth.js'
+import { EXTENSION_ORIGINS } from './config.js'
+import { registerExtensionCors } from './extension-cors.js'
 import { openDb, type Db } from './db/index.js'
 import { registerErrorHandler } from './errors.js'
 import { registerRoutes } from './routes/index.js'
@@ -15,6 +17,8 @@ export interface BuildAppOptions {
   /** 传 null 跳过静态托管（契约测试只关心 /api） */
   webRoot?: string | null
   logger?: FastifyBaseLogger | false
+  /** 扩展 CORS 白名单；不传时读 LAND_EXTENSION_ORIGINS（默认空＝关闭） */
+  extensionOrigins?: ReadonlySet<string>
 }
 
 export interface LandApp {
@@ -41,6 +45,8 @@ export async function buildApp(options: BuildAppOptions): Promise<LandApp> {
   })
 
   registerErrorHandler(app)
+  // 必须早于 registerAuth：白名单内的 OPTIONS 预检不带令牌，不能被鉴权钩子拦成 401
+  registerExtensionCors(app, options.extensionOrigins ?? EXTENSION_ORIGINS)
   registerAuth(app, options.token)
 
   const ws = attachWs(app.server)
