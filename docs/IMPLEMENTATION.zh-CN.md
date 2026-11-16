@@ -577,7 +577,7 @@ server.tool('create_application',
   withProvenance({
     jobId: z.string(),
     resumeId: z.string().optional(),
-    channel: z.enum(['official','referral','platform','other']).default('official'),
+    channel: z.enum(['official','referral','platform','boss','other']).default('official'),
     note: z.string().optional(),
   }),
   async ({ provenance, ...args }) => guard(async () => {

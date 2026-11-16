@@ -28,6 +28,85 @@
 **列表页不是岗位详情**：招聘专题页、职位列表、搜索结果页都只算线索。顺着它找到具体岗位页再入库；
 找不到就记进「候选公司，待补详情链接」，不要用列表页标题编一个岗位。
 
+## 公开接口（第 0 档，比浏览器快一个量级）
+
+这几家社招站的检索接口没有鉴权，一次请求就能拿回**全量岗位 + 完整 JD 正文**，不需要开浏览器。
+一批几十条时先打这几家，能直接吃掉大半工作量。
+
+### 腾讯社招
+
+```bash
+# 列表（一个关键词一次最多 100 条，翻页到空为止）
+curl -s "https://careers.tencent.com/tencentcareer/api/post/Query\
+?timestamp=1700000000000&countryId=&cityId=&bgIds=&productId=&categoryId=\
+&parentCategoryId=&attrId=&keyword=<关键词>&pageIndex=1&pageSize=100&language=zh-cn&area=cn"
+
+# 详情（Responsibility / Requirement 就是完整 JD）
+curl -s "https://careers.tencent.com/tencentcareer/api/post/ByPostId?postId=<PostId>&language=zh-cn"
+```
+
+- 列表字段：`PostId`、`RecruitPostName`、`LocationName`、`BGName`、`LastUpdateTime`；详情字段：`Responsibility`、`Requirement`、`PostURL`。
+- 岗位页 `https://careers.tencent.com/jobdesc.html?postId=<PostId>`，可直接当 `jdUrl`。
+- **必须要多关键词扫**：单关键词 `Agent` 只覆盖一部分，实测有效的是 `Agent`、`智能体`、`Harness`、`大模型应用`、
+  `AI 应用开发`、`Coding Agent`、`Agentic` 七个，按 `PostId` 去重后能多出一倍。
+
+### 百度社招
+
+```bash
+curl -s -X POST "https://talent.baidu.com/httservice/getPostListNew" \
+  -H "content-type: application/x-www-form-urlencoded" \
+  -H "Referer: https://talent.baidu.com/jobs/social-list" \
+  -d "recruitType=SOCIAL&keyWord=Agent&curPage=1&pageSize=10"
+```
+
+- 返回 `data.total` 与 `data.list[]`，字段 `name`（岗位名）、`workPlace`（城市）、`workContent`（职责）、
+  `serviceCondition`（要求）、`postId`。详情页 `https://talent.baidu.com/jobs/detail/SOCIAL/<postId>`。
+- **`pageSize` 上限就是 10**：传 30 / 50 一律返回 `status: fail`，只能老老实实翻页（`total` 几百条就是几十页，
+  脚本里循环到 `curPage * 10 > total` 为止）。
+- 百度的 Agent 岗高度集中在北京，其他城市命中率很低，别在这家身上给外地城市浪费时间。
+
+### 滴滴社招
+
+```bash
+curl -s -H "referer: https://talent.didiglobal.com/social" \
+  "https://talent.didiglobal.com/recruit-portal-service/api/job/front/list?page=1&size=100"
+```
+
+- 返回 `data.total`（全站约 1000 条）+ `data.items[]`，每条自带 `jobDuty` + `jobQualification`（完整 JD）、
+  `workArea`、`deptName`、`createTime` / `refreshTime`、`jdId`。翻到 `page * 100 > total` 为止。
+- 详情页 `https://talent.didiglobal.com/social/p/<jdId>`，可当 `jdUrl`；**站点本身是纯 SPA**，`add_job` 抓不到正文，
+  必须走这个接口拿全文再 `import_jd`。
+- `refreshTime` 是「最近刷新」，选岗可用来判新鲜度；JD 写「5 年以上」的岗位会被 fit 的硬性条件直接封顶。
+
+### 小米社招
+
+```bash
+curl -s -H "referer: https://hr.xiaomi.com/website/opportunities.html" \
+  "https://hr.xiaomi.com/website/api/agent/searchJobPage?keyword=<关键词>&cityZhNames=&pageSize=50&pageNum=1"
+```
+
+- 返回 `data.list[]`，字段 `title`、`description` + `requirement`（职责与要求，等同完整 JD）、`cityZhNames`、`levelOneDeptName`。
+  多关键词扫（`Agent`、`智能体`、`Harness`、`AI 原生`）再去重。
+- **详情链接不在 `hr.xiaomi.com`，而是飞书 ATS**：`https://xiaomi.jobs.f.mioffice.cn/index/position/<feishuId>/detail`。
+  接口给的 `id` 是内部 id，与飞书 id 不同 —— 拿 `title` 回列表页 DOM 里抠 `<a href>` 才能对上。
+- **社招 / 校招 / 实习看 URL 路径**：`/index/`=社招、`/campus/`=校招、`/internship/`=实习、`/toptalent/`=顶尖人才，
+  比读 JD 里的「20XX 届」快且准。飞书详情页 `add_job` 能直接抓到正文，拿到链接后走第 1 档即可。
+
+## 站点可达性（同一台机器实测，2026-11）
+
+先探测再决定策略，能省很多无效重试：
+
+| 打不开 / 接口拒绝 | 现象 | 处置 |
+| --- | --- | --- |
+| `hr.game.163.com`、`zhaopin.37.com` | `curl` 返回 000（连接重置） | 换 `hr.163.com` 同 id 页，或交回用户 |
+| `career.hihonor.com` | DNS 解析失败 | 荣耀岗只能等用户提供链接 |
+| `jobs.bytedance.com`、`careers.aliyun.com`、`talent.quark.cn` | 检索接口 403 / 405（带 Referer、Origin 也无效） | 只能浏览器逐条读 |
+| `job.xiaohongshu.com` | 纯 SPA，无内嵌数据 | 只能浏览器逐条读 |
+| `talent.alibaba.com` | 会 302 回首页 | 岗位 id 属于 `careers.aliyun.com` 或 `talent.quark.cn`，换域名 |
+
+`hr.game.163.com` 与 `hr.163.com` 共用同一个岗位 id：`hr.game.163.com/position/introduction.html?code=72340`
+等于 `hr.163.com/job-detail.html?id=72340&lang=zh&productKey=game`，别当成两条岗位。
+
 ## 去重
 
 1. 开搜前 `list_companies` 与 `list_jobs` 带本次城市，记下已覆盖的公司名。
@@ -55,16 +134,20 @@
 
 **B. 链接没问题，只是抓不到正文**——`add_job` 返回 `warning` 说「正文只提取到 0 字」，岗位其实已经建好了。这时**不要**做三件事：不要重复建岗、不要换 `WebFetch` 再试（同一批 SPA 一样是空壳）、不要拿搜索摘要 `import_jd`。正确做法是走 SKILL.md §3.1 的浏览器流程，或用 `jd-collect` 让用户粘贴。
 
-判断依据是站点有没有服务端渲染，不是「是不是官网」：
+判断依据是站点有没有服务端渲染或公开接口，不是「是不是官网」：
 
-- 飞书招聘 `*.jobs.feishu.cn`、`zhaopin.jd.com`、`talent.baidu.com` 这类有公开接口或 SSR 的，`add_job` 直接能抓到。
-- `jobs.bytedance.com`、`zhaopin.meituan.com`、`talent.didiglobal.com`、`careers.tencent.com`、`xiaomi.jobs.f.mioffice.cn`、`job.100tal.com` 目前都是纯前端渲染，`add_job` 和 `WebFetch` 都只能拿到空壳，必须浏览器读。
+- 有 SSR / 公开接口，`add_job` 直接能抓到正文与 fit：飞书招聘 `*.jobs.feishu.cn`、`xiaomi.jobs.f.mioffice.cn`、`zhaopin.jd.com`、`talent.baidu.com` 详情页。
+- 纯前端渲染，`add_job` 与 `WebFetch` 都只拿到空壳：`jobs.bytedance.com`、`zhaopin.meituan.com`、`talent.didiglobal.com`、`careers.tencent.com` 岗位页、`job.100tal.com`、`job.xiaohongshu.com`。
+  其中腾讯、滴滴**详情页读不到但接口读得到**，优先走上面「公开接口」，别开浏览器；小米要区分两处——`hr.xiaomi.com` 的检索接口有全文，
+  但真正的详情页在飞书 `xiaomi.jobs.f.mioffice.cn`，那个 `add_job` 抓得到。
+- 抓到但内容不对：微软 `jobs.careers.microsoft.com` 会把整页 HTML 灌进正文（约 20 万字符），必须用精简正文重写；
+  北森 `*.zhiye.com/social/detail?jobAdId=<uuid>` 只抓到 9~10 字，等于没抓到，必须走浏览器。
 
 浏览器读正文的三个硬约束（踩过）：
 
 1. 用用户本机 Chrome（`type: "extension"`），内置浏览器视口约 360×690，正文横向被裁，读不全。
-2. `dom_cua_get_visible_dom` 只返回链接/按钮/输入框，**正文文本节点根本不进快照**，只能截图读。
-3. 滚动靠「点一下正文旁空白让焦点进页面 + `keypress` `PageDown`/`End`/`ArrowUp`」；`cua_execute` 的 scroll 动作和 `dom_cua_scroll` 在这类页面上几乎不动。`PageDown` 一次跳一屏多会漏段，拿到底部后要用 `ArrowUp` 连发回补交界。
+2. **先 `tab_screenshot(full_page: true)` 截整页**，多数 JD 一次读完；只有明显截断（字节约 1300px）才转逐屏翻页。
+3. 翻页靠「点一下正文旁空白让焦点进页面 + `keypress` `PageDown`/`End`/`ArrowUp`」；`cua_execute` 的 scroll 动作和 `dom_cua_scroll` 在这类页面上几乎不动。`PageDown` 一次跳一屏多会漏段，拿到底部后要用 `ArrowUp` 连发回补交界。
 
 平台站失败：不重试同一链接、不硬刚反爬。优先找这家公司官网的同岗位页；找不到就请用户复制完整正文再 `import_jd`。
 
