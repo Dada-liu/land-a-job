@@ -45,7 +45,7 @@ interface CompiledPattern {
   re: RegExp
   names: string[]
   value: string
-  /** 原文越长越具体，优先匹配，否则 `样本 {n}` 会吞掉 `样本 {n} 条已投` */
+  /** 原文越长越具体，优先匹配：否则短 key 先命中，会把同类更长的句子截断（译到一半就停） */
   weight: number
 }
 

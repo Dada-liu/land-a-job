@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Copy, FileText, Plus, Star, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Copy, CopyPlus, FileText, Plus, Star, Trash2 } from 'lucide-react'
 // 模板 id 与中文名来自 core（领域数据），列表页因此不必加载整个编辑器与 PDF 库
 import {
   RESUME_TEMPLATE_HINTS,
@@ -22,7 +22,10 @@ import {
 import { sampleResumeData } from '@land/resume-kit/sample-resume'
 import { diffResume } from '../lib/resumeDiff'
 import { Drawer } from '../components/Drawer'
+import { Tooltip } from '../components/ui'
 import { useConfirm } from '../components/ConfirmDialog'
+import { errorText, useToast } from '../components/Toast'
+import { useT } from '../i18n'
 
 function formatDate(iso: string): string {
   const date = new Date(iso)
@@ -34,11 +37,18 @@ function formatDate(iso: string): string {
 export default function Resumes() {
   const navigate = useNavigate()
   const confirm = useConfirm()
+  const toast = useToast()
+  const t = useT()
   const [items, setItems] = useState<ResumeDto[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
 
   const [originFilter, setOriginFilter] = useState<'all' | 'ai' | 'manual'>('all')
+  /**
+   * 哪几个母版下面已经被展开。只记「用户点过」的组，没点过的走默认值：
+   * 全部视图默认收起（一屏先看清有几个母版），筛来源时默认展开（否则筛完只看到一行母版、以为没命中）。
+   */
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   const [compare, setCompare] = useState<{ target: ResumeDto; base: ResumeDto } | null>(null)
 
   /**
@@ -125,6 +135,19 @@ export default function Resumes() {
     }
   }
 
+  /**
+   * 复制简历名（不是复制整份简历）：写 Agent 指令、对比记录时常要指名「用 XX 这一版」，
+   * 名字长了手打容易错。剪贴板不可用时明确提示手动选中，不做静默失败。
+   */
+  const copyName = async (resume: ResumeDto) => {
+    try {
+      await navigator.clipboard.writeText(resume.title)
+      toast.push(t('已复制简历名'), 'success')
+    } catch {
+      toast.push(t('复制失败，请手动选择复制'), 'error')
+    }
+  }
+
   const handleDelete = async (resume: ResumeDto) => {
     const confirmed = await confirm({
       title: `删除简历「${resume.title}」？`,
@@ -140,20 +163,152 @@ export default function Resumes() {
     try {
       await deleteResume(resume.id)
       await reload()
+      toast.push(`已删除简历「${resume.title}」`, 'success')
     } catch (e) {
-      // 被投递引用的简历不能删：服务端返回 409，这里原样提示，别吞成「删除失败」
-      setError(e instanceof Error ? e.message : String(e))
+      // 被投递引用的简历不能删：服务端返回 409。这属于整页级的结论，
+      // 走全局提示（页面顶部），别塞进列表上方的内嵌提示里（会看起来像某张卡片的错误）。
+      toast.push(errorText(e), 'error')
     } finally {
       setBusy(null)
     }
   }
 
-  const filtered = (items ?? []).filter((resume) => {
+  const aiCount = (items ?? []).filter((resume) => Boolean(resume.provenance)).length
+  const filterActive = originFilter !== 'all'
+
+  const matches = (resume: ResumeDto) => {
     if (originFilter === 'ai') return Boolean(resume.provenance)
     if (originFilter === 'manual') return !resume.provenance
     return true
-  })
-  const aiCount = (items ?? []).filter((resume) => Boolean(resume.provenance)).length
+  }
+
+  /**
+   * 分组只看关系，不看时间：谁把谁当母版，已经写在 baseResumeId 上。
+   * 只有 kind='master' 能当爹——历史数据里存在「定制版指向定制版」，
+   * 多级嵌套会让中间那一行从顶层消失，看到的是「简历凭空少了」。
+   */
+  const byId = new Map((items ?? []).map((resume) => [resume.id, resume]))
+  const childrenOf = new Map<string, ResumeDto[]>()
+  const rootRows: ResumeDto[] = []
+  for (const resume of items ?? []) {
+    const base = resume.baseResumeId ? byId.get(resume.baseResumeId) : undefined
+    if (base && base.kind === 'master' && base.id !== resume.id) {
+      const bucket = childrenOf.get(base.id)
+      if (bucket) bucket.push(resume)
+      else childrenOf.set(base.id, [resume])
+    } else {
+      rootRows.push(resume)
+    }
+  }
+  // 母版自己没命中筛选、但名下有命中的定制版时，这一行仍要出来，否则「AI 改过」会全军覆没
+  const visibleRows = rootRows.filter(
+    (root) => matches(root) || (childrenOf.get(root.id) ?? []).some(matches),
+  )
+
+  const isOpen = (id: string) => openGroups[id] ?? filterActive
+  const toggleGroup = (id: string) => setOpenGroups((prev) => ({ ...prev, [id]: !isOpen(id) }))
+
+  /** 卡片样式与分组前逐字相同：母版和定制版用的是同一张卡，只改外面的排布 */
+  const renderCard = (resume: ResumeDto) => (
+    <article key={resume.id} className="rounded-xl border border-stone-200 bg-white p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          {/* 名字独占一行截断，复制按钮跟在后面且不参与截断（shrink-0） */}
+          <div className="flex min-w-0 items-center gap-1">
+            <Link
+              to={`/resumes/${resume.id}`}
+              className="min-w-0 truncate text-sm font-medium text-stone-900 hover:underline"
+            >
+              {resume.title}
+            </Link>
+            {/* 用自绘 Tooltip 而不是 title：原生提示延迟 1 秒且鼠标一动就消失 */}
+            <Tooltip label={t('复制简历名')}>
+              <button
+                type="button"
+                aria-label={t('复制简历名')}
+                data-testid={`resume-copy-name-${resume.id}`}
+                onClick={() => void copyName(resume)}
+                className="shrink-0 rounded p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </button>
+            </Tooltip>
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-stone-500">
+            <span className="rounded bg-stone-100 px-1.5 py-0.5">{resumeTemplateLabel(resume.templateId)}</span>
+            <span className="rounded bg-stone-100 px-1.5 py-0.5">
+              {resume.kind === 'master' ? '母版' : '定制版'}
+            </span>
+            {resume.isDefault ? (
+              <span className="rounded bg-amber-50 px-1.5 py-0.5 text-amber-700">默认</span>
+            ) : null}
+            {resume.provenance ? (
+              <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-700">
+                {String((resume.provenance as { skill?: string }).skill ?? 'AI 生成')}
+              </span>
+            ) : null}
+          </div>
+        </div>
+        <Link
+          to={`/resumes/${resume.id}`}
+          className="shrink-0 rounded-md border border-stone-200 px-2 py-1 text-xs text-stone-600 hover:bg-stone-50"
+        >
+          编辑
+        </Link>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between border-t border-stone-100 pt-2.5">
+        <span className="text-[11px] text-stone-400">更新于 {formatDate(resume.updatedAt)}</span>
+        <div className="flex items-center gap-1">
+          {resume.baseResumeId ? (
+            <button
+              type="button"
+              data-testid="resume-compare"
+              onClick={() => void openCompare(resume)}
+              className="rounded border border-stone-200 px-1.5 py-0.5 text-[10px] text-stone-500 hover:bg-stone-50"
+            >
+              对比母版
+            </button>
+          ) : null}
+          <Tooltip label={t('设为默认简历')}>
+            <button
+              type="button"
+              aria-label={t('设为默认简历')}
+              disabled={resume.isDefault || busy === resume.id}
+              onClick={() => void handleDefault(resume)}
+              className="rounded p-1.5 text-stone-400 hover:bg-stone-100 hover:text-amber-600 disabled:opacity-30"
+            >
+              <Star className="h-3.5 w-3.5" />
+            </button>
+          </Tooltip>
+          {/* 图标换成 CopyPlus：上面那颗「复制简历名」已经是两块矩形，同款图标会认错 */}
+          <Tooltip label={t('复制一份')}>
+            <button
+              type="button"
+              aria-label={t('复制一份')}
+              disabled={busy === resume.id}
+              onClick={() => void handleDuplicate(resume)}
+              className="rounded p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-700 disabled:opacity-30"
+            >
+              <CopyPlus className="h-3.5 w-3.5" />
+            </button>
+          </Tooltip>
+          <Tooltip label={t('删除')}>
+            <button
+              type="button"
+              aria-label={t('删除')}
+              data-testid={`resume-delete-${resume.id}`}
+              disabled={busy === resume.id}
+              onClick={() => void handleDelete(resume)}
+              className="rounded p-1.5 text-stone-400 hover:bg-stone-100 hover:text-red-600 disabled:opacity-30"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </Tooltip>
+        </div>
+      </div>
+    </article>
+  )
 
   return (
     <div className="space-y-6">
@@ -257,94 +412,63 @@ export default function Resumes() {
 
       {items === null ? (
         <div className="rounded-xl border border-stone-200 bg-white p-6 text-sm text-stone-400">读取中…</div>
-      ) : filtered.length === 0 ? (
+      ) : visibleRows.length === 0 ? (
         <section className="rounded-xl border border-dashed border-stone-300 bg-white/60 p-8 text-center">
           <FileText className="mx-auto h-6 w-6 text-stone-300" />
-          <p className="mt-3 text-sm text-stone-600">还没有简历</p>
+          <p className="mt-3 text-sm text-stone-600">{filterActive ? '没有符合条件的简历' : '还没有简历'}</p>
           <p className="mt-1 text-xs text-stone-400">
-            点右上「新建简历」开始；也可以从旧项目导入 JSON（编辑页右上角「导入」）。
+            {filterActive
+              ? '点「全部」看看全部简历；也可能是这些版本来自另一种来源（AI 改过 / 人工）。'
+              : '点右上「新建简历」开始；也可以从旧项目导入 JSON（编辑页右上角「导入」）。'}
           </p>
         </section>
       ) : (
-        <section className="grid gap-3 sm:grid-cols-2" data-testid="resume-grid">
-          {filtered.map((resume) => (
-            <article key={resume.id} className="rounded-xl border border-stone-200 bg-white p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <Link
-                    to={`/resumes/${resume.id}`}
-                    className="block truncate text-sm font-medium text-stone-900 hover:underline"
-                  >
-                    {resume.title}
-                  </Link>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-stone-500">
-                    <span className="rounded bg-stone-100 px-1.5 py-0.5">{resumeTemplateLabel(resume.templateId)}</span>
-                    <span className="rounded bg-stone-100 px-1.5 py-0.5">
-                      {resume.kind === 'master' ? '母版' : '定制版'}
-                    </span>
-                    {resume.isDefault ? (
-                      <span className="rounded bg-amber-50 px-1.5 py-0.5 text-amber-700">默认</span>
-                    ) : null}
-                    {resume.provenance ? (
-                      <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-700">
-                        {String((resume.provenance as { skill?: string }).skill ?? 'AI 生成')}
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-                <Link
-                  to={`/resumes/${resume.id}`}
-                  className="shrink-0 rounded-md border border-stone-200 px-2 py-1 text-xs text-stone-600 hover:bg-stone-50"
-                >
-                  编辑
-                </Link>
-              </div>
+        // 一个母版独占一行，它名下的定制版收在这一行下面
+        <section className="space-y-6" data-testid="resume-grid">
+          {visibleRows.map((root) => {
+            const children = (childrenOf.get(root.id) ?? []).filter(matches)
+            const open = isOpen(root.id)
 
-              <div className="mt-3 flex items-center justify-between border-t border-stone-100 pt-2.5">
-                <span className="text-[11px] text-stone-400">更新于 {formatDate(resume.updatedAt)}</span>
-                <div className="flex items-center gap-1">
-                  {resume.baseResumeId ? (
+            // 母版本身没命中筛选、只有名下的定制版命中：把命中的平铺出来，
+            // 不给一行「母版卡 + 展开按钮」——那颗按钮点开只会是空
+            if (!matches(root)) {
+              return (
+                <div key={root.id} className="grid gap-3 sm:grid-cols-2">
+                  {children.map(renderCard)}
+                </div>
+              )
+            }
+
+            return (
+              <div key={root.id}>
+                {renderCard(root)}
+                {children.length > 0 ? (
+                  // 贴着它上面那张卡：与外层「组间距 24px」拉开，才看得出这颗按钮属于谁
+                  <div className="mt-2 flex items-center">
                     <button
                       type="button"
-                      data-testid="resume-compare"
-                      onClick={() => void openCompare(resume)}
-                      className="rounded border border-stone-200 px-1.5 py-0.5 text-[10px] text-stone-500 hover:bg-stone-50"
+                      data-testid={`resume-group-toggle-${root.id}`}
+                      aria-expanded={open}
+                      onClick={() => toggleGroup(root.id)}
+                      className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-[11px] text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-900"
                     >
-                      对比母版
+                      {open ? (
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      ) : (
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      )}
+                      {open ? t('收起定制版') : t('展开 {n} 个定制版', { n: children.length })}
                     </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    title="设为默认简历"
-                    disabled={resume.isDefault || busy === resume.id}
-                    onClick={() => void handleDefault(resume)}
-                    className="rounded p-1.5 text-stone-400 hover:bg-stone-100 hover:text-amber-600 disabled:opacity-30"
-                  >
-                    <Star className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    title="复制一份"
-                    disabled={busy === resume.id}
-                    onClick={() => void handleDuplicate(resume)}
-                    className="rounded p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-700 disabled:opacity-30"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    title="删除"
-                    data-testid={`resume-delete-${resume.id}`}
-                    disabled={busy === resume.id}
-                    onClick={() => void handleDelete(resume)}
-                    className="rounded p-1.5 text-stone-400 hover:bg-stone-100 hover:text-red-600 disabled:opacity-30"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                  </div>
+                ) : null}
+                {open && children.length > 0 ? (
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2" data-testid={`resume-group-${root.id}`}>
+                    {children.map(renderCard)}
+                  </div>
+                ) : null}
               </div>
-            </article>
-          ))}
+            )
+          })}
         </section>
       )}
 
@@ -357,20 +481,6 @@ export default function Resumes() {
       >
         {compare ? <ResumeDiffView target={compare.target} base={compare.base} /> : null}
       </Drawer>
-
-      <section className="rounded-xl border border-stone-200 bg-white p-5">
-        <h3 className="text-sm font-medium">换版式，不会丢内容</h3>
-        <p className="mt-1.5 text-xs leading-relaxed text-stone-600">
-          编辑页右上角随时可以换模板：只换排版，正文一个字都不动。三套模板用的是同一份内容，A 模板写的切到 B 模板也还在。
-        </p>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {RESUME_TEMPLATES.map((id) => (
-            <span key={id} className="rounded-md border border-stone-200 px-2 py-1 text-[11px] text-stone-600">
-              {RESUME_TEMPLATE_LABELS[id]}
-            </span>
-          ))}
-        </div>
-      </section>
     </div>
   )
 }

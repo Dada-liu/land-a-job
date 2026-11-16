@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { createJob, listCompanies, listJobs, type JobSummaryDto } from '../lib/api'
+import { createJob, listCompanies, listJobCities, listJobs, type JobSummaryDto } from '../lib/api'
 import { qk } from '../lib/queries'
-import { Button, Card, EmptyState, Field, Input, PageHeader, Select, Textarea } from '../components/ui'
+import { useSessionState } from '../lib/sessionState'
+import { Copy } from 'lucide-react'
+import { Button, Card, EmptyState, Field, Input, PageHeader, Select, Textarea, Tooltip } from '../components/ui'
 import { Drawer } from '../components/Drawer'
 import { ApplyDialog } from '../components/ApplyDialog'
 import { QueueDialog } from '../components/QueueDialog'
@@ -34,11 +36,21 @@ function jdSourceBadge(value: string | null): string {
 
 export default function Jobs() {
   const [params, setParams] = useSearchParams()
-  const companyId = params.get('companyId') ?? ''
-  const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('')
-  const [sort, setSort] = useState<'fit' | 'priority' | 'updated'>('fit')
-  const [minFit, setMinFit] = useState(0)
+  /**
+   * 筛选条件写进 sessionStorage：切到别的 tab 再回来，选过的公司/城市/状态/
+   * 分数门槛/排序都还在，不用重选一遍。只在本次会话内有效，关掉标签页即清空。
+   *
+   * 公司 id 仍以 URL 的 ?companyId= 为准（公司库、岗位详情会带着它跳进来），
+   * sessionStorage 只作为「URL 没带时」的兜底。
+   */
+  const companyParam = params.get('companyId')
+  const [rememberedCompany, setRememberedCompany] = useSessionState('jobs.companyId', '')
+  const companyId = companyParam ?? rememberedCompany
+  const [search, setSearch] = useSessionState('jobs.search', '')
+  const [status, setStatus] = useSessionState('jobs.status', '')
+  const [city, setCity] = useSessionState('jobs.city', '')
+  const [sort, setSort] = useSessionState<'fit' | 'priority' | 'updated'>('jobs.sort', 'fit')
+  const [minFit, setMinFit] = useSessionState('jobs.minFit', 0)
   const [createOpen, setCreateOpen] = useState(false)
   const [queueTarget, setQueueTarget] = useState<JobSummaryDto | null>(null)
   const [directApplyTarget, setDirectApplyTarget] = useState<JobSummaryDto | null>(null)
@@ -50,13 +62,15 @@ export default function Jobs() {
   const t = useT()
 
   const companies = useQuery({ queryKey: [...qk.companies, 'all'], queryFn: () => listCompanies({ limit: 200 }) })
+  const cities = useQuery({ queryKey: qk.jobCities, queryFn: listJobCities })
   const jobs = useQuery({
-    queryKey: qk.jobs({ companyId, q: search, status, sort, minFit }),
+    queryKey: qk.jobs({ companyId, q: search, status, city, sort, minFit }),
     queryFn: () =>
       listJobs({
         companyId: companyId || undefined,
         q: search || undefined,
         status: status || undefined,
+        city: city || undefined,
         sort,
         minFit: minFit > 0 ? minFit : undefined,
         withApplication: true,
@@ -67,6 +81,11 @@ export default function Jobs() {
     () => companies.data?.find((company) => company.id === companyId)?.name,
     [companies.data, companyId],
   )
+
+  // 带 ?companyId= 进来的（公司库、岗位详情跳转）也记下来，之后从导航回岗位库还能保持
+  useEffect(() => {
+    if (companyParam) setRememberedCompany(companyParam)
+  }, [companyParam, setRememberedCompany])
 
   const saveJob = useMutation({
     mutationFn: () =>
@@ -91,6 +110,19 @@ export default function Jobs() {
     onError: (error) => toast.push(t('创建失败：{message}', { message: errorText(error) }), 'error'),
   })
 
+  /**
+   * 复制岗位名：和简历库同名按钮同一套规则——复制可见的标题文本，
+   * 成功/失败都给明确提示（剪贴板被拒时不做静默失败）。
+   */
+  const copyTitle = async (job: JobSummaryDto) => {
+    try {
+      await navigator.clipboard.writeText(job.title)
+      toast.push(t('已复制岗位名'), 'success')
+    } catch {
+      toast.push(t('复制失败，请手动选择复制'), 'error')
+    }
+  }
+
   const rows = jobs.data ?? []
 
   return (
@@ -114,6 +146,7 @@ export default function Jobs() {
       />
 
       <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px]">
+        {/* 公司和城市可能有上百个（公司库是 limit 200），下拉里给搜索框，不然只能盲滚 */}
         <Select
           value={companyId}
           onChange={(event) => {
@@ -121,8 +154,12 @@ export default function Jobs() {
             if (event.target.value) next.set('companyId', event.target.value)
             else next.delete('companyId')
             setParams(next, { replace: true })
+            // 同步进 sessionStorage：清掉 URL 参数后要能立刻反映到「回来时还记得什么」
+            setRememberedCompany(event.target.value)
           }}
           className="w-40"
+          searchable
+          searchPlaceholder={t('搜索公司')}
           aria-label={t('按公司筛选')}
         >
           <option value="">{t('全部公司')}</option>
@@ -131,6 +168,30 @@ export default function Jobs() {
               {company.name}
             </option>
           ))}
+          {/* 记忆/链接里的公司已被删：留个能看见的选项，不然下拉显示空白、筛选条件却还在生效。
+              等公司列表回来再判断，避免加载瞬间闪一下「未知公司」 */}
+          {companyId && companies.data && !companies.data.some((company) => company.id === companyId) ? (
+            <option value={companyId}>{t('未知公司')}</option>
+          ) : null}
+        </Select>
+        <Select
+          value={city}
+          onChange={(event) => setCity(event.target.value)}
+          className="w-36"
+          searchable
+          searchPlaceholder={t('搜索城市')}
+          aria-label={t('按城市筛选')}
+        >
+          <option value="">{t('全部城市')}</option>
+          {(cities.data ?? []).map((item) => (
+            <option key={item.city} value={item.city}>
+              {item.city}
+            </option>
+          ))}
+          {/* 选中的城市若已从库里消失（岗位改城市或删掉），仍要有个选项承接，否则下拉会显示空白 */}
+          {city && !(cities.data ?? []).some((item) => item.city === city) ? (
+            <option value={city}>{city}</option>
+          ) : null}
         </Select>
         <Select value={status} onChange={(event) => setStatus(event.target.value)} className="w-36" aria-label={t('按状态筛选')}>
           <option value="">{t('全部状态')}</option>
@@ -164,7 +225,7 @@ export default function Jobs() {
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder={t('搜索岗位、公司、关键词或 JD 正文')}
+          placeholder={t('搜索岗位、公司、城市、关键词或 JD 正文')}
           aria-label={t('搜索岗位')}
           className="w-full"
         />
@@ -204,8 +265,24 @@ export default function Jobs() {
               {rows.map((job) => (
                 <tr key={job.id} className="hover:bg-stone-50/60">
                   <td className="px-4 py-2.5">
+                    {/* 岗位名与复制按钮并排：复制按钮不能塞进「点标题进详情」的按钮里（button 不能嵌 button） */}
+                    <div className="flex items-center gap-1">
+                      <button type="button" onClick={() => navigate(`/jobs/${job.id}`)} className="min-w-0 text-left">
+                        <div data-testid="job-row-title" className="font-medium text-stone-900 hover:underline">{job.title}</div>
+                      </button>
+                      <Tooltip label={t('复制岗位名')}>
+                        <button
+                          type="button"
+                          aria-label={t('复制岗位名')}
+                          data-testid={`job-copy-title-${job.id}`}
+                          onClick={() => void copyTitle(job)}
+                          className="shrink-0 rounded p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+                      </Tooltip>
+                    </div>
                     <button type="button" onClick={() => navigate(`/jobs/${job.id}`)} className="text-left">
-                      <div data-testid="job-row-title" className="font-medium text-stone-900 hover:underline">{job.title}</div>
                       <div className="flex items-center gap-1.5 text-[11px] text-stone-500">
                         <span>{job.companyName ?? t('未知公司')}</span>
                         <span className="rounded bg-stone-100 px-1 text-[10px] text-stone-500" data-testid="job-jd-source">

@@ -24,11 +24,10 @@ const dict: Dict = {
   '{n} 条还在等': '{n} still waiting',
   '· {n} 条还在等': '· {n} still waiting',
 
-  // ——— 转化漏斗 ———
-  '样本 {n} 条已投': 'Based on {n} applications',
-  转化漏斗: 'Conversion funnel',
+  // ——— 历史投递情况 ———
+  历史投递情况: 'Application history',
   相对上一阶段: 'vs. previous stage',
-  '算的是「走到过哪一步」：只要进过面试，就算过了一轮筛选，后来被拒也不会从漏斗里消失。':
+  '算的是「走到过哪一步」：只要进过面试，就算过了一轮筛选，后来被拒也不会被抹掉。':
     'Counts how far each application has ever reached. Once you’ve made it to an interview, that screening stage stays counted even if you’re later rejected.',
 
   // ——— 今日待办 ———
