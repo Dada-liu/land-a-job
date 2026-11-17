@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { sendToBackground } from '../../src/lib/messages.js'
 import type { RuntimeResponse, RuntimeStatus } from '../../src/lib/messages.js'
 import type { StagedJob } from '../../src/lib/types.js'
@@ -35,6 +36,66 @@ function GearIcon() {
   )
 }
 
+/** 悬停多久才出提示：太快会跟着鼠标乱闪，原生 title 的 ~1s 又显得迟钝 */
+const TIP_DELAY = 480
+
+/**
+ * 图标按钮：提示自绘，不用原生 `title`。
+ * 原生 title 的延迟与样式都由浏览器决定，popup 里还会被窗口边缘裁掉；自绘才能控节奏。
+ */
+function IconButton({
+  tip, disabled, spinning, onClick, children,
+}: {
+  tip: string
+  disabled?: boolean
+  spinning?: boolean
+  onClick: () => void
+  children: ReactNode
+}) {
+  const [shown, setShown] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clear = () => {
+    if (timer.current !== null) {
+      clearTimeout(timer.current)
+      timer.current = null
+    }
+  }
+  /** hover 后延迟显示；移开立刻收起（收起不需要等） */
+  const schedule = () => {
+    clear()
+    timer.current = setTimeout(() => setShown(true), TIP_DELAY)
+  }
+  /** 键盘 Tab 过来时直接给提示，别再让用户等半秒 */
+  const showNow = () => {
+    clear()
+    setShown(true)
+  }
+  const hide = () => {
+    clear()
+    setShown(false)
+  }
+  useEffect(() => clear, [])
+
+  return (
+    <button
+      type="button"
+      className={`icon${spinning ? ' spin' : ''}`}
+      aria-label={tip}
+      aria-busy={spinning || undefined}
+      disabled={disabled}
+      onClick={onClick}
+      onMouseEnter={schedule}
+      onMouseLeave={hide}
+      onFocus={showNow}
+      onBlur={hide}
+    >
+      {children}
+      <span className={`tip${shown ? ' on' : ''}`} role="tooltip" aria-hidden="true">{tip}</span>
+    </button>
+  )
+}
+
 /** 操作反馈统一走顶部浮层：底部两行提示用户根本扫不到（尤其 popup 已经很长时） */
 type Toast = { kind: 'ok' | 'error'; text: string }
 
@@ -44,6 +105,7 @@ export function PopupApp() {
   const [logs, setLogs] = useState<string[]>([])
   const [toast, setToast] = useState<Toast | null>(null)
   const [busy, setBusy] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [showProgress, setShowProgress] = useState(false)
 
   const refresh = useCallback(async () => {
@@ -59,6 +121,21 @@ export function PopupApp() {
   }, [])
 
   useEffect(() => { void refresh() }, [refresh])
+
+  /** 点刷新按钮时转起来；本地读取通常几十毫秒就完了，补足最短时长才看得出在转 */
+  const MIN_SPIN = 620
+  const manualRefresh = useCallback(async () => {
+    if (refreshing) return
+    setRefreshing(true)
+    const startedAt = Date.now()
+    try {
+      await refresh()
+    } finally {
+      const left = MIN_SPIN - (Date.now() - startedAt)
+      if (left > 0) await new Promise((resolve) => setTimeout(resolve, left))
+      setRefreshing(false)
+    }
+  }, [refresh, refreshing])
 
   /** 3.2 秒自动收起；点一下也能立刻关掉 */
   useEffect(() => {
@@ -137,20 +214,23 @@ export function PopupApp() {
       <div className="head">
         <h1>land-a-job · BOSS 桥接</h1>
         <div className="head-actions">
-          <button
-            className="icon"
-            title="查看缓存岗位（可筛选）"
-            aria-label="查看缓存岗位"
+          <IconButton
+            tip="查看缓存岗位"
             onClick={() => void chrome.tabs.create({ url: chrome.runtime.getURL('staging.html') })}
           >
             <ListIcon />
-          </button>
-          <button className="icon" title="刷新状态" aria-label="刷新状态" disabled={busy} onClick={() => void refresh()}>
+          </IconButton>
+          <IconButton
+            tip="刷新状态"
+            disabled={busy}
+            spinning={refreshing}
+            onClick={() => void manualRefresh()}
+          >
             <RefreshIcon />
-          </button>
-          <button className="icon" title="设置" aria-label="设置" disabled={busy} onClick={() => void chrome.runtime.openOptionsPage()}>
+          </IconButton>
+          <IconButton tip="设置" disabled={busy} onClick={() => void chrome.runtime.openOptionsPage()}>
             <GearIcon />
-          </button>
+          </IconButton>
         </div>
       </div>
       {/* 提示条正好落在副标题上：提示期间把它淡出，避免露出半截字 */}

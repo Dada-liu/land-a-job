@@ -15,12 +15,33 @@ h1 { font-size: 15px; font-weight: 500; margin: 0 0 4px; }
 .head h1 { margin: 0; }
 .head-actions { display: flex; align-items: center; gap: 2px; flex: none; }
 .icon {
+  position: relative;
   display: inline-flex; align-items: center; justify-content: center;
   width: 26px; height: 26px; padding: 0; border: 0; border-radius: 6px;
   background: transparent; color: #78716c; cursor: pointer;
 }
 .icon:hover { background: #f5f5f4; color: #1c1917; }
 .icon:disabled { opacity: .4; cursor: not-allowed; }
+.icon:focus-visible { outline: 2px solid #a8a29e; outline-offset: 1px; }
+/* 刷新中：图标匀速转，转完由组件撤掉这个类 */
+.icon.spin { color: #1c1917; background: #f5f5f4; }
+.icon.spin svg { animation: icon-spin .8s linear infinite; }
+@keyframes icon-spin { to { transform: rotate(360deg); } }
+/* 自绘提示：hover 延迟后才出现（由组件控时），这里只管显隐与位置 */
+.tip {
+  position: absolute; top: calc(100% + 6px); left: 50%;
+  padding: 4px 8px; border-radius: 6px;
+  background: #1c1917; color: #fff;
+  font-size: 11px; font-weight: 400; line-height: 1.45; white-space: nowrap;
+  opacity: 0; transform: translate(-50%, -2px); visibility: hidden;
+  transition: opacity .12s ease, transform .12s ease;
+  box-shadow: 0 4px 12px rgba(28, 25, 23, .18);
+  pointer-events: none; z-index: 60;
+}
+.tip.on { opacity: 1; transform: translate(-50%, 0); visibility: visible; }
+/* 最右一个贴着容器右边缘：居中会让气泡溢出 popup 窗口 */
+.head-actions > .icon:last-child .tip { left: auto; right: 0; transform: translate(0, -2px); }
+.head-actions > .icon:last-child .tip.on { transform: translate(0, 0); }
 h2 { font-size: 13px; font-weight: 500; margin: 18px 0 8px; }
 .sub { color: #78716c; font-size: 12px; margin: 0 0 14px; line-height: 1.6; }
 .card { background: #fff; border: 1px solid #e7e5e4; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
