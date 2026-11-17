@@ -110,7 +110,7 @@ Any other agent: edit its MCP config (WorkBuddy uses `~/.workbuddy/mcp.json`, Cu
 
 Call these in order (or let the agent call them itself):
 
-1. `get_app_status` → should return service and DB status plus version compatibility for all 9 skills.
+1. `get_app_status` → should return service and DB status plus version compatibility for all 10 skills.
 2. `list_resumes` → an empty array on a fresh database is normal.
 3. If any skill shows an incompatible version → rerun `npm run skills:install`, **restart the agent**, verify again.
 

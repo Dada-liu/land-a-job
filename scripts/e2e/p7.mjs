@@ -315,7 +315,7 @@ async function main() {
     section('Skill 状态条')
     // 状态条在 /api/skills 返回前只显示「检测中」，所以要等它落地
     await waitFor(async () => (await count(page, '[data-testid="skill-bar"]')) === 1, '侧栏有 Skill 状态条')
-    // 侧栏只给一句结论，九个 Skill 的明细在设置页（见下面 skill-row 的断言）
+    // 侧栏只给一句结论，十个 Skill 的明细在设置页（见下面 skill-row 的断言）
     eq(await count(page, '[data-testid="skill-bar"] li'), 0, '侧栏不再逐条列 Skill')
     await waitFor(
       async () => (await text(page, '[data-testid="skill-bar"]')).includes('Skill 已就绪'),
@@ -324,7 +324,7 @@ async function main() {
     const broken = await page.$eval('[data-testid="skill-bar"]', (element) => element.getAttribute('data-broken'))
     eq(broken, '0', '仓库里的 Skill 版本与登记一致，全部就绪')
     await waitFor(
-      async () => (await count(page, '[data-testid="skill-row"]')) === 9,
+      async () => (await count(page, '[data-testid="skill-row"]')) === 10,
       '设置页列出每个 Skill 的版本与安装位置',
     )
 

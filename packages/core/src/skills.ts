@@ -96,6 +96,16 @@ export const SKILL_REGISTRY: readonly SkillMeta[] = [
     purpose: '创建定时任务 / 手动巡检，凭站点证据推进投递状态并留痕',
     writeTools: ['update_application_status', 'add_application_note'],
   },
+  {
+    // 只开浏览器，不碰库：writeTools 刻意留空。别为了「看起来一致」给它塞写工具，
+    // 那会让「打开插件」顺手改数据这件事变得合法。
+    name: 'open-boss-browser',
+    version: '1.0.0',
+    minVersion: '1.0.0',
+    title: '打开插件浏览器',
+    purpose: '拉起装了 BOSS 桥接扩展的独立 profile 浏览器，按 profile / 扩展 / 登录态三步给出下一步',
+    writeTools: [],
+  },
 ] as const
 
 export const SKILL_NAMES = SKILL_REGISTRY.map((item) => item.name) as [string, ...string[]]

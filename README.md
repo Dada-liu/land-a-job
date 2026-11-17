@@ -98,6 +98,7 @@ The server doesn't need to be running: the first tool call spawns `apps/server` 
 | `resume-tailor-batch` | "Tailor every job in the pipeline", "One resume per job, then queue them" |
 | `browser-apply` | "Apply to X for me", "I'll click submit myself, then log it" |
 | `application-status-sync` | "Check application status daily", "Create a scheduled status check" |
+| `open-boss-browser` | "Open the plugin", "Open the BOSS browser" |
 
 The last four share one preamble: the service must be up and there must be at least one resume. Without a resume the agent starts the server, opens `/resumes?create=1`, and waits for you to create a master resume. Batch search also asks for **work location** and the **master resume** first; batch tailoring asks for the **master resume**. `browser-apply` always leaves the final submit click to you.
 
@@ -110,7 +111,7 @@ Hard rules (enforced by both skills and MCP):
 ## Detailed usage
 
 > Quick start above is the shortest path. This section goes: install → run → connect an agent → walk the full loop → backup / troubleshooting.
-> Numbers reflect the current repo: 43 MCP tools / 9 skills / schema v2 / 286 unit tests / 373 E2E assertions.
+> Numbers reflect the current repo: 43 MCP tools / 10 skills / schema v2 / 286 unit tests / 373 E2E assertions.
 
 ### 1. Requirements
 
@@ -212,9 +213,9 @@ For other agents, put the same command in their MCP config:
 
 **Step 3 · Verify**
 
-Ask the agent to call `get_app_status`. It should return service/DB status plus version compatibility for all 9 skills. If you get `SKILL_OUTDATED`, re-run `npm run skills:install` and restart the agent; the web status bar also turns red and shows the fix command.
+Ask the agent to call `get_app_status`. It should return service/DB status plus version compatibility for all 10 skills. If you get `SKILL_OUTDATED`, re-run `npm run skills:install` and restart the agent; the web status bar also turns red and shows the fix command.
 
-**The nine skills and their trigger phrases**
+**The ten skills and their trigger phrases**
 
 | Skill | Say to the agent | Main persisted output |
 | --- | --- | --- |
@@ -227,6 +228,7 @@ Ask the agent to call `get_app_status`. It should return service/DB status plus 
 | `resume-tailor-batch` | "Tailor every job that isn't queued yet" | `resume(kind=variant)` + `queued` applications |
 | `browser-apply` | "Apply to X, I'll click submit myself" | `applied` + timeline evidence note |
 | `application-status-sync` | "Check every site at 9am daily" | status transitions + `application_event` / scheduled task |
+| `open-boss-browser` | "Open the plugin", "Is the browser extension loaded?" | nothing — it only launches a browser and reads the page |
 
 **Calling the API directly** (token in `data/.token`):
 
@@ -419,7 +421,7 @@ flowchart TB
   subgraph A["① User and agent layer · the only place models exist"]
     USER["User"]
     AGENT["Any agent<br/>Claude Code · Codex · WorkBuddy<br/>Cursor · Doubao Work · Kimi"]
-    SKILLS["9 skills · symlinked<br/>jd-collect · job-hunt · resume-tailor<br/>job-prep · offer-decide · job-search-batch<br/>resume-tailor-batch · browser-apply<br/>application-status-sync"]
+    SKILLS["10 skills · symlinked<br/>jd-collect · job-hunt · resume-tailor<br/>job-prep · offer-decide · job-search-batch<br/>resume-tailor-batch · browser-apply<br/>application-status-sync · open-boss-browser"]
     AGBROWSER["Agent's own browser<br/>JD read-back / applying on sites"]
     USER -->|"natural language"| AGENT
     AGENT --> SKILLS

@@ -213,7 +213,7 @@ By D2, the product's AI capability = installed skills × the user's agent × thi
 | --- | --- | --- |
 | FR-7.1 | MCP service | stdio MCP covering all reads and writes for FR-1~FR-6; structured JSON, readable and self-correctable errors |
 | FR-7.2 | MCP resources | `land://today`, `land://pipeline`, `land://job/{id}`, `land://resume/{id}`, `land://offer/compare` so the agent can read context without round-trips |
-| FR-7.3 | Skill package | Installable workflows: `jd-collect`, `job-hunt`, `resume-tailor`, `job-prep`, `offer-decide`, `job-search-batch`, `resume-tailor-batch`, `browser-apply`, `application-status-sync`; each with trigger → fetch → steps → output contract → persistence → prohibitions |
+| FR-7.3 | Skill package | Installable workflows: `jd-collect`, `job-hunt`, `resume-tailor`, `job-prep`, `offer-decide`, `job-search-batch`, `resume-tailor-batch`, `browser-apply`, `application-status-sync`, `open-boss-browser`; each with trigger → fetch → steps → output contract → persistence → prohibitions |
 | FR-7.4 | Complete AI mapping | Every "needs AI" capability in §5.9 maps to a skill step; conversely no skill produces output that isn't persisted |
 | FR-7.5 | Cross-agent compatibility | Claude Code / Codex / WorkBuddy / Cursor can install the same package; clients that don't read a local skill directory (Doubao Work) take the `SKILL.md` text as their brief — browser work is possible, persistence goes through an MCP-capable agent or a web paste; no agent-specific tools (someone's todo list, file-tree convention) |
 | FR-7.6 | Install and go | One command plus manual copy; README gives the concrete paths for Claude Code (`~/.claude/skills/`), Codex (`~/.codex/skills/`) and WorkBuddy (`~/.workbuddy/skills/`) |

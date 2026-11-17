@@ -71,6 +71,11 @@ const NON_TOOL_BACKTICKS = new Set([
   'dom_cua_get_visible_dom',
   'dom_cua_scroll',
   'cua_execute',
+  // open-boss-browser：启动本机浏览器用的 Agent 侧参数，以及 CDP 里的 target 类型。
+  // 都不是本应用的 MCP 工具，写进 SKILL.md 是为了让 Agent 知道该带什么参数、该看哪个 target。
+  'run_in_background',
+  'service_worker',
+  'shared_worker',
 ])
 
 function captureRegistrations(): { tools: string[]; resources: string[] } {
@@ -155,7 +160,7 @@ describe('Skill 与工具的一致性', () => {
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
 
-  it('九个 Skill 目录都在', () => {
+  it('十个 Skill 目录都在', () => {
     expect(skillDirs.sort()).toEqual([
       'application-status-sync',
       'browser-apply',
@@ -164,6 +169,7 @@ describe('Skill 与工具的一致性', () => {
       'job-prep',
       'job-search-batch',
       'offer-decide',
+      'open-boss-browser',
       'resume-tailor',
       'resume-tailor-batch',
     ])

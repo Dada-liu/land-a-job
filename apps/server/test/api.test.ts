@@ -633,7 +633,7 @@ describe('provenance 校验（P5 / D2 红线）', () => {
 })
 
 describe('Skill 状态与版本胜率（P5）', () => {
-  it('GET /skills 返回九个登记的 Skill', async () => {
+  it('GET /skills 返回十个登记的 Skill', async () => {
     const result = await app.call('GET', '/skills')
     expect(result.status).toBe(200)
     const names = result.body.data.skills.map((item: { name: string }) => item.name)
@@ -645,6 +645,7 @@ describe('Skill 状态与版本胜率（P5）', () => {
       'job-prep',
       'job-search-batch',
       'offer-decide',
+      'open-boss-browser',
       'resume-tailor',
       'resume-tailor-batch',
     ])

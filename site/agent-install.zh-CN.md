@@ -110,7 +110,7 @@ codex mcp add land-a-job -- node "$HOME/Tools/land-a-job/apps/mcp/dist/index.js"
 
 依次调用（或让 Agent 自己调）：
 
-1. `get_app_status` → 应返回服务与 DB 状态，以及 9 个 Skill 的版本兼容性。
+1. `get_app_status` → 应返回服务与 DB 状态，以及 10 个 Skill 的版本兼容性。
 2. `list_resumes` → 空库返回空数组是正常的。
 3. 若有 Skill 版本显示不兼容 → 重跑 `npm run skills:install`，**重启 Agent** 再验。
 

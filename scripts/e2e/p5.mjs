@@ -150,7 +150,7 @@ async function main() {
     eq(existsSync(path.join(dataDir, '.port')), false, '启动前没有端口文件')
     const status = await call(client, 'get_app_status')
     eq(status.data?.service, 'up', '首次工具调用把服务拉起来了')
-    eq(status.data?.registeredSkills?.length, 9, '返回九个已登记 Skill')
+    eq(status.data?.registeredSkills?.length, 10, '返回十个已登记 Skill')
     ok(existsSync(path.join(dataDir, '.port')), '端口文件已写入')
     eq(readFileSync(path.join(dataDir, '.port'), 'utf8').trim(), String(PORT), '端口与预期一致')
 
@@ -158,10 +158,10 @@ async function main() {
     ok(token.length >= 32, '令牌已生成（MCP 从文件读，不走环境变量）')
 
     const skillsPayload = status.data?.skills
-    eq(skillsPayload?.skills?.length, 9, '本机 skill 扫描到九个')
+    eq(skillsPayload?.skills?.length, 10, '本机 skill 扫描到十个')
     ok(
       skillsPayload.skills.every((item) => item.compatible === true),
-      '九个 Skill 版本与注册表兼容',
+      '十个 Skill 版本与注册表兼容',
       skillsPayload.skills.map((item) => `${item.name}@${item.version}`),
     )
 
@@ -489,7 +489,7 @@ async function main() {
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
       .sort()
-    eq(skillNames.length, 9, '九个 Skill 目录')
+    eq(skillNames.length, 10, '十个 Skill 目录')
     ok(skillNames.includes('jd-collect'), '新增的 JD 采集 Skill 已随包分发')
     for (const name of ['job-search-batch', 'resume-tailor-batch', 'browser-apply', 'application-status-sync']) {
       ok(skillNames.includes(name), `${name} 已随包分发`)

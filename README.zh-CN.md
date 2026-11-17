@@ -98,6 +98,7 @@ npm run skills:install
 | `resume-tailor-batch` | 「把库里的岗位都定制一遍」「每个岗位配份简历并进待投」 |
 | `browser-apply` | 「帮我投 XX 公司」「我自己点提交，投完记一下」 |
 | `application-status-sync` | 「每天帮我看看投递到哪一步」「建个定时任务查状态」 |
+| `open-boss-browser` | 「打开插件」「打开 BOSS 浏览器」 |
 
 后四个 Skill 共用同一段前置检查：服务可用、库里有简历。没有简历时 Agent 会启动前后端、用本机浏览器打开
 `/resumes?create=1`，让用户先建第一份母版简历再继续；批量搜岗还必须先问**工作地点**和**母简历**，
@@ -216,9 +217,9 @@ codex mcp add land-a-job -- node /绝对路径/land-a-job/apps/mcp/dist/index.js
 
 **第 3 步 · 验证**
 
-在 Agent 里说「调一下 `get_app_status` 看看服务状态」，正常应返回服务 / DB 状态与 9 个 Skill 的版本兼容性。返回 `SKILL_OUTDATED` 就重跑 `npm run skills:install` 并重启 Agent；Web 顶部状态条也会变红并给出修复命令。
+在 Agent 里说「调一下 `get_app_status` 看看服务状态」，正常应返回服务 / DB 状态与 10 个 Skill 的版本兼容性。返回 `SKILL_OUTDATED` 就重跑 `npm run skills:install` 并重启 Agent；Web 顶部状态条也会变红并给出修复命令。
 
-**九个 Skill 与触发语**
+**十个 Skill 与触发语**
 
 | Skill | 对 Agent 说 | 主要落库产物 |
 | --- | --- | --- |
@@ -231,6 +232,7 @@ codex mcp add land-a-job -- node /绝对路径/land-a-job/apps/mcp/dist/index.js
 | `resume-tailor-batch` | 「库里没进待投的岗位都定制一遍」 | `resume(kind=variant)` + `queued` 投递 |
 | `browser-apply` | 「帮我投 XX 公司，最后我自己点提交」 | `applied` 投递 + 时间线证据备注 |
 | `application-status-sync` | 「每天 9 点帮我巡检各站点状态」 | 状态跃迁 + `application_event` / 定时任务 |
+| `open-boss-browser` | 「打开插件」「打开 BOSS 浏览器」「插件装了没反应」 | 不落库：只开浏览器、读页面、讲清下一步 |
 
 **绕开 Agent 直接调 API**（令牌在 `data/.token`）：
 
@@ -356,7 +358,7 @@ packages/resume-kit   简历编辑器（三套模板 + 受控编辑面板 + 分�
 apps/server           Fastify HTTP + WS，托管 Web 产物，唯一数据写入方
 apps/mcp              MCP server（stdio）：43 个工具 + 5 个资源，HTTP 薄壳 + 自动拉起
 apps/web              React 19 + Vite + Tailwind 4 的看板与编辑器
-skills/               九个 Skill（SKILL.md + references），软件能力的真正载体
+skills/               十个 Skill（SKILL.md + references），软件能力的真正载体
 scripts/e2e           P3–P7 端到端（真服务 + 真 Chrome），lib.mjs 抽公共骨架
 scripts/build-site.mjs  官网构建（拷 site/ → site/dist + 写 build.json）
 scripts/install-launchd.sh  开机常驻 / 卸载 / 状态
@@ -407,7 +409,7 @@ data/                 运行期生成：land.db、.token、logs/、files/、snap
 2. **该用哪个 Skill** + 是否就绪（未装显示 `npm run skills:install`）；
 3. **手动兜底出口**——不想用 Agent 就自己改。
 
-顶部状态条读 `/api/skills` 显示九个 Skill 的已装版本，落后或缺失时变红并可一键复制修复命令。
+顶部状态条读 `/api/skills` 显示十个 Skill 的已装版本，落后或缺失时变红并可一键复制修复命令。
 
 ## 架构总览（详细）
 
@@ -423,7 +425,7 @@ flowchart TB
   subgraph A["① 用户与 Agent 层 · 模型只存在于这里"]
     USER["用户"]
     AGENT["任意 Agent<br/>Claude Code · Codex · WorkBuddy<br/>Cursor · 豆包工作 · Kimi"]
-    SKILLS["9 个 Skill · symlink 安装<br/>jd-collect · job-hunt · resume-tailor<br/>job-prep · offer-decide · job-search-batch<br/>resume-tailor-batch · browser-apply<br/>application-status-sync"]
+    SKILLS["10 个 Skill · symlink 安装<br/>jd-collect · job-hunt · resume-tailor<br/>job-prep · offer-decide · job-search-batch<br/>resume-tailor-batch · browser-apply<br/>application-status-sync · open-boss-browser"]
     AGBROWSER["Agent 自带浏览器<br/>JD 读回 / 官网投递"]
     USER -->|"自然语言"| AGENT
     AGENT --> SKILLS

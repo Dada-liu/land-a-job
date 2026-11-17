@@ -575,10 +575,11 @@ apps/mcp
 - **provenance required**: skills must send `provenance: { skill, skillVersion, model? }`; the server validates `skill` against `SKILL_REGISTRY`, writes `provenance_json` on `resume` / `question`, and records the event with `source='mcp'`. Manual edits in the UI write `provenance_json = NULL`, which is how the two are distinguished.
 
 ```ts
-// Server-side validation sketch; the authoritative list is packages/core/src/skills.ts (9 today)
+// Server-side validation sketch; the authoritative list is packages/core/src/skills.ts (10 today)
 const SKILL_REGISTRY = [
   'jd-collect', 'job-hunt', 'resume-tailor', 'job-prep', 'offer-decide',
   'job-search-batch', 'resume-tailor-batch', 'browser-apply', 'application-status-sync',
+  'open-boss-browser',
 ] as const
 const Provenance = z.object({
   skill: z.enum(SKILL_REGISTRY),
@@ -721,7 +722,7 @@ description: Tailor a resume to a JD and analyse gaps. Use when the user says ..
 - Never PATCH the whole data_json over manual edits
 ```
 
-### 9.4 The nine skills
+### 9.4 The ten skills
 
 | Skill | Covers | Key tool sequence | Persisted output |
 | --- | --- | --- | --- |
@@ -734,6 +735,7 @@ description: Tailor a resume to a JD and analyse gaps. Use when the user says ..
 | `resume-tailor-batch` | FR-2 bulk entry | `list_jobs` + `list_applications` + `list_resumes` → per job `get_job` → `tailor_resume` → `update_resume` (with provenance) → `create_application(status=queued)` | `resume(kind=variant)`, `application(status=queued)` |
 | `browser-apply` | FR-4 manual submit path | `list_companies` / `list_jobs` / `get_resume` → `export_resume_pdf` → agent browser prefill → **user clicks submit** → status update or `create_application(status=applied)` → `add_application_note` → `get_timeline` | `application(status=applied)`, timeline evidence |
 | `application-status-sync` | FR-4 status write-back | `get_app_status` → `list_applications` → `get_job` / `get_application` → browser reads site status → `update_application_status` + `add_application_note` → verify | status transitions, `application_event` |
+| `open-boss-browser` | browser entry for the local BOSS bridge extension | shell launch with a dedicated `user-data-dir` → `GET /json/list` to confirm the extension's service worker → CDP `Runtime.evaluate` for the login state | nothing — no write tool, no provenance |
 
 The last four share an identical §0: service reachable + at least one resume; without a resume they start the server and open `/resumes?create=1` in the browser. None of them add MCP tools, and none let the app touch a model or login state.
 
@@ -769,7 +771,7 @@ sequenceDiagram
 
 ### 9.5 Provenance contract
 
-One format across all nine skills:
+One format across the nine skills that persist anything:
 
 ```json
 {

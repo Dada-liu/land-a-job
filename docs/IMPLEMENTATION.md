@@ -38,7 +38,7 @@ P0 Foundation (3d) → P1 Data & API (4d) → P2 Resume reuse (4d) → P3 Pipeli
 | G3 | Old resume JSON migrates 100% and renders correctly |
 | G4 | Drag on the board → refresh → same state, complete timeline |
 | G5 | One real site completes "fill → human confirm → submit → evidence" |
-| G6 | 9 skills symlinked into Claude Code, Codex and WorkBuddy; the same SKILL.md works for "apply" and "interview prep" in at least two agents; output visible in the UI with provenance |
+| G6 | 10 skills symlinked into Claude Code, Codex and WorkBuddy; the same SKILL.md works for "apply" and "interview prep" in at least two agents; output visible in the UI with provenance |
 | G7 | Two offers' comp totals match hand calculation within 1% |
 | G8 | Offline, with no API keys, the UI's entry/edit/stats/export/compare all work |
 

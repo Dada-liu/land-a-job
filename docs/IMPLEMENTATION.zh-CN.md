@@ -40,7 +40,7 @@ P0 地基（3d） → P1 数据与 API（4d） → P2 简历复用（4d） → P
 | G3 | 旧简历 JSON 可 100% 迁移并正确渲染 |
 | G4 | 看板拖拽 → 刷新页面状态一致，时间线完整 |
 | G5 | 一个真实官网完成「填 → 人工确认 → 提交 → 存证」 |
-| G6 | 9 个 Skill 以 symlink 装进 Claude Code、Codex 与 WorkBuddy 各一份；同一份 SKILL.md 在至少两个 Agent 中跑通「投递」与「面试准备」；产出在 Web 可见且带 provenance |
+| G6 | 10 个 Skill 以 symlink 装进 Claude Code、Codex 与 WorkBuddy 各一份；同一份 SKILL.md 在至少两个 Agent 中跑通「投递」与「面试准备」；产出在 Web 可见且带 provenance |
 | G7 | 两 offer 总包手算误差 < 1% |
 | G8 | 断网 + 无任何 API Key 时，Web 的录入/编辑/统计/导出/对比全部可用 |
 

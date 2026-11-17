@@ -576,10 +576,11 @@ apps/mcp
 
 ```ts
 // 服务端校验片段
-// 片段示意；权威定义在 packages/core/src/skills.ts（当前 9 个）
+// 片段示意；权威定义在 packages/core/src/skills.ts（当前 10 个）
 const SKILL_REGISTRY = [
   'jd-collect', 'job-hunt', 'resume-tailor', 'job-prep', 'offer-decide',
   'job-search-batch', 'resume-tailor-batch', 'browser-apply', 'application-status-sync',
+  'open-boss-browser',
 ] as const
 const Provenance = z.object({
   skill: z.enum(SKILL_REGISTRY),
@@ -731,7 +732,7 @@ description: 按 JD 定制简历并分析匹配缺口。当用户说「按这个
 - 禁止一次 patch 整个 data_json 覆盖人工改动（用条目级工具）
 ```
 
-### 9.4 九个 Skill 的职责与工具序列
+### 9.4 十个 Skill 的职责与工具序列
 
 | Skill | 覆盖需求 | 关键工具序列 | 落库产物 |
 | --- | --- | --- | --- |
@@ -744,6 +745,7 @@ description: 按 JD 定制简历并分析匹配缺口。当用户说「按这个
 | `resume-tailor-batch` | FR-2 的批量入口 | `list_jobs` + `list_applications` + `list_resumes` 圈目标 → 逐岗位 `get_job` → `tailor_resume` → `update_resume`（带 provenance）→ `create_application(status=queued)` → `get_application` 复核 | `resume(kind=variant)`、`application(status=queued)` |
 | `browser-apply` | FR-4 的人工提交路径 | `list_companies` / `list_jobs` / `get_resume` → `export_resume_pdf` → `workbuddy-browser-use` 预填 → **用户点击提交** → `update_application_status` 或 `create_application(status=applied)` → `add_application_note` → `get_timeline` | `application(status=applied)`、时间线证据 |
 | `application-status-sync` | FR-4 的状态回写 | `get_app_status` → `list_applications` → `get_job` / `get_application` → 浏览器读站点状态 → `update_application_status` + `add_application_note` → 复核；定时由 Agent 侧 `automation_update` 管理 | `application` 状态跃迁、`application_event` |
+| `open-boss-browser` | 本机 BOSS 桥接扩展的浏览器入口 | shell 起独立 `user-data-dir` 的 Chrome → `GET /json/list` 确认扩展的 service worker → CDP `Runtime.evaluate` 判登录态 | 无：不调任何写接口，也就没有 provenance |
 
 后四个 Skill 的 §0 是同一份前置检查：服务可用 + 库里有简历；没有简历就启动前后端、用本机浏览器打开
 `/resumes?create=1` 让用户先建母版。它们都不新增 MCP 工具，也不让应用碰模型或登录态。
@@ -780,7 +782,7 @@ sequenceDiagram
 
 ### 9.5 落库契约（provenance）
 
-统一格式，九个 Skill 一致：
+统一格式，九个会落库的 Skill 一致（`open-boss-browser` 不写数据，不涉及 provenance）：
 
 ```json
 {
