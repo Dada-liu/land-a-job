@@ -10,7 +10,7 @@ import { parseResponse, type CapturedResponse, type ConversationItem } from '../
 import { runPipeline, type ActionResult } from '../src/lib/pipeline.js'
 import { RateLimiter, type PersistedRateLimit } from '../src/lib/rate-limit.js'
 import { bestMatchingJob } from '../src/lib/match.js'
-import { isDefaultGreeting, isPeerMessage, toSnapshot } from '../src/lib/reply.js'
+import { detectGreetSent, isDefaultGreeting, isPeerMessage, toSnapshot } from '../src/lib/reply.js'
 import { bytesToBase64, tailorAndExport } from '../src/lib/resume.js'
 import { PAGE_URLS } from '../src/lib/selectors.js'
 import { syncOnReply, pushApplied, syncRepliedJob } from '../src/lib/sync.js'
@@ -210,6 +210,7 @@ async function handleFriendList(conversations: ConversationItem[]): Promise<void
   let unmatched = 0
   let reversed = 0
   let newConvs = 0
+  let greetSents = 0
 
   for (const conv of conversations) {
     const key = snapshotKey(conv.uid, conv.jobId)
@@ -275,6 +276,20 @@ async function handleFriendList(conversations: ConversationItem[]): Promise<void
       if (result.pushed) applied += 1
     }
 
+    /**
+     * 定制招呼语发出：打过招呼之后自己又发了一条非默认模板的消息。
+     * 插件不点发送，只能靠会话列表被动读到——所以它依赖「检查新回复」或 60 分钟巡检。
+     */
+    const greetSentTarget = findStagedForGreetSent(data, conv)
+    const greetSent = detectGreetSent(conv, greetSentTarget)
+    if (greetSent.sent && greetSentTarget && greetSent.at) {
+      greetSentTarget.greetSentAt = greetSent.at
+      greetSentTarget.notes = `${greetSentTarget.notes ? `${greetSentTarget.notes}；` : ''}已发出定制招呼语${
+        greetSent.matchedDraft ? '' : '（文案与草稿不同）'}`
+      greetSents += 1
+      log(`${greetSentTarget.brandName}：已确认发出定制招呼语（${greetSent.matchedDraft ? '与草稿一致' : '文案有改动'}）`)
+    }
+
     // P3c：读到「附件简历已发送给对方」的系统回执（或兜底：自己发的消息）→ 推进 applied + 写时间线
     const sentTarget = findStagedForSent(data, conv)
     const sentDecision = detectSent(conv, sentTarget)
@@ -299,8 +314,8 @@ async function handleFriendList(conversations: ConversationItem[]): Promise<void
   await ensureJdForReplies(Object.values(data.jobs), bridge)
   /** 会话列表是分页的：把「读到多少条 / 累计多少条」写进日志，用户能直接核对 BOSS 页面上的总数 */
   log(`读到会话列表：本批 ${conversations.length} 条、新会话 ${newConvs} 条、累计 ${Object.keys(data.conversations).length} 条`)
-  if (replies || manual || synced || applied || unmatched || reversed) {
-    log(`检查回复：新回复 ${replies} 条、写入 land-a-job ${synced} 条、推进投递 ${applied} 条、反向补建 ${reversed} 条、跳过（太旧/无公司名/对不上岗位）${unmatched} 条、你已接手 ${manual} 条`)
+  if (replies || manual || synced || applied || unmatched || reversed || greetSents) {
+    log(`检查回复：新回复 ${replies} 条、定制版招呼语 ${greetSents} 条、写入 land-a-job ${synced} 条、推进投递 ${applied} 条、反向补建 ${reversed} 条、跳过（太旧/无公司名/对不上岗位）${unmatched} 条、你已接手 ${manual} 条`)
   }
 }
 
@@ -319,6 +334,16 @@ function findStagedForSent(data: StagingData, conv: ConversationItem): StagedJob
   return bestMatchingJob(Object.values(data.jobs), conv, (job) =>
     (job.state === 'replied' || job.state === 'tailored' || job.state === 'uploaded')
     && !job.manual)
+}
+
+/**
+ * 「定制招呼语发出」的落点：必须是**已经记过打招呼**的那条。
+ * 同一岗位常有多条重复记录（securityId 会变），只在 greetedAt 存在的记录上写，
+ * 免得把时间写到另一条 ready 副本上、UI 里还是空。
+ */
+function findStagedForGreetSent(data: StagingData, conv: ConversationItem): StagedJob | undefined {
+  return bestMatchingJob(Object.values(data.jobs), conv, (job) =>
+    job.greetedAt !== undefined && job.greetSentAt === undefined && !job.manual)
 }
 
 async function handleCaptured(url: string, body: unknown): Promise<void> {

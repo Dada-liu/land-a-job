@@ -31,9 +31,52 @@ function normalize(text: string): string {
   return text.replace(/\s+/g, '').replace(/[\u200B-\u200F\uFEFF]/g, '')
 }
 
+/** 两条消息是不是同一句（忽略空白与零宽字符） */
+export function isSameMessage(text: string, expected: string): boolean {
+  const a = normalize(text)
+  return a.length > 0 && a === normalize(expected)
+}
+
 export function isDefaultGreeting(text: string, greeting = DEFAULT_BOSS_GREETING): boolean {
-  const value = normalize(text)
-  return value.length > 0 && value === normalize(greeting)
+  return isSameMessage(text, greeting)
+}
+
+/**
+ * 「定制招呼语发出」的判据（只读会话列表，不点发送）。
+ *
+ * 顺序是：先有 `greetedAt`（用户手动发过默认招呼语），之后会话里又出现一条**自己发的**、
+ * 且不是 BOSS 默认模板的消息——那就是他复制草稿发出去的那条。
+ * 用户常常会把草稿改两句再发，所以文案不一致不算失败，只在备注里标出来。
+ */
+export interface GreetSentDecision {
+  sent: boolean
+  at?: number
+  /** 发出去的文字与插件生成的草稿是否一致 */
+  matchedDraft: boolean
+  reason: string
+}
+
+export function detectGreetSent(
+  conv: ConversationItem,
+  staged: StagedJob | undefined,
+  opts: { defaultGreeting?: string } = {},
+): GreetSentDecision {
+  const greeting = opts.defaultGreeting ?? DEFAULT_BOSS_GREETING
+  const base: GreetSentDecision = { sent: false, matchedDraft: false, reason: '' }
+  if (!staged) return { ...base, reason: '未匹配到暂存记录' }
+  if (staged.greetSentAt) return { ...base, reason: '已记录过定制版发出时间' }
+  if (!staged.greetedAt) return { ...base, reason: '还没打过招呼，谈不上定制版' }
+  if (!isSelfMessage(conv)) return { ...base, reason: '最后一条不是自己发的' }
+  if (isDefaultGreeting(conv.lastMsg, greeting)) return { ...base, reason: '最后一条仍是 BOSS 默认招呼语' }
+  if (!conv.lastTS || conv.lastTS <= staged.greetedAt) {
+    return { ...base, reason: '消息时间早于打招呼时间（历史消息）' }
+  }
+  return {
+    sent: true,
+    at: conv.lastTS,
+    matchedDraft: Boolean(staged.greetDraft && isSameMessage(conv.lastMsg, staged.greetDraft)),
+    reason: '打过招呼之后又发了一条自己的消息',
+  }
 }
 
 export function toSnapshot(conv: ConversationItem): ConversationSnapshot | null {

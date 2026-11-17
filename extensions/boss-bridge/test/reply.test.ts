@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_BOSS_GREETING } from '../src/lib/constants.js'
 import type { ConversationItem } from '../src/lib/parsers.js'
-import { detectReply, isDefaultGreeting, isPeerMessage, isSelfMessage, matchesStaged } from '../src/lib/reply.js'
+import { detectGreetSent, detectReply, isDefaultGreeting, isPeerMessage, isSelfMessage, matchesStaged } from '../src/lib/reply.js'
 import type { ConversationSnapshot, StagedJob } from '../src/lib/types.js'
 
 /** P0 第三轮真实样本：拓保软件 uid=12648805，11:28 自己打招呼 → 11:31 HR 回复。 */
@@ -139,5 +139,49 @@ describe('消息方向判据（P0 三轮实测定稿）', () => {
       expect(decision.isReply).toBe(false)
       expect(decision.reason).toContain('已过回复阶段')
     }
+  })
+})
+
+describe('定制招呼语发出的判据', () => {
+  const draft = '您好，看到贵司「AI Agent开发」岗位很感兴趣，我在 Agent 方面有相关经验。'
+  const greetedJob: StagedJob = { ...staged, greetDraft: draft }
+
+  /** 打过招呼 3 分钟后发出去的那条（自己发的） */
+  const sentAfterGreet: ConversationItem = {
+    ...base,
+    lastTS: staged.greetedAt! + 180_000,
+    lastMsg: draft,
+    fromId: 504921610,
+    status: 2,
+  }
+
+  it('打过招呼之后自己又发了一条 → 记发出时间，且认出与草稿一致', () => {
+    const decision = detectGreetSent(sentAfterGreet, greetedJob)
+    expect(decision.sent).toBe(true)
+    expect(decision.at).toBe(sentAfterGreet.lastTS)
+    expect(decision.matchedDraft).toBe(true)
+  })
+
+  it('末句是 BOSS 默认招呼语 / 对方发的 / 还没记打招呼，都不算', () => {
+    expect(detectGreetSent(base, greetedJob).reason).toContain('默认招呼语')
+    expect(detectGreetSent(peerReply, greetedJob).reason).toContain('不是自己发的')
+    expect(detectGreetSent(sentAfterGreet, { ...greetedJob, greetedAt: undefined }).reason).toContain('还没打过招呼')
+  })
+
+  it('用户改了两句再发也算，只是标记「文案与草稿不同」', () => {
+    const edited = { ...sentAfterGreet, lastMsg: '您好，我在 Agent 编排上做过完整项目，想聊聊这个岗位。' }
+    const decision = detectGreetSent(edited, greetedJob)
+    expect(decision.sent).toBe(true)
+    expect(decision.matchedDraft).toBe(false)
+  })
+
+  it('时间早于打招呼的旧消息不算（历史会话不能被当成刚发出）', () => {
+    const old = { ...sentAfterGreet, lastTS: staged.greetedAt! - 1000 }
+    expect(detectGreetSent(old, greetedJob).reason).toContain('早于打招呼时间')
+  })
+
+  it('已经记过就不再重复写', () => {
+    const decided = detectGreetSent(sentAfterGreet, { ...greetedJob, greetSentAt: sentAfterGreet.lastTS - 1 })
+    expect(decided.sent).toBe(false)
   })
 })
