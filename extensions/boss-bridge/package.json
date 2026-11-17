@@ -1,0 +1,35 @@
+{
+  "name": "@land/boss-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "description": "BOSS 直聘与 land-a-job 的本地桥接扩展（只读 JD、暂存、批次确认）",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "prepare": "wxt prepare",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "key:gen": "node scripts/gen-extension-key.mjs"
+  },
+  "dependencies": {
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.3.7",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.1.4",
+    "@wxt-dev/module-react": "1.1.5",
+    "typescript": "^6.0.3",
+    "vite": "^7.0.0",
+    "vitest": "^5.1.0",
+    "wxt": "^0.21.5"
+  }
+}

@@ -9,7 +9,7 @@ export interface TemplateMeta {
 /**
  * 模板元数据单独成文件（只读 catalog.json，不 import 任何模板组件）。
  *
- * 这样列表页可以只取模板名，而不用把三套模板 + jsPDF 一起拉进首屏包。
+ * 这样列表页可以只取模板名，而不用把全部模板 + jsPDF 一起拉进首屏包。
  */
 export const templateCatalog: TemplateMeta[] = catalog
 

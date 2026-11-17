@@ -171,6 +171,13 @@ curl --noproxy '*' http://127.0.0.1:4399/api/health
 
 常驻脚本还支持 `bash scripts/install-launchd.sh --status` 与 `--uninstall`（`npm run launchd:uninstall` 是后者的别名）。
 
+launchd 的进程**不继承终端环境变量**：用「BOSS 桥接」扩展时要把扩展 ID 一起传进去，否则扩展调本地 API 会 401。
+脚本会把它写进 plist，重装时没给值则沿用上一次的：
+
+```bash
+LAND_EXTENSION_ORIGINS=<扩展ID> npm run launchd:install
+```
+
 `npm run dev` 里 web 会先等后端 `/api/health` 就绪再起 vite（`scripts/dev-web.mjs`），并把探测到的真实端口
 用 `LAND_API_PORT` 传给 vite 的代理——server 在 4399 被占时会顺延，写死端口会让页面所有请求变 502。
 单个子进程崩掉时 `--kill-others-on-fail` 会一起收工，不会留一个只会返回 502 的页面。
@@ -269,7 +276,7 @@ curl --noproxy '*' -H "X-Land-Token: $TOKEN" http://127.0.0.1:4399/api/jobs
 | `/pipeline` | 投递看板 | 按状态拖卡片，状态机校验 |
 | `/jobs` · `/jobs/:id` | 岗位库 · 详情 | 建岗、抓 / 粘 JD、fit 因子、来源标签、定制计划交接卡；两处都有「进入待投」「直接投递」弹窗 |
 | `/companies` | 公司库 | 目标公司、优先级、官网 |
-| `/resumes` · `/resumes/:id` | 简历列表 · 编辑器 | 三套模板、自动保存、乐观锁、PDF 导出 |
+| `/resumes` · `/resumes/:id` | 简历列表 · 编辑器 | 四套模板（含纸面直接编辑）、自动保存、乐观锁、PDF 导出 |
 | `/interviews` | 面试日历 | 排期、反馈、复盘 |
 | `/offers` | Offer 对比 | 4 年总包、税后、权重滑块 |
 | `/bank` | 题库 | 四维筛选、三维雷达、答案与评分 |
@@ -332,6 +339,7 @@ curl --noproxy '*' -H "X-Land-Token: $TOKEN" http://127.0.0.1:4399/api/jobs
 | `LAND_CHROME` | 自动探测 | 显式指定本机 Chrome 路径（PDF 导出 / 投递助手） |
 | `LAND_APPLY_HEADLESS` | 关 | 投递助手改用无头浏览器 |
 | `LAND_LOG_LEVEL` | — | 日志级别 |
+| `LAND_EXTENSION_ORIGINS` | 关 | 允许跨域调用本机 API 的 Chrome 扩展 ID（逗号分隔，扩展 manifest 需用 key 固定 ID） |
 
 **没有任何模型 / API Key 配置项**（D2）。令牌也不经环境变量注入，而是启动时生成在 `data/.token`。
 
@@ -354,7 +362,7 @@ curl --noproxy '*' -H "X-Land-Token: $TOKEN" http://127.0.0.1:4399/api/jobs
 
 ```
 packages/core         领域逻辑（状态机、契约 schema、fit/漏斗/跟进/定制/Offer 模型），零 I/O
-packages/resume-kit   简历编辑器（三套模板 + 受控编辑面板 + 分页 + PDF 导出 + 文本导入），不依赖 store
+packages/resume-kit   简历编辑器（四套模板 + 受控编辑面板 + 纸面直接编辑 + 分页 + PDF 导出 + 文本导入），不依赖 store
 apps/server           Fastify HTTP + WS，托管 Web 产物，唯一数据写入方
 apps/mcp              MCP server（stdio）：43 个工具 + 5 个资源，HTTP 薄壳 + 自动拉起
 apps/web              React 19 + Vite + Tailwind 4 的看板与编辑器
@@ -371,7 +379,7 @@ data/                 运行期生成：land.db、.token、logs/、files/、snap
 ### 简历模块
 
 - `/resumes` 列表：新建（选模板）、复制为 variant（记血缘）、设默认、删除（二次确认）。
-- `/resumes/:id` 编辑：左侧模块表单 + 右侧 A4 预览，三套模板可切换且内容不丢；自动保存 500ms 防抖，带 `expectedUpdatedAt` 乐观锁。
+- `/resumes/:id` 编辑：左侧模块表单 + 右侧 A4 预览，四套模板可切换且内容不丢；「经典模板（自由编辑）」还能直接在纸面上改字；自动保存 500ms 防抖，带 `expectedUpdatedAt` 乐观锁。
 - 导出：页面内导出走 jspdf（链接保持可点）；`POST /api/resumes/:id/export` 用本机 Chrome 无头出 PDF（页面没开也能导）。
 - 双入口冲突：Agent 改过而页面未刷新时，保存返回 409，页面顶部出现「载入服务端版本 / 用我的版本覆盖」，期间停止自动保存。
 
@@ -471,7 +479,7 @@ flowchart TB
 ```mermaid
 flowchart LR
   CORE["packages/core<br/>schema · 状态机 · fit · 漏斗<br/>跟进 · Offer · SKILL_REGISTRY"]
-  RK["packages/resume-kit<br/>三套模板 · 编辑器 · 分页 · PDF"]
+  RK["packages/resume-kit<br/>四套模板 · 编辑器 · 分页 · PDF"]
   SERVER["apps/server"]
   MCPAPP["apps/mcp"]
   WEBAPP["apps/web"]
@@ -625,10 +633,11 @@ stateDiagram-v2
 | `GET /api/health` | 服务身份（端口探测依赖 `data.service`）、schema 版本、WS 连接数 |
 | `GET /api/bootstrap` | 页面自举：同源可读、跨域读不到响应体，因此可下发本机令牌（唯一不用信封的接口） |
 | `GET/POST/PATCH/DELETE /api/companies` | 公司 CRUD；删除有岗位的公司需 `?cascade=true`，有投递记录则一律拒绝 |
-| `GET/POST/PATCH/DELETE /api/jobs` | 岗位 CRUD；列表不返回 `jdText` |
+| `GET/POST/PATCH/DELETE /api/jobs` | 岗位 CRUD；列表不返回 `jdText`；`?city=` 按城市筛选（包含匹配），`?q=` 也会搜城市 |
+| `GET /api/jobs/cities` | 岗位库里出现过的城市及岗位数，供城市筛选下拉使用 |
 | `GET/POST/PATCH/DELETE /api/resumes` | 简历 CRUD；`POST /:id/duplicate` 生成 variant 并记录血缘 |
 | `POST /api/resumes/:id/export` | 无头导出：`{filePath,bytes,via}`；`?download=1` 直接流回 PDF。缺 Chrome 返回 501 `CHROME_NOT_FOUND`，前端自动降级到页面内导出 |
-| `GET/POST/PATCH/DELETE /api/applications` | 投递 CRUD；`POST /:id/status` 走状态机 + 事件，`POST /:id/notes` 追加备注，`GET /:id/timeline` 读时间线 |
+| `GET/POST/PATCH/DELETE /api/applications` | 投递 CRUD；`POST /:id/status` 走状态机 + 事件，`POST /:id/notes` 追加备注，`GET /:id/timeline` 读时间线。DELETE 只接受已撤回的记录（先撤回再删） |
 | `GET/POST/PATCH/DELETE /api/interviews` | 面试（`?upcoming=true` 只取未来） |
 | `GET/POST/PATCH/DELETE /api/questions` | 题库 |
 | `GET/POST/PATCH /api/offers` | Offer（一个投递只能一份） |

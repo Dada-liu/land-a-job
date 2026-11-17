@@ -136,80 +136,6 @@ export default function Dashboard() {
         </Card>
       ) : null}
 
-      <section className="grid gap-3 lg:grid-cols-[1.1fr_2fr]">
-        <Card className="p-5">
-          <div className="text-xs text-stone-500">{northStar.label}</div>
-          <div className="mt-2 flex items-end gap-2">
-            <span data-testid="north-star-value" className="text-4xl font-semibold tabular-nums text-stone-900">
-              {northStar.value}
-            </span>
-            <WeeklyTarget target={northStar.target} />
-          </div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-stone-100">
-            <div
-              className="h-full rounded-full bg-emerald-500 transition-all"
-              style={{ width: `${Math.min(100, (northStar.value / northStar.target) * 100)}%` }}
-            />
-          </div>
-          <div className="mt-2 text-[11px] leading-relaxed text-stone-400">{northStar.hint}</div>
-          <div className="mt-4 grid grid-cols-3 gap-2 border-t border-stone-100 pt-3 text-center">
-            <div>
-              <div className="font-mono text-sm text-stone-900">{week.submitted}</div>
-              <div className="text-[10px] text-stone-400">本周已投</div>
-            </div>
-            <div>
-              <div className="font-mono text-sm text-stone-900">{week.newJobs}</div>
-              <div className="text-[10px] text-stone-400">本周新增岗位</div>
-            </div>
-            <div>
-              <div className="font-mono text-sm text-stone-900">{week.newApplications}</div>
-              <div className="text-[10px] text-stone-400">本周新增投递</div>
-            </div>
-          </div>
-          <div className="mt-3 flex items-baseline justify-between border-t border-stone-100 pt-2.5 text-[11px]">
-            <span className="text-stone-500">响应中位数</span>
-            <span className="text-stone-900">
-              <span data-testid="response-median" className="font-mono">
-                {responseTime.medianDays === null ? '无样本' : `${responseTime.medianDays} 天`}
-              </span>
-              <span className="ml-1.5 text-[10px] text-stone-400">
-                样本 {responseTime.sample}
-                {responseTime.waiting > 0 ? ` · ${responseTime.waiting} 条还在等` : ''}
-              </span>
-            </span>
-          </div>
-        </Card>
-
-        <Card className="p-5">
-          <SectionTitle extra={`样本 ${firstStage} 条已投`}>转化漏斗</SectionTitle>
-          <div className="space-y-2">
-            {funnel.map((step, index) => (
-              <div key={step.stage} className="flex items-center gap-3" data-stage={step.stage}>
-                <span className="w-16 shrink-0 text-[11px] text-stone-500">{step.label}</span>
-                <span className="h-5 flex-1 overflow-hidden rounded bg-stone-50">
-                  <span
-                    className={`block h-full rounded ${index === 0 ? 'bg-stone-400' : 'bg-stone-800'}`}
-                    style={{ width: `${firstStage === 0 ? 0 : Math.max(2, (step.reached / firstStage) * 100)}%` }}
-                  />
-                </span>
-                <span
-                  data-testid={`funnel-${step.stage}`}
-                  className="w-8 shrink-0 text-right font-mono text-[11px] tabular-nums text-stone-900"
-                >
-                  {step.reached}
-                </span>
-                <span className="w-10 shrink-0 text-right font-mono text-[10px] text-stone-400" title="相对上一阶段">
-                  {pct(step.conversion)}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 text-[11px] text-stone-400">
-            算的是「走到过哪一步」：只要进过面试，就算过了一轮筛选，后来被拒也不会从漏斗里消失。
-          </div>
-        </Card>
-      </section>
-
       <section className="grid gap-3 lg:grid-cols-[2fr_1fr]">
         <Card className="p-5">
           <SectionTitle extra={today.length > 0 ? `${today.length} 条待处理` : '今天没有该做的事'}>
@@ -289,6 +215,80 @@ export default function Dashboard() {
           </div>
           <div className="mt-4 border-t border-stone-100 pt-3 text-[11px] leading-relaxed text-stone-400">
             按 ⌘K 可以用一句话记下岗位；你在别处改动数据，这里开着的页面会自动更新。
+          </div>
+        </Card>
+      </section>
+
+      <section className="grid gap-3 lg:grid-cols-[1.1fr_2fr]">
+        <Card className="p-5">
+          <div className="text-xs text-stone-500">{northStar.label}</div>
+          <div className="mt-2 flex items-end gap-2">
+            <span data-testid="north-star-value" className="text-4xl font-semibold tabular-nums text-stone-900">
+              {northStar.value}
+            </span>
+            <WeeklyTarget target={northStar.target} />
+          </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-stone-100">
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-all"
+              style={{ width: `${Math.min(100, (northStar.value / northStar.target) * 100)}%` }}
+            />
+          </div>
+          <div className="mt-2 text-[11px] leading-relaxed text-stone-400">{northStar.hint}</div>
+          <div className="mt-4 grid grid-cols-3 gap-2 border-t border-stone-100 pt-3 text-center">
+            <div>
+              <div className="font-mono text-sm text-stone-900">{week.submitted}</div>
+              <div className="text-[10px] text-stone-400">本周已投</div>
+            </div>
+            <div>
+              <div className="font-mono text-sm text-stone-900">{week.newJobs}</div>
+              <div className="text-[10px] text-stone-400">本周新增岗位</div>
+            </div>
+            <div>
+              <div className="font-mono text-sm text-stone-900">{week.newApplications}</div>
+              <div className="text-[10px] text-stone-400">本周新增投递</div>
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline justify-between border-t border-stone-100 pt-2.5 text-[11px]">
+            <span className="text-stone-500">响应中位数</span>
+            <span className="text-stone-900">
+              <span data-testid="response-median" className="font-mono">
+                {responseTime.medianDays === null ? '无样本' : `${responseTime.medianDays} 天`}
+              </span>
+              <span className="ml-1.5 text-[10px] text-stone-400">
+                样本 {responseTime.sample}
+                {responseTime.waiting > 0 ? ` · ${responseTime.waiting} 条还在等` : ''}
+              </span>
+            </span>
+          </div>
+        </Card>
+
+        <Card className="p-5">
+          <SectionTitle>历史投递情况</SectionTitle>
+          <div className="space-y-2">
+            {funnel.map((step, index) => (
+              <div key={step.stage} className="flex items-center gap-3" data-stage={step.stage}>
+                <span className="w-16 shrink-0 text-[11px] text-stone-500">{step.label}</span>
+                <span className="h-5 flex-1 overflow-hidden rounded bg-stone-50">
+                  <span
+                    className={`block h-full rounded ${index === 0 ? 'bg-stone-400' : 'bg-stone-800'}`}
+                    style={{ width: `${firstStage === 0 ? 0 : Math.max(2, (step.reached / firstStage) * 100)}%` }}
+                  />
+                </span>
+                <span
+                  data-testid={`funnel-${step.stage}`}
+                  className="w-8 shrink-0 text-right font-mono text-[11px] tabular-nums text-stone-900"
+                >
+                  {step.reached}
+                </span>
+                <span className="w-10 shrink-0 text-right font-mono text-[10px] text-stone-400" title="相对上一阶段">
+                  {pct(step.conversion)}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 text-[11px] text-stone-400">
+            算的是「走到过哪一步」：只要进过面试，就算过了一轮筛选，后来被拒也不会被抹掉。
           </div>
         </Card>
       </section>

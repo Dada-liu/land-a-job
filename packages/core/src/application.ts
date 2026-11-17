@@ -128,7 +128,7 @@ export const EVENT_TYPES = [
 export type EventType = (typeof EVENT_TYPES)[number]
 
 /** 投递渠道：官网直投是主路径，平台内投递只登记不自动化（PRD D2） */
-export const CHANNELS = ['official', 'referral', 'platform', 'other'] as const
+export const CHANNELS = ['official', 'referral', 'platform', 'boss', 'other'] as const
 export type Channel = (typeof CHANNELS)[number]
 
 /** 证据置信度：Agent 抓取的表单结果未经人工确认时为 reported */

@@ -382,8 +382,16 @@ async function main() {
       '筛「人工」能看到母版',
     )
     await page.click('[data-testid="resume-filter-all"]')
-    // 4 份 = 母版 + 定制版 + 单投简历 + 只排在待投里的那份
-    await waitFor(async () => (await count(page, '[data-testid="resume-grid"] article')) === 4, '回到全部 4 份')
+    // 列表按母版分行：3 个母版各占一行，定制版默认收在母版下面
+    await waitFor(
+      async () => (await count(page, '[data-testid="resume-grid"] article')) === 3,
+      '回到全部：3 个母版各一行，定制版默认收起',
+    )
+    await page.click(`[data-testid="resume-group-toggle-${resume.id}"]`)
+    await waitFor(
+      async () => (await count(page, '[data-testid="resume-grid"] article')) === 4,
+      '展开母版后能看到它名下的定制版',
+    )
 
     await page.click('[data-testid="resume-compare"]')
     await page.waitForSelector('[data-testid="resume-diff"]', { timeout: 6000 })

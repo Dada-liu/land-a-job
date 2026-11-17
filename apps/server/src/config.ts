@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { DATA_LAYOUT, SERVICE_NAME, VERSION } from '@land/core'
+import { parseExtensionOrigins } from './extension-cors.js'
 
 export { SERVICE_NAME, VERSION }
 
@@ -25,6 +26,12 @@ export const HOST = '127.0.0.1'
 export const DEFAULT_PORT = Number.parseInt(process.env.LAND_PORT ?? '', 10) || 4399
 
 export const APP_VERSION = VERSION
+
+/**
+ * 允许跨域调用本机 API 的 Chrome 扩展 ID 白名单（逗号分隔，默认空＝关闭）。
+ * 扩展 manifest 里用 key 固定 ID，这里填同一个值。
+ */
+export const EXTENSION_ORIGINS = parseExtensionOrigins(process.env.LAND_EXTENSION_ORIGINS)
 
 /** Web 构建产物；缺失时页面会给出构建提示而不是 404 */
 export const WEB_ROOT = path.join(REPO_ROOT, 'apps', 'web', 'dist')

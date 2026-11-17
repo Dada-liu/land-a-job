@@ -207,7 +207,7 @@ CREATE TABLE job (
   jd_text       TEXT,
   jd_url        TEXT,
   jd_snapshot   TEXT,             -- data/files/jd/<id>.html 相对路径
-  channel       TEXT NOT NULL DEFAULT 'official', -- official|referral|platform|other
+  channel       TEXT NOT NULL DEFAULT 'official', -- official|referral|platform|boss|other
   city          TEXT,
   salary_min    INTEGER,          -- 单位：元/月
   salary_max    INTEGER,
@@ -858,7 +858,7 @@ npm run start            # 起 server，自动打开 http://127.0.0.1:4399
 ```
 
 - **端口**：`LAND_PORT`（默认 4399）；被占用且非本服务时自动 +1 并在 `data/.port` 记录，MCP 读该文件。
-- **环境变量**：`LAND_DATA_DIR`、`LAND_PORT`、`LAND_TOKEN`、`LAND_HEADLESS_EXPORT`、`LAND_APPLY_INTERVAL_MS`、`LAND_CHROME`。**不含任何模型配置项**（D2）。
+- **环境变量**：`LAND_DATA_DIR`、`LAND_PORT`、`LAND_TOKEN`、`LAND_HEADLESS_EXPORT`、`LAND_APPLY_INTERVAL_MS`、`LAND_CHROME`、`LAND_EXTENSION_ORIGINS`（允许跨域调用本机 API 的 Chrome 扩展 ID 白名单，默认空）。**不含任何模型配置项**（D2）。
 - **不规划云部署**（D1）：单用户本地是产品形态，不是过渡方案。跨设备靠 `npm run export` 导出全库 JSON 后手动导入；不引入同步协议、不做冲突合并。
 
 ---

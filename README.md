@@ -169,6 +169,14 @@ All of `data/` is gitignored:
 
 The launchd script also supports `bash scripts/install-launchd.sh --status` and `--uninstall` (`npm run launchd:uninstall` is an alias).
 
+A launchd job does **not** inherit your shell environment. If you use the BOSS Bridge extension, pass its ID so the
+script writes it into the plist (a re-install without the variable keeps the previous value) — otherwise the
+extension's calls to the local API get a 401:
+
+```bash
+LAND_EXTENSION_ORIGINS=<extension-id> npm run launchd:install
+```
+
 In `npm run dev`, the web side waits for `/api/health` before starting vite (`scripts/dev-web.mjs`) and passes the detected port to vite's proxy as `LAND_API_PORT` — the server increments when 4399 is taken, so a hardcoded port would turn every request into a 502. If one child process dies, `--kill-others-on-fail` shuts the rest down instead of leaving a page that only returns 502.
 
 > Key design: **the web UI does not depend on an agent being resident.** Close the terminal, quit Claude Code — the board still opens. The agent also doesn't need a browser tab open.
@@ -328,6 +336,7 @@ Only five, all optional. Copy `.env.example` to `.env` (gitignored).
 | `LAND_CHROME` | auto-detected | Explicit Chrome path (PDF export / apply assistant) |
 | `LAND_APPLY_HEADLESS` | off | Run the apply assistant headless |
 | `LAND_LOG_LEVEL` | — | Log level |
+| `LAND_EXTENSION_ORIGINS` | off | Comma-separated Chrome extension IDs allowed to call the local API cross-origin |
 
 **There is no model or API-key setting** (D2). The token isn't injected via environment either — it's generated into `data/.token` at startup.
 
@@ -350,7 +359,7 @@ Only five, all optional. Copy `.env.example` to `.env` (gitignored).
 
 ```
 packages/core         Domain logic (state machine, contract schemas, fit/funnel/follow-up/tailoring/offer models), zero I/O
-packages/resume-kit   Resume editor (three templates, controlled editor, pagination, PDF export, text import), no store
+packages/resume-kit   Resume editor (four templates incl. edit-on-page, controlled editor, pagination, PDF export, text import), no store
 apps/server           Fastify HTTP + WS, serves the web build, the only writer
 apps/mcp              MCP server (stdio): 43 tools + 5 resources, HTTP shell + auto-spawn
 apps/web              React 19 + Vite + Tailwind 4 board and editors
@@ -367,7 +376,7 @@ data/                 Runtime data: land.db, .token, logs/, files/, snapshots/
 ### Resumes
 
 - `/resumes`: create (pick a template), duplicate as a variant (with lineage), set default, delete (with confirmation).
-- `/resumes/:id`: module forms on the left, A4 preview on the right; three templates switch without losing content. Autosaves with a 500 ms debounce and an `expectedUpdatedAt` optimistic lock.
+- `/resumes/:id`: module forms on the left, A4 preview on the right; four templates switch without losing content, and the free-edit one lets you type straight on the page. Autosaves with a 500 ms debounce and an `expectedUpdatedAt` optimistic lock.
 - Export: in-page export via jspdf (links stay clickable); `POST /api/resumes/:id/export` renders a PDF with local headless Chrome (works even when the page isn't open).
 - Two-writer conflicts: if the agent changed the resume and the page is stale, saving returns 409 and the page offers "load the server version / overwrite with mine" while autosave pauses.
 
@@ -467,7 +476,7 @@ flowchart TB
 ```mermaid
 flowchart LR
   CORE["packages/core<br/>schema · state machine · fit · funnel<br/>follow-up · offer · SKILL_REGISTRY"]
-  RK["packages/resume-kit<br/>three templates · editor · pagination · PDF"]
+  RK["packages/resume-kit<br/>four templates · editor · pagination · PDF"]
   SERVER["apps/server"]
   MCPAPP["apps/mcp"]
   WEBAPP["apps/web"]
@@ -621,10 +630,11 @@ Responses are `{ data, meta? }`; failures are `{ error: { code, message, details
 | `GET /api/health` | Service identity (`data.service` is used for port probing), schema version, WS connections |
 | `GET /api/bootstrap` | Page bootstrap: same-origin readable, cross-origin returns no body, so it can hand out the local token (the only endpoint without the envelope) |
 | `GET/POST/PATCH/DELETE /api/companies` | Company CRUD; deleting a company with jobs needs `?cascade=true`, and is refused if applications exist |
-| `GET/POST/PATCH/DELETE /api/jobs` | Job CRUD; list responses omit `jdText` |
+| `GET/POST/PATCH/DELETE /api/jobs` | Job CRUD; list responses omit `jdText`; `?city=` filters by city (substring match) and `?q=` also matches city |
+| `GET /api/jobs/cities` | Cities present in the job library with their job counts, for the city filter dropdown |
 | `GET/POST/PATCH/DELETE /api/resumes` | Resume CRUD; `POST /:id/duplicate` creates a variant with lineage |
 | `POST /api/resumes/:id/export` | Headless export: `{filePath,bytes,via}`; `?download=1` streams the PDF. Missing Chrome returns 501 `CHROME_NOT_FOUND` and the UI falls back to in-page export |
-| `GET/POST/PATCH/DELETE /api/applications` | Application CRUD; `POST /:id/status` runs the state machine + event, `POST /:id/notes` appends a note, `GET /:id/timeline` reads the timeline |
+| `GET/POST/PATCH/DELETE /api/applications` | Application CRUD; `POST /:id/status` runs the state machine + event, `POST /:id/notes` appends a note, `GET /:id/timeline` reads the timeline. DELETE only accepts `withdrawn` records (withdraw first) |
 | `GET/POST/PATCH/DELETE /api/interviews` | Interviews (`?upcoming=true` for future only) |
 | `GET/POST/PATCH/DELETE /api/questions` | Question bank |
 | `GET/POST/PATCH /api/offers` | Offers (one per application) |

@@ -3,6 +3,8 @@ import type { ResumeData } from '../types/resume'
 import type { EditorModule, ResumeTemplate } from '../types/template'
 import { ClassicTemplate } from './classic/ClassicTemplate'
 import { classicEditorModules } from './classic/resumeConfig'
+import { ClassicFreeformTemplate } from './classic-freeform/ClassicFreeformTemplate'
+import { classicFreeformEditorModules } from './classic-freeform/resumeConfig'
 import { Template1 } from './template-1/Template1'
 import { template1EditorModules } from './template-1/resumeConfig'
 import { Template2 } from './template-2/Template2'
@@ -36,6 +38,10 @@ const definitions: Record<string, TemplateDefinition> = {
   'template-2': {
     component: Template2,
     editorModules: template2EditorModules,
+  },
+  'classic-freeform': {
+    component: ClassicFreeformTemplate,
+    editorModules: classicFreeformEditorModules,
   },
 }
 

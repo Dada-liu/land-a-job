@@ -38,6 +38,13 @@ const SECTION_LABELS: Record<string, string> = {
 
 const MAX_TEXT = 220
 
+/**
+ * 不参与对比的字段：它们不是「内容」，是排版参数。
+ * 区块末尾的空行（sectionSpacing）只影响间距，出现在「和母版比改了什么」里会误导人——
+ * 那会让人以为 Agent 改了内容。
+ */
+const IGNORED_KEYS = new Set(['sectionSpacing'])
+
 function show(value: unknown): string {
   if (value === null || value === undefined) return ''
   if (typeof value === 'string') return value.length > MAX_TEXT ? `${value.slice(0, MAX_TEXT)}…` : value
@@ -90,6 +97,7 @@ export function diffResume(before: unknown, after: unknown, options: { max?: num
     if (bothObject) {
       const keys = new Set([...Object.keys(left), ...Object.keys(right)])
       for (const key of keys) {
+        if (IGNORED_KEYS.has(key)) continue
         const childPath = path ? `${path}.${key}` : key
         // 顶层区块名本身就用来做总结，所以 section 只在第一层取
         walk(left[key], right[key], childPath, path ? section : key)

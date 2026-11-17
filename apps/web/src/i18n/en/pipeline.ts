@@ -20,6 +20,10 @@ const dict: Dict = {
 
   // ——— 投递详情抽屉 ———
   关联简历: 'Linked resume',
+  打开岗位: 'Open job',
+  '已结束（不参与拖拽）': 'Closed (not draggable)',
+  '还没有已结束的投递。撤回、被拒、已入职、已失联的投递会收在这里，不参与拖拽。':
+    'No closed applications yet. Withdrawn, rejected, accepted and ghosted ones land here and cannot be dragged.',
   来自: 'From',
   '已投 · 已停留 {n} 天': 'Applied · {n} days in stage',
   投递于: 'Applied on',

@@ -76,6 +76,10 @@ const NON_TOOL_BACKTICKS = new Set([
   'run_in_background',
   'service_worker',
   'shared_worker',
+  // job-search-batch §2/§3：WebSearch 参数与 MCP 返回字段，不是工具名。
+  'blocked_domains',
+  'full_page',
+  'jd_text',
 ])
 
 function captureRegistrations(): { tools: string[]; resources: string[] } {

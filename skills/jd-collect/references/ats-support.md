@@ -52,6 +52,17 @@ postId=<id>&recruitType=<1 校园 | 2 社招>
 ```
 注意：`/{SU…}/pb/*.html` 是页面路径，不是接口，POST 它会返回 405；接口在 `/wecruit/positionInfo/` 下。state 1017 表示岗位已关闭。
 
+## 公司自建 ATS（只给列表页时先试接口）
+
+用户递来的是「招聘列表页」而不是详情页时，先看这家有没有公开列表接口 —— 一次就能拿到全量岗位 + 完整正文：
+
+| 公司 | 列表接口（都要带 Referer） | 备注 |
+| --- | --- | --- |
+| 滴滴 | `GET https://talent.didiglobal.com/recruit-portal-service/api/job/front/list?page=1&size=100`，Referer `https://talent.didiglobal.com/social` | `items[]` 自带 `jobDuty`+`jobQualification`；详情页 `talent.didiglobal.com/social/p/<jdId>` 是纯 SPA，`add_job` 抓不到 |
+| 小米 | `GET https://hr.xiaomi.com/website/api/agent/searchJobPage?keyword=<kw>&pageSize=50&pageNum=1`，Referer `https://hr.xiaomi.com/website/opportunities.html` | `list[]` 自带 `description`+`requirement`；详情页在飞书 `xiaomi.jobs.f.mioffice.cn/index/position/<feishuId>/detail`，接口 id ≠ 飞书 id，要回列表页 DOM 抠 `<a href>` 对上标题 |
+
+列表页本身**不能当 `jdUrl` 入库**：按岗位取出详情页链接再 `add_job`，正文用接口返回的那段 `import_jd`。
+
 ## 没适配时怎么办
 
 - 公司官网或普通网页：通用 HTTP + 正文提取；403 会先读 robots.txt 再决定是否换请求头。

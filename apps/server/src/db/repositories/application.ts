@@ -328,11 +328,22 @@ export function listTimeline(db: Db, id: string): ApplicationEventDto[] {
   return rows.map(toEvent)
 }
 
-/** 软删投递：保留记录但不再计入活跃，事件里留一条 deleted 便于回溯 */
+/**
+ * 软删投递：保留记录但不再计入活跃，事件里留一条 deleted 便于回溯。
+ *
+ * 只有「已撤回」能删。撤回是用户主动放弃，登记错了（重复登记、投错岗位）
+ * 留着一条记录只会污染看板与统计；而其它状态还在流程里，直接删会让漏斗口径
+ * 与「投递＝到达过 applied」对不上——想清理就先撤回，时间线也留得下痕迹。
+ */
 export function deleteApplication(db: Db, id: string, actor: string, source: string): void {
   db.transaction(() => {
     const row = getById(db, spec, id)
     if (!row) throw new NotFoundError('投递', id)
+    if (row.status !== 'withdrawn') {
+      throw new ConflictError('只有已撤回的投递可以删除；先撤回这一步，再删记录', {
+        status: String(row.status),
+      })
+    }
     softDeleteRow(db, spec, id)
     writeEvent(db, id, { type: 'deleted', from: String(row.status), actor, source })
   })()

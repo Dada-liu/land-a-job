@@ -13,7 +13,9 @@ import {
   type JdCollectionDto,
 } from '../lib/api'
 import { qk } from '../lib/queries'
-import { Button, Card, Field, Input, PageHeader, Select, Textarea } from '../components/ui'
+import { CHANNEL_OPTIONS } from '../lib/channels'
+import { Copy } from 'lucide-react'
+import { Button, Card, Field, Input, PageHeader, Select, Textarea, Tooltip } from '../components/ui'
 import { Drawer } from '../components/Drawer'
 import { ApplyDialog } from '../components/ApplyDialog'
 import { QueueDialog } from '../components/QueueDialog'
@@ -138,6 +140,19 @@ export default function JobDetail() {
     onError: (error) => toast.push(t('重算失败：{message}', { message: errorText(error) }), 'error'),
   })
 
+  /**
+   * 复制岗位名：与简历库、岗位库列表同一套规则——复制可见标题，
+   * 成功/失败都给明确提示，剪贴板被拒时不静默失败。
+   */
+  const copyTitle = async (title: string) => {
+    try {
+      await navigator.clipboard.writeText(title)
+      toast.push(t('已复制岗位名'), 'success')
+    } catch {
+      toast.push(t('复制失败，请手动选择复制'), 'error')
+    }
+  }
+
   const tailor = useQuery({
     // 带上投递绑定的简历只是缓存键：换成另一版简历时重算，别拿旧计划糊人
     queryKey: ['tailor-plan', id, active?.resumeId ?? null],
@@ -178,19 +193,24 @@ export default function JobDetail() {
 
       <PageHeader
         title={data.title}
+        titleExtra={
+          <Tooltip label={t('复制岗位名')}>
+            <button
+              type="button"
+              aria-label={t('复制岗位名')}
+              data-testid="job-detail-copy-title"
+              onClick={() => void copyTitle(data.title)}
+              className="rounded p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
+            >
+              <Copy className="h-4 w-4" />
+            </button>
+          </Tooltip>
+        }
         description={t('{company} · {city} · {salary} · {channel}', {
           company: data.companyName ?? t('未知公司'),
           city: data.city ?? t('城市未填'),
           salary: `${money(data.salaryMin)}-${money(data.salaryMax)}`,
-          channel: t(
-            data.channel === 'official'
-              ? '官网'
-              : data.channel === 'referral'
-                ? '内推'
-                : data.channel === 'platform'
-                  ? '招聘平台'
-                  : '其他',
-          ),
+          channel: t(CHANNEL_OPTIONS.find((item) => item.value === data.channel)?.label ?? '其他'),
         })}
         actions={
           <>
