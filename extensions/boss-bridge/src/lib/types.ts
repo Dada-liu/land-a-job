@@ -21,8 +21,16 @@ export interface BossActive {
 }
 
 export interface StagedJob {
-  /** securityId 优先，规范化 JD URL 兜底 */
+  /**
+   * 主键：**优先 `encryptJobId`**（同一岗位在所有入口都是同一个值），
+   * 没有时才退到 `securityId`，再没有才用「公司::岗位」。
+   *
+   * 为什么不用 securityId：BOSS 对同一个岗位在不同列表页会返回不同的 securityId
+   * （实测见过 332/380 两种长度），拿它当主键会在每次换列表页时多出一条重复记录。
+   */
   key: string
+  /** 岗位的 securityId：不再当主键，但详情页响应只带它，命中靠它反查 */
+  securityId?: string
   /** 记录来源：joblist 是正常抓到岗位卡片，conversation 是从会话列表反向补建的 */
   origin?: 'joblist' | 'conversation'
   url: string

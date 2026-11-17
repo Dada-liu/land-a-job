@@ -21,6 +21,7 @@ import {
   chromeKV,
   conversationKey as snapshotKey,
   createJobFromConversation,
+  dedupeStaging,
   healStaging,
   mergeJobList,
   reverseJobKey,
@@ -199,6 +200,7 @@ async function handleRisk(code: number, message: string): Promise<void> {
 async function handleFriendList(conversations: ConversationItem[]): Promise<void> {
   const data = await store.load()
   healStaging(data)
+  dedupeStaging(data)
   lastFriendListAt = Date.now()
   const previous = { ...data.conversations }
   const bridge = new LandBridge(await getSettings())
@@ -705,9 +707,14 @@ export default defineBackground(() => {
         case 'GET_STATUS': {
           const data = await store.load()
           const healed = healStaging(data)
-          if (healed) {
+          /** 存量迁移：旧主键是 securityId，同岗位会有多条，读状态时顺手归并一次 */
+          const deduped = dedupeStaging(data)
+          if (healed || deduped.merged || deduped.renamed) {
             await store.save(data)
-            log(`${healed} 条历史「待确认活跃度」记录已按 HR 在线证据自动放行`)
+            if (healed) log(`${healed} 条历史「待确认活跃度」记录已按 HR 在线证据自动放行`)
+            if (deduped.merged || deduped.renamed) {
+              log(`暂存区去重：合并 ${deduped.merged} 条重复记录、${deduped.renamed} 条主键改为岗位 ID`)
+            }
           }
           const jobs = Object.values(data.jobs)
           const settings = await getSettings()
@@ -736,7 +743,9 @@ export default defineBackground(() => {
         }
         case 'GET_STAGED': {
           const data = await store.load()
-          if (healStaging(data)) await store.save(data)
+          const healed = healStaging(data)
+          const deduped = dedupeStaging(data)
+          if (healed || deduped.merged || deduped.renamed) await store.save(data)
           return { ok: true, staged: Object.values(data.jobs) }
         }
         case 'GET_CONVERSATIONS': {

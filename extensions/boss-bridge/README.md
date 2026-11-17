@@ -13,8 +13,9 @@
 - WXT + React 19 骨架：popup 状态面板、options 配置页、background service worker。
 - `chrome.debugger` **被动旁听**页面自身响应：`joblist` / `detail` / `friendlist` /
   `bossdata` / `greet`，不注入 fetch、不重放请求、不导航写接口。
-- 暂存区（`chrome.storage.local`）：`securityId` 主键、`is_new`、TTL 60 天 / 500 条上限，
-  **回复前 JD 只存这里，0 落库**。
+- 暂存区（`chrome.storage.local`）：**`encryptJobId` 主键**（早期用 securityId，实测同岗位在不同
+  列表页会返回不同 securityId，每换入口就多一条，所以换掉了；旧数据在下次读状态时自动归并+改键）、
+  `is_new`、TTL 60 天 / 500 条上限，**回复前 JD 只存这里，0 落库**。
 - HR 活跃度两段闸门、回复方向判据、0-token 模板招呼语、
   `filter → generate → delivery` 三段流水线（默认 dry-run）、限速熔断。
 
@@ -76,7 +77,7 @@
 `encryptBossId` / `encryptJobId` 与 joblist **同源**（独创时代两边完全一致）。早期存档
 104 会话 / 120 岗位只对上 4 条，是因为其余会话对应的岗位压根没被列表页抓到，不是两套 ID 不通。
 
-- 加密 ID 相等 / `securityId` 命中暂存主键 → 200 分，直接命中；
+- 加密 ID 相等 / `securityId` 命中暂存记录 → 200 分，直接命中；
 - 两边都有 ID 却不相等 → 只认公司名**完全相同**（60 分），避免把「博彦科技」的回复
   连到「博彦科技承德有限公司」的另一个岗位；
 - 缺 ID 时才用公司名前缀 40 / 包含 20 兜底；≥40 才算同一个岗位；
@@ -278,7 +279,7 @@ code 9 / 31 / 37、「操作过于频繁」「环境存在异常」立即熔断�
 | boss-zhipin-scraper | Network 域被动读 | 已落地 | `chrome.debugger` + 等 `loadingFinished` 再取体 |
 | boss-zhipin-scraper | 独立持久 profile | 已落地 | 快速开始第 4 步；登录态只留在独立 profile，不复制主 Chrome Cookie |
 | boss-zhipin-scraper | 熔断 / 单轮预算 | 已落地 | code 9·31·37、500 次/轮、退避 10→60s |
-| boss-zhipin-scraper | 增量去重 + `is_new` | 部分 | 去重靠 `key`（securityId）生效；`isNew` 字段没有 UI 消费，只作数据 |
+| boss-zhipin-scraper | 增量去重 + `is_new` | 部分 | 去重靠 `key`（encryptJobId）生效；`isNew` 字段没有 UI 消费，只作数据 |
 | boss-zhipin-scraper | Skill 打包 | 已落地 | `jd-collect` / `browser-apply` 作选择器失效时的兜底 |
 | boss-helper | WXT + MV3 骨架 | 已落地 | React 19，不复用其 Vue 组件 |
 | boss-helper | 流水线分阶段 + 逐任务超时 | 已落地 | filter → generate → delivery；120/70/90/30s |

@@ -46,8 +46,55 @@ export function emptyStaging(now = Date.now(), day = new Date(now).toISOString()
   }
 }
 
+/**
+ * 暂存区主键：`encryptJobId` 优先。
+ *
+ * 早期用的是 `securityId`，踩过的坑是：**同一个岗位在不同列表页会返回不同的 securityId**
+ * （实测 332 与 380 字符两种都见过），于是每换一个入口就多出一条记录，
+ * 缓存岗位里同一个岗位显示两三行、打招呼时间写到其中一条上、另一条还是「可打招呼」。
+ * `encryptJobId` 在所有入口都稳定，所以主键换成它；`securityId` 降级成普通字段，
+ * 详情页响应只带 securityId，命中时按字段反查。
+ */
 function jobKey(item: JobListItem): string {
-  return item.securityId || item.encryptJobId || `${item.brandName}::${item.jobName}`
+  return item.encryptJobId || item.securityId || `${item.brandName}::${item.jobName}`
+}
+
+/** 进度排序：去重时留最靠后的那条 */
+const STATE_RANK: Record<StageState, number> = {
+  discovered: 0,
+  filtered_out: 1,
+  needs_detail: 2,
+  ready: 3,
+  greeted: 4,
+  replied: 5,
+  tailored: 6,
+  uploaded: 7,
+  sent: 8,
+  archived: 9,
+}
+
+/**
+ * 按 ID 反查已有记录。
+ *
+ * 主键换代后必须兼容存量：旧记录的 key 是 securityId，直接 `data.jobs[新主键]` 查不到，
+ * 一合并就会多出一条。所以先查规范主键，再按 `encryptJobId` / `securityId` 字段扫一遍，
+ * 命中旧键就把它搬到规范键上（下面的 mergeJobList 负责删旧键）。
+ */
+function locateExisting(
+  data: StagingData,
+  item: JobListItem,
+): { key: string; job: StagedJob } | undefined {
+  const canonical = jobKey(item)
+  const direct = data.jobs[canonical]
+  if (direct) return { key: canonical, job: direct }
+  for (const [key, job] of Object.entries(data.jobs)) {
+    if (job.origin === 'conversation') continue
+    if (item.encryptJobId && job.encryptJobId === item.encryptJobId) return { key, job }
+    if (item.securityId && (job.securityId === item.securityId || key === item.securityId)) {
+      return { key, job }
+    }
+  }
+  return undefined
 }
 
 /**
@@ -86,7 +133,10 @@ export function mergeJobList(
     if (!item.securityId && !item.encryptJobId && !item.jobName) continue
     const key = jobKey(item)
     if (!key) continue
-    const existing = data.jobs[key]
+    const found = locateExisting(data, item)
+    const existing = found?.job
+    /** 存量记录还挂在旧主键（securityId）上：搬到规范主键，别留两条 */
+    if (found && found.key !== key) delete data.jobs[found.key]
     const decision = listGate(item)
     const detailDecided = existing?.bossActive.source === 'detail'
     /** 详情判过、或已经走到下游：结论连同 notes 一起保留，别用列表粗筛覆盖 */
@@ -95,6 +145,7 @@ export function mergeJobList(
     const staged: StagedJob = {
       ...existing,
       key,
+      securityId: item.securityId ?? existing?.securityId,
       origin: existing?.origin ?? 'joblist',
       /**
        * 新版详情页实测 URL：路径用 `encryptJobId`，长的 `securityId` 放查询参数。
@@ -224,6 +275,13 @@ export function applyJdFromDom(data: StagingData, key: string, payload: DomJdPay
 }
 
 /** 纯函数：详情响应到达时复核活跃度并补 JD 正文（JD 仍只在暂存区）。 */
+/** 详情响应只带 securityId：先按主键试（老数据），再按字段扫（新主键是 encryptJobId） */
+function findKeyBySecurityId(data: StagingData, securityId?: string): string | undefined {
+  if (!securityId) return undefined
+  if (data.jobs[securityId]) return securityId
+  return Object.keys(data.jobs).find((k) => data.jobs[k]?.securityId === securityId)
+}
+
 export function applyDetail(
   data: StagingData,
   detail: DetailCaptured,
@@ -236,7 +294,7 @@ export function applyDetail(
     return job?.origin === 'conversation' && !job.jdText && !job.jobName
       && normalizeBrand(job.brandName) === normalizeBrand(detail.brandName)
   })
-  const key = (detail.securityId && data.jobs[detail.securityId] ? detail.securityId : undefined)
+  const key = findKeyBySecurityId(data, detail.securityId)
     ?? Object.keys(data.jobs).find((k) =>
       data.jobs[k]?.jobName === detail.jobName && data.jobs[k]?.brandName === detail.brandName)
     ?? reverseKey
@@ -296,8 +354,9 @@ export function applyGreet(
 ): { key: string; recorded: boolean } | null {
   const jobs = Object.values(data.jobs)
   const job = (greet.securityId ? data.jobs[greet.securityId] : undefined)
+    ?? (greet.securityId ? jobs.find((item) => item.securityId === greet.securityId) : undefined)
     ?? (greet.encryptJobId
-      ? jobs.find((item) => item.encryptJobId && item.encryptJobId === greet.encryptJobId)
+      ? jobs.find((item) => item.key === greet.encryptJobId || item.encryptJobId === greet.encryptJobId)
       : undefined)
     ?? (greet.encryptBossId
       ? jobs.find((item) => item.encryptBossId && item.encryptBossId === greet.encryptBossId)
@@ -314,6 +373,112 @@ export function applyGreet(
   }
   data.lastUpdated = now
   return { key: job.key, recorded }
+}
+
+function earliest(a?: number, b?: number): number | undefined {
+  if (a === undefined) return b
+  if (b === undefined) return a
+  return Math.min(a, b)
+}
+
+/** 归并两条同岗位记录：状态取更靠后的，时间取更早的（更早＝真实发生），字段谁有就用谁 */
+function mergeJobRecords(winner: StagedJob, other: StagedJob): StagedJob {
+  const notes = [winner.notes, other.notes].filter(Boolean).join('；')
+  const detailed = winner.bossActive.source === 'detail'
+    ? winner.bossActive
+    : other.bossActive.source === 'detail'
+      ? other.bossActive
+      : winner.bossActive
+  const longerJd = (other.jdText?.length ?? 0) > (winner.jdText?.length ?? 0) ? other.jdText : winner.jdText
+  return {
+    ...other,
+    ...winner,
+    securityId: winner.securityId ?? other.securityId,
+    url: winner.url || other.url,
+    jobName: winner.jobName || other.jobName,
+    brandName: winner.brandName || other.brandName,
+    salaryDesc: winner.salaryDesc ?? other.salaryDesc,
+    city: winner.city ?? other.city,
+    encryptJobId: winner.encryptJobId ?? other.encryptJobId,
+    encryptBossId: winner.encryptBossId ?? other.encryptBossId,
+    lid: winner.lid ?? other.lid,
+    jdText: longerJd,
+    bossActive: detailed,
+    bossFreezeStatus: winner.bossFreezeStatus ?? other.bossFreezeStatus,
+    bossPreFreezeStatus: winner.bossPreFreezeStatus ?? other.bossPreFreezeStatus,
+    greetDraft: winner.greetDraft ?? other.greetDraft,
+    conversationId: winner.conversationId ?? other.conversationId,
+    replyMsgId: winner.replyMsgId ?? other.replyMsgId,
+    landSync: winner.landSync ?? other.landSync,
+    resumeVariantId: winner.resumeVariantId ?? other.resumeVariantId,
+    resumeExport: winner.resumeExport ?? other.resumeExport,
+    uploadedAt: earliest(winner.uploadedAt, other.uploadedAt),
+    attachmentName: winner.attachmentName ?? other.attachmentName,
+    sentAt: earliest(winner.sentAt, other.sentAt),
+    sentMsgId: winner.sentMsgId ?? other.sentMsgId,
+    pendingApplied: winner.pendingApplied ?? other.pendingApplied,
+    state: STATE_RANK[winner.state] >= STATE_RANK[other.state] ? winner.state : other.state,
+    capturedAt: earliest(winner.capturedAt, other.capturedAt) ?? winner.capturedAt,
+    greetedAt: earliest(winner.greetedAt, other.greetedAt),
+    greetSentAt: earliest(winner.greetSentAt, other.greetSentAt),
+    repliedAt: earliest(winner.repliedAt, other.repliedAt),
+    manual: winner.manual || other.manual,
+    notes: notes || undefined,
+  }
+}
+
+/**
+ * 存量迁移 + 去重（幂等，可在每次读状态时跑）。
+ *
+ * 1. 同一个 `encryptJobId` 的多条记录合成一条：状态留最靠后的、时间留最早的、字段谁有取谁。
+ * 2. 顺手把主键改成规范键（`encryptJobId`），旧数据的主键是 securityId，不搬的话
+ *    下一次列表刷新还会按新主键再建一条。
+ *
+ * 反向补建的记录（`origin === 'conversation'`，主键 `chat:uid:jobId`）保留自己的主键：
+ * `createJobFromConversation` 靠它判幂等，换了主键会被重复创建。
+ */
+export function dedupeStaging(data: StagingData, now = Date.now()): { merged: number; renamed: number } {
+  const groups = new Map<string, string[]>()
+  for (const [key, job] of Object.entries(data.jobs)) {
+    const id = job.encryptJobId
+      ? `enc:${job.encryptJobId}`
+      : job.securityId
+        ? `sec:${job.securityId}`
+        : `key:${key}`
+    const list = groups.get(id)
+    if (list) list.push(key)
+    else groups.set(id, [key])
+  }
+
+  let merged = 0
+  let renamed = 0
+  for (const keys of groups.values()) {
+    if (keys.length === 0) continue
+    const ordered = keys
+      .map((key) => data.jobs[key])
+      .filter((job): job is StagedJob => Boolean(job))
+      .sort((a, b) => STATE_RANK[b.state] - STATE_RANK[a.state] || a.capturedAt - b.capturedAt)
+    const winner = ordered[0]
+    if (!winner) continue
+
+    for (const loser of ordered.slice(1)) {
+      if (loser.key === winner.key) continue
+      Object.assign(winner, mergeJobRecords(winner, loser))
+      delete data.jobs[loser.key]
+      merged += 1
+    }
+
+    const canonical = winner.encryptJobId || winner.securityId || winner.key
+    if (winner.origin !== 'conversation' && canonical !== winner.key && !data.jobs[canonical]) {
+      delete data.jobs[winner.key]
+      winner.key = canonical
+      data.jobs[canonical] = winner
+      renamed += 1
+    }
+  }
+
+  if (merged || renamed) data.lastUpdated = now
+  return { merged, renamed }
 }
 
 /** TTL / 上限清理；sent 后 7 天归档。 */
