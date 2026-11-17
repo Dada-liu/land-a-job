@@ -428,16 +428,42 @@ function mergeJobRecords(winner: StagedJob, other: StagedJob): StagedJob {
 }
 
 /**
+ * 旧版把 securityId 当主键用，却**从没存成字段**；改主键后它就丢了，
+ * 而岗位详情响应只带 securityId（`findKeyBySecurityId` 靠它）。
+ * 两处能捞回来：JD 链接的 `?securityId=` 查询参数，或者旧主键本身（encryptJobId 只有 28 字符，
+ * 长过 60 的一律当 securityId）。
+ */
+function backfillSecurityId(job: StagedJob, oldKey?: string): boolean {
+  if (job.securityId) return false
+  let fromUrl: string | undefined
+  try {
+    fromUrl = new URL(job.url).searchParams.get('securityId') ?? undefined
+  } catch {
+    fromUrl = undefined
+  }
+  const fromKey = oldKey && oldKey.length >= 60 && !oldKey.includes('::') && !oldKey.startsWith('chat:')
+    ? oldKey
+    : undefined
+  const value = fromUrl ?? fromKey
+  if (!value) return false
+  job.securityId = value
+  return true
+}
+
+/**
  * 存量迁移 + 去重（幂等，可在每次读状态时跑）。
  *
  * 1. 同一个 `encryptJobId` 的多条记录合成一条：状态留最靠后的、时间留最早的、字段谁有取谁。
  * 2. 顺手把主键改成规范键（`encryptJobId`），旧数据的主键是 securityId，不搬的话
- *    下一次列表刷新还会按新主键再建一条。
+ *    下一次列表刷新还会按新主键再建一条；搬之前先把 securityId 回填成字段。
  *
  * 反向补建的记录（`origin === 'conversation'`，主键 `chat:uid:jobId`）保留自己的主键：
  * `createJobFromConversation` 靠它判幂等，换了主键会被重复创建。
  */
-export function dedupeStaging(data: StagingData, now = Date.now()): { merged: number; renamed: number } {
+export function dedupeStaging(
+  data: StagingData,
+  now = Date.now(),
+): { merged: number; renamed: number; filled: number } {
   const groups = new Map<string, string[]>()
   for (const [key, job] of Object.entries(data.jobs)) {
     const id = job.encryptJobId
@@ -452,6 +478,7 @@ export function dedupeStaging(data: StagingData, now = Date.now()): { merged: nu
 
   let merged = 0
   let renamed = 0
+  let filled = 0
   for (const keys of groups.values()) {
     if (keys.length === 0) continue
     const ordered = keys
@@ -468,6 +495,8 @@ export function dedupeStaging(data: StagingData, now = Date.now()): { merged: nu
       merged += 1
     }
 
+    if (backfillSecurityId(winner, winner.key)) filled += 1
+
     const canonical = winner.encryptJobId || winner.securityId || winner.key
     if (winner.origin !== 'conversation' && canonical !== winner.key && !data.jobs[canonical]) {
       delete data.jobs[winner.key]
@@ -477,8 +506,8 @@ export function dedupeStaging(data: StagingData, now = Date.now()): { merged: nu
     }
   }
 
-  if (merged || renamed) data.lastUpdated = now
-  return { merged, renamed }
+  if (merged || renamed || filled) data.lastUpdated = now
+  return { merged, renamed, filled }
 }
 
 /** TTL / 上限清理；sent 后 7 天归档。 */

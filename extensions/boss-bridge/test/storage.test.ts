@@ -352,6 +352,32 @@ describe('主键改成 encryptJobId（同岗位不再因 securityId 轮换而重
     expect(data.jobs['enc-a'].notes).toContain('手动打招呼')
   })
 
+  it('搬主键时把 securityId 回填成字段（旧版只拿它当主键、从没存字段）', () => {
+    const data = emptyStaging(now, day)
+    const secId = `sec-${'x'.repeat(320)}`
+    data.jobs[secId] = {
+      key: secId, encryptJobId: 'enc-1', url: '', jobName: '前端开发', brandName: '拓保软件',
+      state: 'ready', isNew: false, capturedAt: now,
+      bossActive: { online: true, capturedAt: now, source: 'list' },
+    }
+    const result = dedupeStaging(data, now + 1)
+    expect(result).toMatchObject({ renamed: 1, filled: 1 })
+    expect(Object.keys(data.jobs)).toEqual(['enc-1'])
+    expect(data.jobs['enc-1'].securityId).toBe(secId)
+  })
+
+  it('没有旧主键可参考时，从 JD 链接的 ?securityId= 回填', () => {
+    const data = emptyStaging(now, day)
+    data.jobs['enc-2'] = {
+      key: 'enc-2', encryptJobId: 'enc-2',
+      url: 'https://www.zhipin.com/job_detail/enc-2.html?securityId=sec-from-url',
+      jobName: '前端开发', brandName: '拓保软件', state: 'ready', isNew: false, capturedAt: now,
+      bossActive: { online: true, capturedAt: now, source: 'list' },
+    }
+    expect(dedupeStaging(data, now + 1).filled).toBe(1)
+    expect(data.jobs['enc-2'].securityId).toBe('sec-from-url')
+  })
+
   it('反向补建的记录保留 chat: 主键（createJobFromConversation 靠它判幂等）', () => {
     const data = emptyStaging(now, day)
     const conv: ConversationItem = {
