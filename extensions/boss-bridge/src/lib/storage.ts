@@ -273,6 +273,49 @@ export function applyDetail(
   return key
 }
 
+/**
+ * 页面自己发的默认招呼语（`friend/add.json` 响应）回写到暂存区。
+ *
+ * 为什么必须回写：扩展**从不代发**招呼语，用户是在 BOSS 页面上点的「立即沟通」，
+ * 而「打过招呼」是后续一切的前提——只有打过招呼，定制招呼语才有地方可发。
+ * 早期这里只打一行日志，于是缓存岗位里永远没有打招呼时间、也分不清「该不该跟进」。
+ *
+ * 只补「打招呼」这一个事实：不动 JD、不动 land-a-job，也不把已推进的状态打回去。
+ * 对齐顺序 securityId（＝主键）→ encryptJobId → encryptBossId，任一条命中即可。
+ */
+export interface GreetEvidence {
+  securityId?: string
+  encryptJobId?: string
+  encryptBossId?: string
+}
+
+export function applyGreet(
+  data: StagingData,
+  greet: GreetEvidence,
+  now = Date.now(),
+): { key: string; recorded: boolean } | null {
+  const jobs = Object.values(data.jobs)
+  const job = (greet.securityId ? data.jobs[greet.securityId] : undefined)
+    ?? (greet.encryptJobId
+      ? jobs.find((item) => item.encryptJobId && item.encryptJobId === greet.encryptJobId)
+      : undefined)
+    ?? (greet.encryptBossId
+      ? jobs.find((item) => item.encryptBossId && item.encryptBossId === greet.encryptBossId)
+      : undefined)
+  if (!job) return null
+
+  /** 只认第一次：同一条会话可能被重复旁听到，时间要稳在「真正打招呼那一刻」 */
+  const recorded = job.greetedAt === undefined
+  if (recorded) job.greetedAt = now
+  /** 已经回复/发过简历的记录只补时间，状态绝不回退 */
+  if (!AFTER_GREET_STATES.has(job.state)) {
+    job.state = 'greeted'
+    job.notes = `${job.notes ? `${job.notes}；` : ''}已在 BOSS 页面手动打招呼`.trim()
+  }
+  data.lastUpdated = now
+  return { key: job.key, recorded }
+}
+
 /** TTL / 上限清理；sent 后 7 天归档。 */
 export function pruneStaging(data: StagingData, now = Date.now()): number {
   let removed = 0

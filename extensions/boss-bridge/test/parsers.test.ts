@@ -9,6 +9,7 @@ import {
 const LIST_URL = 'https://www.zhipin.com/wapi/zpgeek/search/joblist.json?query=前端'
 const DETAIL_URL = 'https://www.zhipin.com/wapi/zpgeek/job/detail.json?securityId=abc'
 const FRIEND_URL = 'https://www.zhipin.com/wapi/zprelation/friend/getGeekFriendList.json'
+const now = 1794454300000
 
 describe('被动响应解析（P0 实测 JSON 路径）', () => {
   it('端点归类覆盖五类读响应', () => {
@@ -104,6 +105,38 @@ describe('被动响应解析（P0 实测 JSON 路径）', () => {
 
   it('JD 是第三方文本：剔除零宽字符与控制字符', () => {
     expect(sanitizeUntrustedText('前端\u200B开发\u0000\uFEFF')).toBe('前端开发')
+  })
+
+  it('打招呼响应带岗位身份：securityId 取响应，encryptJobId 取 URL 的 jobId', () => {
+    const url = 'https://www.zhipin.com/wapi/zpgeek/friend/add.json?securityId=sec-1&jobId=enc-job-1&lid=l1&_=1'
+    const body = {
+      code: 0,
+      message: 'Success',
+      zpData: {
+        showGreeting: true,
+        greeting: '您好，看到您的招聘信息，我很感兴趣，希望可以进一步沟通。',
+        securityId: 'sec-1',
+        encBossId: 'enc-boss-1',
+      },
+    }
+    const parsed = parseResponse(url, body, now)
+    expect(parsed).toEqual({
+      kind: 'greet',
+      greeting: '您好，看到您的招聘信息，我很感兴趣，希望可以进一步沟通。',
+      securityId: 'sec-1',
+      encryptJobId: 'enc-job-1',
+      encryptBossId: 'enc-boss-1',
+    })
+  })
+
+  it('响应里缺 securityId 时退回用 URL 上的那个（回写靠它对齐岗位）', () => {
+    const url = 'https://www.zhipin.com/wapi/zpgeek/friend/add.json?securityId=from-url&jobId=enc-job-2'
+    const parsed = parseResponse(url, { code: 0, zpData: { greeting: '你好' } }, now)
+    expect(parsed?.kind).toBe('greet')
+    if (parsed?.kind !== 'greet') return
+    expect(parsed.securityId).toBe('from-url')
+    expect(parsed.encryptJobId).toBe('enc-job-2')
+    expect(parsed.encryptBossId).toBeUndefined()
   })
 
   it('规范化链接去追踪参数，但保留带岗位号的 SPA hash', () => {

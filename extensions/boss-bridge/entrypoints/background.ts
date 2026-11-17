@@ -16,6 +16,7 @@ import { PAGE_URLS } from '../src/lib/selectors.js'
 import { syncOnReply, pushApplied, syncRepliedJob } from '../src/lib/sync.js'
 import {
   applyDetail,
+  applyGreet,
   applyJdFromDom,
   chromeKV,
   conversationKey as snapshotKey,
@@ -363,9 +364,25 @@ async function handleCaptured(url: string, body: unknown): Promise<void> {
         log('发现招聘者账号状态异常，相关岗位会被跳过')
       }
       return
-    case 'greet':
-      log('观测到页面自身的默认招呼语响应（扩展不主动调用该接口）')
+    case 'greet': {
+      /**
+       * 页面自己的默认招呼语响应＝用户点了「立即沟通」。这是**唯一**能证明「打过招呼」的证据，
+       * 必须回写：缓存岗位的打招呼时间、以及「打完招呼才定制招呼语」这条顺序都靠它。
+       */
+      const data = await store.load()
+      const hit = applyGreet(data, captured)
+      if (!hit) {
+        const id = captured.securityId ?? captured.encryptJobId ?? '无岗位标识'
+        log(`观测到页面发的默认招呼语（${id}），但暂存区里没有对应岗位——先去岗位列表刷一次再打招呼`)
+        return
+      }
+      await store.save(data)
+      if (hit.recorded) {
+        const job = data.jobs[hit.key]
+        log(`${job?.brandName ?? hit.key}：已记录打招呼（点「筛选并生成招呼语」为它生成定制版）`)
+      }
       return
+    }
     default:
       return
   }
@@ -675,6 +692,8 @@ export default defineBackground(() => {
             attachedTabCount: attachedTabs.size,
             jobs: jobs.length,
             ready: jobs.filter((j) => j.state === 'ready').length,
+            /** 已在 BOSS 页面手动打过招呼：定制招呼语的输入只有这一类 */
+            greeted: jobs.filter((j) => j.state === 'greeted').length,
             /** 0 条 ready 时最常见的解释：详情页还没被旁听到（没点开 / 在别的标签页） */
             needsDetail: jobs.filter((j) => j.state === 'needs_detail').length,
             filteredOut: jobs.filter((j) => j.state === 'filtered_out').length,

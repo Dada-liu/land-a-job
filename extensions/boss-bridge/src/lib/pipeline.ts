@@ -121,15 +121,25 @@ export async function runPipeline(deps: PipelineDeps): Promise<PipelineResult> {
     result.reasons.push(`${needsDetail.length} 条仍在等待详情复核，暂不产出招呼语`)
   }
 
-  // ② generate：0-token 模板招呼语，只为通过闸门的记录产出草稿
-  const ready = jobs.filter((j) => j.state === 'ready')
-  for (const job of ready) {
+  /**
+   * ② generate：只为**已经手动打过招呼**的记录生成定制招呼语。
+   *
+   * 顺序刻意是这个方向：用户先在 BOSS 上点「立即沟通」发出默认招呼语（扩展被动记下
+   * 打招呼时间），之后才轮到扩展给这家公司写一版定制招呼语，由用户复制去发第二条。
+   * 没打过招呼的 `ready` 记录不产草稿——否则攒一堆没处发的文案，还会诱导用户
+   * 把「筛选通过」误当成「已经触达」。
+   */
+  const greeted = jobs.filter((j) => j.state === 'greeted')
+  for (const job of greeted) {
     if (result.drafted >= 10) break
     if (!job.greetDraft) {
       job.greetDraft = buildGreeting(deps.settings.greetingTemplate, job, deps.settings.highlights)
       result.drafted += 1
     }
     result.preview.push(job)
+  }
+  if (greeted.length === 0 && jobs.some((j) => j.state === 'ready')) {
+    log('有可打招呼的岗位，但还没人打过招呼：先在 BOSS 页面上点「立即沟通」，扩展记下后才生成定制招呼语')
   }
 
   // ③ delivery：dry-run 只出预览；非 dry-run 也要用户逐批确认，最后一次点击留给人
@@ -161,9 +171,12 @@ export async function runPipeline(deps: PipelineDeps): Promise<PipelineResult> {
         }
         const target = data.jobs[job.key]
         if (target) {
-          target.state = 'greeted'
-          target.greetedAt = now()
-          target.notes = `${target.notes ?? ''}；已发送招呼语`.trim()
+          /**
+           * 走到这里的都是「已经手动打过招呼」的记录，发出去的是**第二条**定制招呼语，
+           * 所以只补 greetSentAt，不碰 state / greetedAt（那是默认招呼语的时间）。
+           */
+          target.greetSentAt = now()
+          target.notes = `${target.notes ? `${target.notes}；` : ''}已发送定制招呼语`.trim()
         }
         deps.limiter.recordAction()
         result.delivered += 1

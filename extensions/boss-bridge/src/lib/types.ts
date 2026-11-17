@@ -61,6 +61,8 @@ export interface StagedJob {
   isNew: boolean
   capturedAt: number
   greetedAt?: number
+  /** 定制招呼语已发出的时间；默认招呼语的时间记在 greetedAt */
+  greetSentAt?: number
   repliedAt?: number
   /** 用户自己接手了会话时置 true，自动化立即停止（ai-job 原则） */
   manual?: boolean

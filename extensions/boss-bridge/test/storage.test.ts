@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  applyDetail, applyJdFromDom, createJobFromConversation, emptyStaging, healStaging,
+  applyDetail, applyGreet, applyJdFromDom, createJobFromConversation, emptyStaging, healStaging,
   memoryKV, mergeJobList, pruneStaging, reverseJobKey, StagingStore,
 } from '../src/lib/storage.js'
 import { STAGING_LIMITS } from '../src/lib/constants.js'
@@ -260,5 +260,51 @@ describe('暂存区（只存 chrome.storage.local，0 落库）', () => {
     )
     expect(data.jobs.a.state).toBe('replied')
     expect(data.jobs.a.repliedAt).toBe(now)
+  })
+})
+
+describe('打招呼回写（friend/add.json → 暂存区）', () => {
+  it('按 securityId 命中：ready 推成 greeted 并记时间', () => {
+    const data = emptyStaging(now, day)
+    mergeJobList(data, [item('a')], now, day)
+    expect(data.jobs.a.state).toBe('ready')
+    const hit = applyGreet(data, { securityId: 'a' }, now + 5000)
+    expect(hit).toEqual({ key: 'a', recorded: true })
+    expect(data.jobs.a.state).toBe('greeted')
+    expect(data.jobs.a.greetedAt).toBe(now + 5000)
+    expect(data.jobs.a.notes).toContain('手动打招呼')
+  })
+
+  it('没有 securityId 时用 encryptJobId / encryptBossId 兜底对齐', () => {
+    const data = emptyStaging(now, day)
+    mergeJobList(data, [item('a'), item('b')], now, day)
+    expect(applyGreet(data, { encryptJobId: 'enc-b' }, now)?.key).toBe('b')
+    const byBoss = emptyStaging(now, day)
+    mergeJobList(byBoss, [item('a')], now, day)
+    byBoss.jobs.a.encryptBossId = 'enc-boss-a'
+    expect(applyGreet(byBoss, { encryptBossId: 'enc-boss-a' }, now)?.key).toBe('a')
+  })
+
+  it('对不上的打招呼不臆测：返回 null 且不动任何记录', () => {
+    const data = emptyStaging(now, day)
+    mergeJobList(data, [item('a')], now, day)
+    expect(applyGreet(data, { securityId: 'ghost' }, now)).toBeNull()
+    expect(data.jobs.a.greetedAt).toBeUndefined()
+  })
+
+  it('重复旁听只认第一次，已回复的记录只补时间不降级', () => {
+    const data = emptyStaging(now, day)
+    mergeJobList(data, [item('a')], now, day)
+    applyGreet(data, { securityId: 'a' }, now + 1000)
+    expect(applyGreet(data, { securityId: 'a' }, now + 9000)).toEqual({ key: 'a', recorded: false })
+    expect(data.jobs.a.greetedAt).toBe(now + 1000)
+
+    const replied = emptyStaging(now, day)
+    mergeJobList(replied, [item('b')], now, day)
+    replied.jobs.b.state = 'replied'
+    replied.jobs.b.repliedAt = now + 2000
+    applyGreet(replied, { securityId: 'b' }, now + 3000)
+    expect(replied.jobs.b.state).toBe('replied')
+    expect(replied.jobs.b.greetedAt).toBe(now + 3000)
   })
 })

@@ -50,6 +50,8 @@ export interface RuntimeStatus {
   attachedTabCount: number
   jobs: number
   ready: number
+  /** 已在 BOSS 页面手动打过招呼（定制招呼语只为这些记录生成） */
+  greeted: number
   /** 还在等详情响应（没点开详情 / 详情页标签未附着） */
   needsDetail: number
   /** 已经判过、被活跃度闸门挡掉的条数 */

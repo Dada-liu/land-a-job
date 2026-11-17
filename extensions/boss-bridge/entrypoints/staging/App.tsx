@@ -273,7 +273,8 @@ export function StagingApp() {
                           <h3>进度</h3>
                           <p>
                             抓取 {timeLabel(job.capturedAt)}<br />
-                            打招呼 {timeLabel(job.greetedAt)} · 回复 {timeLabel(job.repliedAt)}<br />
+                            打招呼 {timeLabel(job.greetedAt)} · 定制版发出 {timeLabel(job.greetSentAt)}<br />
+                            回复 {timeLabel(job.repliedAt)}<br />
                             上传附件 {timeLabel(job.uploadedAt)} · 发出 {timeLabel(job.sentAt)}
                           </p>
                           {job.landSync && (

@@ -49,12 +49,28 @@ export interface ConversationItem {
   chatStatus?: number
 }
 
+/**
+ * 页面自己发的默认招呼语（`/wapi/zpgeek/friend/add.json`）。
+ *
+ * 请求是 GET，`securityId` / `jobId` 都在 query 上；响应 `zpData` 又回带一次
+ * `securityId` 与 `encBossId`。两边都留着，回写暂存区时按「securityId → encryptJobId →
+ * encryptBossId」依次对齐，任一条命中就能记下打招呼时间。
+ */
+export interface GreetCaptured {
+  greeting: string
+  /** 与 joblist 的 securityId 同源，就是暂存区主键 */
+  securityId?: string
+  /** 请求 query 的 `jobId`（实测是 encryptJobId 形态，不是数字） */
+  encryptJobId?: string
+  encryptBossId?: string
+}
+
 export type CapturedResponse =
   | { kind: 'joblist'; jobs: JobListItem[] }
   | { kind: 'detail'; detail: DetailCaptured }
   | { kind: 'friendlist'; conversations: ConversationItem[] }
   | { kind: 'bossdata'; freeze?: number; preFreeze?: number }
-  | { kind: 'greet'; greeting: string }
+  | ({ kind: 'greet' } & GreetCaptured)
   | { kind: 'risk'; code: number; message: string }
   | { kind: 'misc' }
 
@@ -98,6 +114,15 @@ function str(value: unknown): string {
 
 function num(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
+/** 从请求 URL 上取一个 query 参数；URL 不合法时返回 undefined，绝不抛。 */
+function queryParam(url: string, name: string): string | undefined {
+  try {
+    return new URL(url).searchParams.get(name) || undefined
+  } catch {
+    return undefined
+  }
 }
 
 /** 顶层 code 才是业务响应码；嵌套的职位/会话 code 不参与风控判定（P0 第二轮修复）。 */
@@ -206,7 +231,13 @@ export function parseResponse(url: string, body: unknown, now = Date.now()): Cap
   }
 
   if (kind === 'greet') {
-    return { kind, greeting: str(zpData?.greeting) }
+    return {
+      kind,
+      greeting: str(zpData?.greeting),
+      securityId: str(zpData?.securityId) || queryParam(url, 'securityId'),
+      encryptJobId: queryParam(url, 'jobId'),
+      encryptBossId: str(zpData?.encBossId) || undefined,
+    }
   }
 
   return { kind: 'misc' }
