@@ -132,6 +132,43 @@ export const SELECTOR_REGISTRY: SelectorEntry[] = [
     verified: false,
     page: 'job',
   },
+  /**
+   * 搜索页是**左右分栏**（2026-11-18 实测）：左侧 `.job-card-box` 列表，
+   * 右侧 `.job-detail-container` 直接渲染 JD 与「立即沟通」。
+   * 所以浏览详情不需要新开标签页——点左侧卡片，右侧自己换内容，全部请求都由页面发出。
+   */
+  {
+    key: 'jobCard',
+    label: '搜索页岗位卡片（.job-name 的 href 带岗位 ID）',
+    selectors: ['.job-card-box', '.job-card-wrap .job-card-box'],
+    required: false,
+    verified: true,
+    page: 'job',
+  },
+  {
+    key: 'jobDetailPane',
+    label: '右侧岗位详情面板（分栏页，不跳转）',
+    selectors: ['.job-detail-container', '.job-detail-box'],
+    required: false,
+    verified: true,
+    page: 'job',
+  },
+  {
+    key: 'greetButtonInPane',
+    label: '详情面板里的「立即沟通」（ka 属性带岗位 ID）',
+    selectors: ['.job-detail-container .op-btn-chat', '.op-btn.op-btn-chat', '.btn-greet'],
+    required: false,
+    verified: true,
+    page: 'job',
+  },
+  {
+    key: 'jobMoreLink',
+    label: '详情面板「查看更多信息」（href 带 encryptJobId）',
+    selectors: ['.job-detail-container .more-job-btn', '.more-job-btn'],
+    required: false,
+    verified: true,
+    page: 'job',
+  },
 ]
 
 export interface SelectorCheck {

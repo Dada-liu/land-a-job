@@ -3,6 +3,23 @@ import type { ReactNode } from 'react'
 import { sendToBackground } from '../../src/lib/messages.js'
 import type { RuntimeResponse, RuntimeStatus } from '../../src/lib/messages.js'
 import type { StagedJob } from '../../src/lib/types.js'
+import type { AutoSettings } from '../../src/lib/orchestrator.js'
+
+/** 阶段说人话：实现词（scan / greet / send）不露到界面上 */
+const PHASE_LABEL: Record<string, string> = {
+  idle: '待命',
+  scan: '读岗位详情',
+  greet: '打招呼',
+  send: '发消息',
+}
+
+const AUTO_SWITCHES: readonly [keyof AutoSettings & ('scan' | 'scanDetail' | 'greet' | 'sendGreeting' | 'sendResume'), string][] = [
+  ['scan', '自动翻页'],
+  ['scanDetail', '自动读详情'],
+  ['greet', '自动打招呼'],
+  ['sendGreeting', '自动发定制语'],
+  ['sendResume', '自动发简历'],
+]
 
 /** 图标只用内联 SVG：扩展不引图标库，少一个依赖也少一份体积 */
 function RefreshIcon() {
@@ -158,6 +175,23 @@ export function PopupApp() {
     }
   }
 
+  /** 单开关只发一个字段：后台按 patch 合并，避免整份设置被旧值覆盖 */
+  async function toggleAuto(patch: Partial<AutoSettings>) {
+    setBusy(true)
+    setToast(null)
+    try {
+      await sendToBackground({ type: 'SET_AUTO_SETTINGS', auto: patch })
+      await refresh()
+    } catch (e) {
+      setToast({ kind: 'error', text: (e as Error).message })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  /** 全自动的实时状态；未开启时也带上（显示"未开启"而不是整块消失） */
+  const auto = status?.auto
+
   const ready = staged.filter((j) => j.state === 'ready')
   /**
    * 已手动打过招呼：定制招呼语只给这一类生成，没打过招呼的不产出文案。
@@ -245,7 +279,52 @@ export function PopupApp() {
         </div>
       </div>
       {/* 提示条正好落在副标题上：提示期间把它淡出，避免露出半截字 */}
-      <p className={`sub top-sub${toast ? ' dimmed' : ''}`}>你先在 BOSS 上打招呼，扩展只给打过的公司出定制招呼语，不替你发消息。</p>
+      <p className={`sub top-sub${toast ? ' dimmed' : ''}`}>默认只出草稿、不碰发送；打开下面的「全自动」才会替你翻页和沟通。</p>
+
+      {auto && (
+        <div className="card auto">
+          <div className="row">
+            <span className="label">全自动</span>
+            <span className={`badge ${auto.enabled ? 'on' : ''}`}>
+              {auto.enabled ? PHASE_LABEL[auto.phase] ?? '运行中' : '未开启'}
+            </span>
+          </div>
+          <div className="row">
+            <span className="label">今日</span>
+            <span className="value">
+              读详情 {auto.scannedToday}/{auto.limits.scan} · 招呼 {auto.greetedToday}/{auto.limits.greet} · 消息 {auto.sentToday}/{auto.limits.send}
+            </span>
+          </div>
+          <p className="sub auto-note">{auto.lastStepText ?? auto.waitReason ?? '尚未执行任何动作'}</p>
+
+          <div className="actions">
+            <button className="btn primary" disabled={busy || auto.enabled} onClick={() => void act({ type: 'START_AUTO' }, '已开启全自动，每分钟推进一个动作')}>
+              开始全自动
+            </button>
+            <button className="btn" disabled={busy || !auto.enabled} onClick={() => void act({ type: 'STOP_AUTO' }, '已暂停全自动')}>
+              暂停
+            </button>
+          </div>
+
+          <div className="auto-switches">
+            {AUTO_SWITCHES.map(([key, label]) => (
+              <label className="check" key={key}>
+                <input
+                  type="checkbox"
+                  checked={auto.switches[key]}
+                  disabled={busy}
+                  onChange={(e) => void toggleAuto({ [key]: e.target.checked })}
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+          <p className="hint">
+            只在你已经打开的岗位搜索页上动作，{auto.windowLabel} 之外自动停。
+            写动作（打招呼 / 发消息 / 发简历）默认关闭，开之前先想清楚风险。
+          </p>
+        </div>
+      )}
 
       <div className="card">
         <div className="row">

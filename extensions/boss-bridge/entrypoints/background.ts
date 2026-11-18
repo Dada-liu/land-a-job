@@ -1,5 +1,13 @@
 import { defineBackground } from 'wxt/utils/define-background'
-import { ALARM_NAME, ALARM_PERIOD_MINUTES, DEFAULT_SETTINGS, REPLY_LOOKBACK_MS, STORAGE_KEYS } from '../src/lib/constants.js'
+import {
+  ALARM_NAME,
+  ALARM_PERIOD_MINUTES,
+  AUTO_ALARM_NAME,
+  AUTO_TICK_MINUTES,
+  DEFAULT_SETTINGS,
+  REPLY_LOOKBACK_MS,
+  STORAGE_KEYS,
+} from '../src/lib/constants.js'
 import { detailGate } from '../src/lib/activity.js'
 import { canSend, canUpload, sanitizeFileName } from '../src/lib/attachment.js'
 import { LandBridge } from '../src/lib/bridge.js'
@@ -9,6 +17,21 @@ import { detectSent } from '../src/lib/outgoing.js'
 import { parseResponse, type CapturedResponse, type ConversationItem } from '../src/lib/parsers.js'
 import { runPipeline, type ActionResult } from '../src/lib/pipeline.js'
 import { RateLimiter, type PersistedRateLimit } from '../src/lib/rate-limit.js'
+import {
+  afterAction,
+  afterFailure,
+  decideAuto,
+  defaultAutoSettings,
+  emptyAutoState,
+  localDay,
+  startAutoState,
+  stopAutoState,
+  toAutoSnapshot,
+  type AutoDecision,
+  type AutoSettings,
+  type AutoState,
+  type AutoContext,
+} from '../src/lib/orchestrator.js'
 import { bestMatchingJob } from '../src/lib/match.js'
 import { detectGreetSent, isDefaultGreeting, isPeerMessage, toSnapshot } from '../src/lib/reply.js'
 import { bytesToBase64, tailorAndExport } from '../src/lib/resume.js'
@@ -117,6 +140,247 @@ async function sendToTab<T extends ContentResponse>(tabId: number, message: Cont
 
 async function getSettings(): Promise<BridgeSettings> {
   return (await kv.get<BridgeSettings>(STORAGE_KEYS.settings)) ?? DEFAULT_SETTINGS
+}
+
+/* ---------------- 全自动：决策在 orchestrator.ts，这里只负责执行与落盘 ---------------- */
+
+const AUTO_GREET_CONFIRM_WAIT_MS = 2_500
+/** 点过「立即沟通」但还没等到回执的记录，10 分钟内不再点第二次 */
+const AUTO_GREET_RETRY_MS = 10 * 60 * 1000
+
+async function getAutoSettings(): Promise<AutoSettings> {
+  const saved = await kv.get<Partial<AutoSettings>>(STORAGE_KEYS.auto)
+  return { ...defaultAutoSettings(), ...(saved ?? {}) }
+}
+
+async function saveAutoSettings(patch: Partial<AutoSettings>): Promise<AutoSettings> {
+  const next = { ...(await getAutoSettings()), ...patch }
+  await kv.set(STORAGE_KEYS.auto, next)
+  return next
+}
+
+async function getAutoState(): Promise<AutoState> {
+  const saved = await kv.get<AutoState>(STORAGE_KEYS.autoRun)
+  return { ...emptyAutoState(localDay(Date.now())), ...(saved ?? {}) }
+}
+
+async function saveAutoState(state: AutoState): Promise<void> {
+  await kv.set(STORAGE_KEYS.autoRun, state)
+}
+
+/**
+ * 自动化只在**用户自己已经打开的岗位列表页**上操作。
+ * 刻意不调 `tabs.create`：新开标签 + 停留 1 秒 + 关闭，这一串在服务端看就是脚本。
+ */
+async function jobListTabId(): Promise<number | null> {
+  const tabs = await chrome.tabs.query({ url: 'https://www.zhipin.com/web/geek/jobs*' })
+  const tab = tabs.find((item) => item.id !== undefined)
+  if (tab?.id === undefined) return null
+  await attachTab(tab.id)
+  return tab.id
+}
+
+interface AutoOutcome {
+  ok: boolean
+  message: string
+  /** 环境没准备好（扩展刚重载、页面没刷新），不该计入失败次数 */
+  retryable?: boolean
+}
+
+/** 读一条候选的详情：点卡片（同页换面板）→ 读 DOM 的 JD → 按旁听到的活跃度判定 */
+async function autoOpenDetail(key: string, tabId: number): Promise<AutoOutcome> {
+  const opened = await sendToTab<ContentResponse>(tabId, { type: 'CONTENT_OPEN_JOB_CARD', id: key })
+  if (!opened.ok) return { ok: false, message: opened.reason }
+
+  /**
+   * 换卡片后右侧面板要重新渲染，JD 不是立刻就有。
+   * 单次读取实测经常读空（记成失败但旁听其实已经补上了），所以这里轮询等它出现。
+   */
+  let dom: ContentResponse = { ok: false, reason: '还没读' }
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    dom = await sendToTab<ContentResponse>(tabId, { type: 'CONTENT_READ_PANE_JD' })
+    if (dom.ok && dom.value) break
+    await new Promise((resolve) => setTimeout(resolve, 600))
+  }
+  if (!dom.ok || !dom.value) return { ok: false, message: dom.reason }
+
+  let payload: { jdText: string; id?: string; brandName?: string; jobName?: string; salaryDesc?: string; city?: string }
+  try {
+    payload = JSON.parse(dom.value)
+  } catch {
+    return { ok: false, message: '详情面板的 JD 解析失败' }
+  }
+  /** 面板上如果还是上一个岗位，读到的 JD 就是别人的——宁可失败也不写错 */
+  if (payload.id && payload.id !== key) {
+    return { ok: false, message: `面板显示的不是这个岗位（当前 ${payload.id}）` }
+  }
+
+  const data = await store.load()
+  const job = data.jobs[key]
+  if (!job) return { ok: false, message: '暂存记录不存在' }
+
+  applyJdFromDom(data, key, payload)
+  if (job.bossActive.source === 'detail') {
+    const decision = detailGate(job.bossActive, job.bossFreezeStatus, job.bossPreFreezeStatus, { now: Date.now() })
+    job.state = decision.state
+    job.notes = decision.reason
+  }
+  await store.save(data)
+  return {
+    ok: true,
+    message: `${job.brandName}：已读详情（JD ${payload.jdText.length} 字，${
+      job.state === 'needs_detail' ? '活跃度待详情响应' : job.state === 'ready' ? '可打招呼' : '已跳过'
+    }）`,
+  }
+}
+
+/**
+ * 点「立即沟通」。
+ *
+ * 只点按钮：默认招呼语是页面自己在 `friend/add.json` 里发出的，扩展不构造、不调用写接口。
+ * 点完不等状态机立即改写——`greeted` 一律由旁听回执写入，避免"点了但没发出去"被记成已触达。
+ */
+async function autoGreet(key: string, tabId: number): Promise<AutoOutcome> {
+  const opened = await sendToTab<ContentResponse>(tabId, { type: 'CONTENT_OPEN_JOB_CARD', id: key })
+  if (!opened.ok) return { ok: false, message: opened.reason }
+  await new Promise((resolve) => setTimeout(resolve, 1_200))
+
+  const clicked = await sendToTab<ContentResponse>(tabId, { type: 'CONTENT_CLICK_GREET' })
+  if (!clicked.ok) return { ok: false, message: clicked.reason }
+
+  /** 先记下"点过"，万一回执没来，也不会在同一分钟里重复点第二次 */
+  const before = await store.load()
+  const target = before.jobs[key]
+  if (target) {
+    target.greetClickedAt = Date.now()
+    await store.save(before)
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, AUTO_GREET_CONFIRM_WAIT_MS))
+
+  const data = await store.load()
+  const job = data.jobs[key]
+  if (job?.state === 'greeted') return { ok: true, message: `${job.brandName}：已打招呼（回执已确认）` }
+  return { ok: true, message: `${job?.brandName ?? key}：已点「立即沟通」，等回执确认` }
+}
+
+async function executeAuto(decision: AutoDecision, tabId: number): Promise<AutoOutcome> {
+  const check = limiter.canAct()
+  if (!check.ok && check.waitMs === 0) return { ok: false, message: check.reason }
+  if (check.waitMs > 0) await new Promise((resolve) => setTimeout(resolve, check.waitMs))
+
+  switch (decision.kind) {
+    case 'scroll': {
+      const res = await sendToTab<ContentResponse>(tabId, { type: 'CONTENT_SCAN_JOBS', scroll: true })
+      limiter.noteRequest()
+      return res.ok ? { ok: true, message: res.reason } : { ok: false, message: res.reason }
+    }
+    case 'openDetail':
+      limiter.noteRequest()
+      return autoOpenDetail(decision.jobKey, tabId)
+    case 'greet':
+      limiter.noteRequest()
+      return autoGreet(decision.jobKey, tabId)
+    case 'sendGreeting':
+      return { ok: false, message: '自动发定制招呼语尚未接入（P3）' }
+    case 'sendResume':
+      return { ok: false, message: '自动发简历尚未接入（P4）' }
+    default:
+      return { ok: false, message: '未知动作' }
+  }
+}
+
+/** 一次 tick 只做一个动作：service worker 可能随时休眠，长循环会被打断 */
+async function tickAuto(): Promise<void> {
+  const settings = await getAutoSettings()
+  if (!settings.enabled) return
+
+  const state = await getAutoState()
+  const data = await store.load()
+  const jobs = Object.values(data.jobs)
+  const byAge = (a: StagedJob, b: StagedJob) => a.capturedAt - b.capturedAt
+  const now = Date.now()
+
+  const tabId = await jobListTabId()
+  if (tabId === null) {
+    await saveAutoState({ ...state, waitReason: '没有打开的岗位搜索页（自动化只在你自己的列表页上运行）', lastTickAt: now })
+    return
+  }
+
+  /**
+   * 先探活：扩展重载后，已打开的页面上还是旧的 content script，
+   * 直接发动作会得到「Receiving end does not exist」。这属于环境没就绪，
+   * 不该计入失败次数（否则三次就把自己停了）。
+   */
+  const alive = await sendToTab<ContentResponse>(tabId, { type: 'CONTENT_SELF_CHECK' })
+  if (!alive.ok && /Receiving end does not exist|Could not establish connection/.test(alive.reason)) {
+    await saveAutoState({ ...state, waitReason: `BOSS 页面还没接管新代码，刷新一下该页面会自动继续（${alive.reason.slice(0, 40)}）`, lastTickAt: now })
+    return
+  }
+
+  /**
+   * 暂存区里可能有上百条记录，而列表页当前只渲染几十张卡片。
+   * 先问页面有哪些卡片，只从「真的点得到」的记录里挑；一个都点不到就往下滚一次再试。
+   */
+  const visibleIds = async (): Promise<Set<string>> => {
+    const res = await sendToTab<ContentResponse>(tabId, { type: 'CONTENT_SCAN_JOBS', scroll: false })
+    if (!res.ok || !res.value) return new Set()
+    try {
+      return new Set((JSON.parse(res.value) as { id?: string }[]).map((c) => c.id).filter(Boolean) as string[])
+    } catch {
+      return new Set()
+    }
+  }
+
+  const ids = await visibleIds()
+  const detailTargets = jobs
+    .filter((j) => j.state === 'needs_detail'
+      || ((j.state === 'ready' || j.state === 'greeted') && !j.jdText?.trim()))
+    .sort(byAge)
+    .map((j) => j.key)
+  const readyKeys = jobs
+    .filter((j) => j.state === 'ready' && !(j.greetClickedAt && now - j.greetClickedAt < AUTO_GREET_RETRY_MS))
+    .sort(byAge)
+    .map((j) => j.key)
+
+  const reachable = (keys: string[]) => keys.filter((key) => ids.has(key))
+  /** 只有「要读详情」时才需要翻页找人；翻页本身由 scroll 决策负责 */
+
+  const ctx: AutoContext = {
+    now,
+    settings,
+    state,
+    tripped: limiter.snapshot.tripped,
+    detailTargets: reachable(detailTargets),
+    ready: reachable(readyKeys),
+    pendingGreeting: jobs
+      .filter((j) => j.state === 'greeted' && j.greetDraft && !j.greetSentAt)
+      .sort(byAge)
+      .map((j) => j.key),
+    pendingResume: [],
+  }
+
+  const decision = decideAuto(ctx)
+  if (decision.kind === 'idle' || decision.kind === 'wait') {
+    const reason = detailTargets.length > 0 && ctx.detailTargets.length === 0 && decision.kind === 'idle'
+      ? `列表页上没有待办的岗位卡片（${detailTargets.length} 条候选不在当前搜索结果里，换个关键词或往下滚）`
+      : decision.reason
+    await saveAutoState({
+      ...state,
+      phase: decision.kind === 'idle' ? 'idle' : state.phase,
+      waitReason: reason,
+      lastTickAt: now,
+    })
+    return
+  }
+
+  const outcome = await executeAuto(decision, tabId)
+  const next = outcome.ok
+    ? { ...afterAction(state, decision, Date.now(), settings), waitReason: outcome.message, lastTickAt: now }
+    : { ...afterFailure(state, Date.now(), outcome.message), lastTickAt: now }
+  await saveAutoState(next)
+  log(`自动化${outcome.ok ? '' : '失败'}：${outcome.message}`)
+  await persistLimiter()
 }
 
 async function getLimiter(): Promise<RateLimiter> {
@@ -699,7 +963,16 @@ export default defineBackground(() => {
 
   chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === ALARM_NAME) void watchReplies()
+    if (alarm.name === AUTO_ALARM_NAME) void tickAuto()
   })
+
+  /** service worker 被回收后 alarm 可能丢了，启动时按开关恢复一次 */
+  void (async () => {
+    const auto = await getAutoSettings()
+    if (auto.enabled) {
+      await chrome.alarms.create(AUTO_ALARM_NAME, { periodInMinutes: AUTO_TICK_MINUTES })
+    }
+  })()
 
   chrome.runtime.onMessage.addListener((message: RuntimeRequest, _sender, sendResponse) => {
     void (async (): Promise<RuntimeResponse> => {
@@ -739,6 +1012,7 @@ export default defineBackground(() => {
             dryRun: settings.dryRun,
             rateLimitTripped: limiter.snapshot.tripped,
             lastError: lastError || undefined,
+            auto: toAutoSnapshot(await getAutoState(), await getAutoSettings(), Date.now()),
           }
           return { ok: true, status }
         }
@@ -927,6 +1201,40 @@ export default defineBackground(() => {
 
           await store.save(data)
           return { ok: true, result: { results } }
+        }
+        case 'START_AUTO': {
+          const settings = await saveAutoSettings({ enabled: true })
+          const state = startAutoState(await getAutoState(), Date.now())
+          await saveAutoState(state)
+          await chrome.alarms.create(AUTO_ALARM_NAME, { periodInMinutes: AUTO_TICK_MINUTES })
+          log('已开启全自动：每分钟推进一个动作，随时可以暂停')
+          void tickAuto()
+          return { ok: true, result: toAutoSnapshot(state, settings, Date.now()) }
+        }
+        case 'STOP_AUTO': {
+          const settings = await saveAutoSettings({ enabled: false })
+          const state = stopAutoState(await getAutoState(), '你手动停止了全自动')
+          await saveAutoState(state)
+          await chrome.alarms.clear(AUTO_ALARM_NAME)
+          log('已停止全自动')
+          return { ok: true, result: toAutoSnapshot(state, settings, Date.now()) }
+        }
+        case 'GET_AUTO':
+          return {
+            ok: true,
+            result: toAutoSnapshot(await getAutoState(), await getAutoSettings(), Date.now()),
+          }
+        case 'SET_AUTO_SETTINGS': {
+          const settings = await saveAutoSettings(message.auto)
+          if (settings.enabled) {
+            await chrome.alarms.create(AUTO_ALARM_NAME, { periodInMinutes: AUTO_TICK_MINUTES })
+          } else {
+            await chrome.alarms.clear(AUTO_ALARM_NAME)
+          }
+          return {
+            ok: true,
+            result: toAutoSnapshot(await getAutoState(), settings, Date.now()),
+          }
         }
         case 'RESET_LIMITER':
           limiter.reset()

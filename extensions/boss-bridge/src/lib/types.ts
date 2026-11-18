@@ -69,6 +69,12 @@ export interface StagedJob {
   isNew: boolean
   capturedAt: number
   greetedAt?: number
+  /**
+   * 自动化点过「立即沟通」的时间。
+   * 只表示**动作已执行**，不代表已触达——`greetedAt` 仍只由 `friend/add.json` 回执写入。
+   * 用途：回执没到时短期去重，避免一分钟内重复点同一家。
+   */
+  greetClickedAt?: number
   /** 定制招呼语已发出的时间；默认招呼语的时间记在 greetedAt */
   greetSentAt?: number
   repliedAt?: number

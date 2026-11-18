@@ -75,6 +75,11 @@ h2 { font-size: 13px; font-weight: 500; margin: 18px 0 8px; }
 .chev.open { transform: rotate(180deg); }
 .fold-body .row { padding: 4px 0; }
 
+/* 全自动卡片：一行状态、一行用量、四个开关，别把 popup 撑太长 */
+.auto-note { margin: 6px 0 2px; font-size: 12px; }
+.auto-switches { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; }
+.auto-switches .check { margin-bottom: 0; gap: 6px; }
+
 /* 四步流程：每一步左侧一列「圆点 + 竖线」，竖线由 .rail 自己画，
    这样圆点中心（7.5px）与线（7px）永远对齐，不依赖容器的 padding 推算 */
 .steps { margin-top: 12px; }

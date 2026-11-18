@@ -1,4 +1,5 @@
 import type { BridgeSettings, ConversationSnapshot, StagedJob } from './types.js'
+import type { AutoSettings, AutoSnapshot } from './orchestrator.js'
 
 export type RuntimeRequest =
   | { type: 'GET_STATUS' }
@@ -24,8 +25,14 @@ export type RuntimeRequest =
   | { type: 'RESET_LIMITER' }
   | { type: 'TEST_BRIDGE' }
   | { type: 'GET_LOGS' }
+  /** 全自动：开始 / 停止 / 读状态（默认关闭，需用户显式开启） */
+  | { type: 'START_AUTO' }
+  | { type: 'STOP_AUTO' }
+  | { type: 'GET_AUTO' }
+  /** 自动化参数：按 patch 合并，popup 只传要改的字段 */
+  | { type: 'SET_AUTO_SETTINGS'; auto: Partial<AutoSettings> }
 
-/** background → 内容脚本；只做确定性 DOM 动作，绝不代点发送 */
+/** background → 内容脚本；确定性 DOM 动作，绝不代发聊天消息 */
 export type ContentRequest =
   | { type: 'CONTENT_SELF_CHECK' }
   | { type: 'CONTENT_UPLOAD_PDF'; fileName: string; base64: string }
@@ -35,6 +42,14 @@ export type ContentRequest =
   | { type: 'CONTENT_SCROLL_CONVERSATIONS' }
   /** 新版详情页 JD 是 SSR 渲染的，从 DOM 读取正文（只读，不调接口） */
   | { type: 'CONTENT_READ_JD' }
+  /** 搜索页：读卡片列表；`scroll` 为真时先滚一屏触发页面自己的分页 */
+  | { type: 'CONTENT_SCAN_JOBS'; scroll: boolean }
+  /** 搜索页：点开某张卡片，右侧面板换详情（同页，不新开标签） */
+  | { type: 'CONTENT_OPEN_JOB_CARD'; id: string }
+  /** 搜索页：读右侧详情面板的 JD 正文（只读） */
+  | { type: 'CONTENT_READ_PANE_JD' }
+  /** 搜索页：点面板里的「立即沟通」（只点击，默认招呼语由页面自己发） */
+  | { type: 'CONTENT_CLICK_GREET' }
 
 export interface ContentResponse {
   ok: boolean
@@ -70,6 +85,8 @@ export interface RuntimeStatus {
   dryRun: boolean
   rateLimitTripped: boolean
   lastError?: string
+  /** 全自动的当前状态（未开启时 enabled=false） */
+  auto?: AutoSnapshot
 }
 
 /**

@@ -182,6 +182,166 @@ function selfCheck(): ContentResponse {
   }
 }
 
+/* ---------------- 搜索页：左右分栏，同页浏览（不新开标签、不跳转） ---------------- */
+
+/** 卡片链接形如 `/job_detail/<encryptJobId>.html`，与暂存区主键同一个值 */
+function jobIdFromHref(href: string): string | undefined {
+  return /\/job_detail\/([^/?#]+)\.html/.exec(href)?.[1]
+}
+
+function cardLinks(): HTMLAnchorElement[] {
+  return Array.from(document.querySelectorAll('.job-card-box a.job-name')) as HTMLAnchorElement[]
+}
+
+function serializeCards(): string {
+  const cards = cardLinks().map((link) => {
+    const card = link.closest('.job-card-box') ?? link.parentElement
+    return {
+      id: jobIdFromHref(link.getAttribute('href') ?? ''),
+      jobName: String(link.textContent ?? '').trim(),
+      brandName: String(card?.querySelector('.boss-name')?.textContent ?? '').trim(),
+      city: String(card?.querySelector('.company-location')?.textContent ?? '').replace(/\s+/g, ' ').trim() || undefined,
+    }
+  }).filter((card) => Boolean(card.id))
+  return JSON.stringify(cards)
+}
+
+/** 从卡片往上找真正在滚的那个容器；找不到就退回整页滚动 */
+function scrollableAncestor(from: Element | null): HTMLElement | null {
+  let node: HTMLElement | null = from as HTMLElement | null
+  while (node) {
+    const style = getComputedStyle(node)
+    if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 40) return node
+    node = node.parentElement
+  }
+  return (document.scrollingElement as HTMLElement | null) ?? null
+}
+
+/**
+ * 读列表卡片（可选往下滚一段）。
+ *
+ * 搜索页是**整页无限滚动**（列表容器 `overflow: visible`，没有翻页按钮），
+ * 分页请求只在滚到接近底部时才发。所以这里分几次小幅下滚、每步停一下——
+ * 既像真人滑动，也能稳定把后面的卡片带出来。全程不点击、不输入。
+ */
+async function scanJobCards(scroll: boolean): Promise<ContentResponse> {
+  const before = cardLinks().length
+  if (before === 0) {
+    return { ok: false, reason: '岗位列表还没渲染（.job-card-box 里没有岗位链接），等页面加载完再试' }
+  }
+  if (!scroll) {
+    return { ok: true, reason: `读到 ${before} 张卡片`, value: serializeCards() }
+  }
+
+  const container = scrollableAncestor(cardLinks()[before - 1] ?? null)
+  if (!container) return { ok: true, reason: `读到 ${before} 张卡片（没有可滚动容器）`, value: serializeCards() }
+
+  const bottom = () => container.scrollHeight - container.clientHeight
+  if (container.scrollTop >= bottom() - 40) {
+    return { ok: true, reason: `已经是列表底部（${before} 张卡片），没有更多可加载`, value: serializeCards() }
+  }
+
+  for (let step = 0; step < 3; step += 1) {
+    const stride = 360 + Math.round(Math.random() * 240)
+    container.scrollTop = Math.min(container.scrollTop + stride, bottom())
+    await sleep(320)
+  }
+  /** 滚到底后给页面留出请求下一页的时间 */
+  await sleep(1_400)
+  const after = cardLinks().length
+  return {
+    ok: true,
+    reason: after > before
+      ? `往下滚了 3 段（卡片 ${before} → ${after}）`
+      : `往下滚了 3 段（卡片仍 ${after} 张，可能在等下一页响应）`,
+    value: serializeCards(),
+  }
+}
+
+/** 右侧详情面板当前展示的是哪个岗位（「查看更多信息」的链接里带 ID） */
+function paneJobId(): string | undefined {
+  const more = document.querySelector('.job-detail-container .more-job-btn') as HTMLAnchorElement | null
+  return jobIdFromHref(more?.getAttribute('href') ?? '') ?? undefined
+}
+
+/**
+ * 点开一张卡片，等右侧面板换成这个岗位。
+ *
+ * 刻意不用 `chrome.tabs.create` 打开详情：那是一次真实导航，短时间批量「开—停 1 秒—关」
+ * 才是服务端能看见的异常序列。分栏页里点卡片只触发页面自己的一次详情请求，和真人一致。
+ */
+async function openJobCard(id: string): Promise<ContentResponse> {
+  const link = cardLinks().find((item) => jobIdFromHref(item.getAttribute('href') ?? '') === id)
+  if (!link) return { ok: false, reason: `列表里没有这个岗位的卡片（${id}），可能需要先滚动加载` }
+
+  link.scrollIntoView({ block: 'center' })
+  await sleep(250)
+  link.click()
+
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    await sleep(400)
+    if (paneJobId() === id) {
+      const title = String(
+        document.querySelector('.job-detail-container .job-name, .job-detail-container .name')?.textContent ?? '',
+      ).trim()
+      return { ok: true, reason: `已打开「${title || id}」的详情`, value: id }
+    }
+  }
+  return { ok: false, reason: '点了卡片，但右侧详情没有切到这个岗位（站点可能改成新标签打开）' }
+}
+
+/**
+ * 读右侧面板的 JD。和独立详情页共用同一套 DOM 结构，
+ * 但**不新开页面**，所以这条路径不产生额外的导航请求。
+ */
+function readPaneDetail(): ContentResponse {
+  const pane = document.querySelector('.job-detail-container')
+  if (!pane) return { ok: false, reason: '右侧详情面板还没出现（这个页面可能不是左右分栏的搜索页）' }
+
+  const body = pane.querySelector('.job-sec-text')
+  const jdText = String((body as HTMLElement | null)?.innerText ?? body?.textContent ?? '').trim()
+  if (jdText.length < 20) return { ok: false, reason: 'JD 区域还没渲染（.job-sec-text 为空或过短）' }
+
+  const text = (selector: string): string | undefined => {
+    const value = String(pane.querySelector(selector)?.textContent ?? '').replace(/\s+/g, ' ').trim()
+    return value || undefined
+  }
+  const nameText = text('.job-name') ?? text('.name') ?? ''
+  const payload = {
+    jdText,
+    id: paneJobId(),
+    brandName: text('.company-info .name') ?? text('.company-name') ?? text('.sider-company .name'),
+    jobName: (nameText.split(/\s+\d+-\d+K/)[0] ?? '').replace(/-\S+$/, '').trim() || undefined,
+    salaryDesc: nameText.match(/(\d+-\d+K[^\s]*)/)?.[1],
+    city: text('.info-primary')?.match(/(北京|上海|广州|深圳|杭州|成都|南京|武汉|西安|苏州|天津|重庆|厦门|长沙|郑州|青岛|合肥|福州|济南|大连|宁波|无锡|东莞|佛山|珠海|中山|其他|全国)/)?.[1],
+  }
+  return { ok: true, reason: `已读取 JD 正文（${jdText.length} 字）`, value: JSON.stringify(payload) }
+}
+
+/**
+ * 点右侧面板里的「立即沟通」。
+ *
+ * 只点击，不代发任何消息：默认招呼语由页面自己在请求里带上（`friend/add.json`），
+ * 扩展依旧只从旁听里确认结果。找不到按钮就返回失败，不做"试试别的元素"。
+ */
+async function clickGreet(): Promise<ContentResponse> {
+  const pane = document.querySelector('.job-detail-container')
+  if (!pane) return { ok: false, reason: '右侧详情面板没出现' }
+  const button = pane.querySelector('.op-btn-chat, .btn-greet, .btn-startchat') as HTMLElement | null
+  if (!button) return { ok: false, reason: '没找到「立即沟通」按钮（选择器 .op-btn-chat）' }
+
+  const label = String(button.textContent ?? '').trim()
+  if (!label.includes('沟通')) return { ok: false, reason: `命中的按钮不是「立即沟通」（文本：${label.slice(0, 10)}）` }
+  if (button.className.includes('disabled') || button.getAttribute('aria-disabled') === 'true') {
+    return { ok: false, reason: '「立即沟通」当前不可点（按钮是禁用态）' }
+  }
+
+  button.scrollIntoView({ block: 'center' })
+  await sleep(200)
+  button.click()
+  return { ok: true, reason: '已点击「立即沟通」，等页面自己发请求', value: paneJobId() }
+}
+
 export default defineContentScript({
   matches: ['https://www.zhipin.com/*'],
   runAt: 'document_idle',
@@ -201,6 +361,14 @@ export default defineContentScript({
             return scrollConversations()
           case 'CONTENT_READ_JD':
             return readJobDetail()
+          case 'CONTENT_SCAN_JOBS':
+            return scanJobCards(message.scroll)
+          case 'CONTENT_OPEN_JOB_CARD':
+            return openJobCard(message.id)
+          case 'CONTENT_READ_PANE_JD':
+            return readPaneDetail()
+          case 'CONTENT_CLICK_GREET':
+            return clickGreet()
           default:
             return { ok: false, reason: '未知的内容脚本指令' }
         }

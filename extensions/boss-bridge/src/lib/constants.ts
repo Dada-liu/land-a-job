@@ -71,7 +71,44 @@ export const STORAGE_KEYS = {
   settings: 'bossBridge.settings',
   rateLimit: 'bossBridge.rateLimit',
   logs: 'bossBridge.logs',
+  auto: 'bossBridge.auto',
+  /** 自动化的运行态（phase/今日计数/休息时间），与参数分开放，避免互相覆盖 */
+  autoRun: 'bossBridge.auto.run',
 } as const
+
+/**
+ * 全自动流程的默认参数（保守档）。
+ *
+ * 三个刻意的取舍：
+ * 1. `enabled` 默认 false，且所有写动作（greet / sendGreeting / sendResume）默认 false——
+ *    装完不会自己动，必须是用户显式打开。
+ * 2. 每日上限远低于平台硬限（120/150 位）：把额度打满本身就是异常特征。
+ * 3. 间隔 4–12 秒而不是 1.5 秒：真人不会每隔 1.5 秒精确点一次。
+ */
+export const AUTO_DEFAULTS = {
+  enabled: false,
+  scan: true,
+  scanDetail: false,
+  greet: false,
+  sendGreeting: false,
+  sendResume: false,
+  /** 09:30–21:00；凌晨持续活跃是最容易被判异常的行为 */
+  windowStartMin: 9 * 60 + 30,
+  windowEndMin: 21 * 60,
+  dailyScanLimit: 80,
+  dailyGreetLimit: 40,
+  dailyMessageLimit: 60,
+  gapMinMs: 4000,
+  gapMaxMs: 12000,
+  scrollGapMs: 120_000,
+  restEvery: 5,
+  restMinMs: 60_000,
+  restMaxMs: 180_000,
+} as const
+
+/** 自动化的 tick 间隔（chrome.alarms 最小 1 分钟） */
+export const AUTO_ALARM_NAME = 'boss-bridge-auto'
+export const AUTO_TICK_MINUTES = 1
 
 export const DEFAULT_SETTINGS: BridgeSettings = {
   apiBase: 'http://127.0.0.1:4399',
