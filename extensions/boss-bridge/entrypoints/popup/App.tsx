@@ -159,8 +159,19 @@ export function PopupApp() {
   }
 
   const ready = staged.filter((j) => j.state === 'ready')
-  /** 已手动打过招呼：定制招呼语只给这一类生成，没打过招呼的不产出文案 */
-  const greeted = staged.filter((j) => j.state === 'greeted')
+  /**
+   * 已手动打过招呼：定制招呼语只给这一类生成，没打过招呼的不产出文案。
+   * 按打招呼时间倒序——刚在 BOSS 上点过「立即沟通」的那家排最上面，方便马上复制发出；
+   * 缺时间的（历史回填不完整的）沉到最后，内部再按抓取时间新→旧。
+   */
+  const greeted = staged
+    .filter((j) => j.state === 'greeted')
+    .sort((a, b) => {
+      if (a.greetedAt && b.greetedAt) return b.greetedAt - a.greetedAt
+      if (a.greetedAt) return -1
+      if (b.greetedAt) return 1
+      return b.capturedAt - a.capturedAt
+    })
   const replied = staged.filter((j) => j.state === 'replied')
   const tailored = staged.filter((j) => j.state === 'tailored')
   const uploaded = staged.filter((j) => j.state === 'uploaded')
@@ -250,15 +261,10 @@ export function PopupApp() {
           </span>
         </div>
         <div className="row"><span className="label">已收集岗位</span><span className="value">{status?.jobs ?? 0} 条</span></div>
-        <div className="row" title="会话列表分页加载，点「检查新回复」会滚动到底把后续页读出来">
-          <span className="label">已读取会话</span><span className="value">{status?.conversations ?? 0} 条</span>
-        </div>
         <div className="row"><span className="label">可打招呼（HR 近期活跃）</span><span className="value">{status?.ready ?? 0} 条</span></div>
         <div className="row" title="在 BOSS 页面上点过「立即沟通」的公司；定制招呼语只为这些记录生成">
           <span className="label">已打招呼</span><span className="value">{status?.greeted ?? 0} 条</span>
         </div>
-        <div className="row"><span className="label">待确认活跃度</span><span className="value">{status?.needsDetail ?? 0} 条</span></div>
-        <div className="row"><span className="label">HR 不活跃（已跳过）</span><span className="value">{status?.filteredOut ?? 0} 条</span></div>
 
         {/* 后面四行是「投出去之后」才用得到的，折起来把前面几行的注意力让出来 */}
         <button className="disclosure" aria-expanded={showProgress} onClick={() => setShowProgress((v) => !v)}>
@@ -281,11 +287,6 @@ export function PopupApp() {
 
         {status?.rateLimitTripped && <p className="error">已触发 BOSS 频率保护，自动停机。确认安全后点「解除保护」继续。</p>}
         {status?.lastError && <p className="error">{status.lastError}</p>}
-        {(status?.needsDetail ?? 0) > 0 && (
-          <p className="sub">
-            还有 {status?.needsDetail} 条岗位列表没给活跃度：点开详情页看看，或在设置里勾选「允许自动打开候选详情页」后再筛一次。
-          </p>
-        )}
 
         <div className="steps">
           <div className={`step ${currentStep === 1 ? 'active' : ''}`}>
@@ -359,7 +360,7 @@ export function PopupApp() {
         )}
       </div>
 
-      <h2>定制招呼语（已打招呼 {greeted.length} 条 · 前 10 条）</h2>
+      <h2>定制招呼语（已打招呼 {greeted.length} 条 · 最近的 {Math.min(10, greeted.length)} 条）</h2>
       <div className="card list drafts">
         {greeted.length === 0 && (
           <p className="sub">
@@ -377,7 +378,8 @@ export function PopupApp() {
                 onClick={() => void copy(job.greetDraft ?? '')}
               >复制</button>
             </div>
-            <p className={job.greetDraft ? 'draft-text' : 'draft-text empty'}>
+            {/* 空草稿用 pending，别用 empty：staging 页的 .empty 带 44px 上下内边距 */}
+            <p className={job.greetDraft ? 'draft-text' : 'draft-text pending'}>
               {job.greetDraft ?? '待生成（再点一次「筛选并生成招呼语」）'}
             </p>
           </div>

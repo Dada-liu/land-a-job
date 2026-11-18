@@ -32,6 +32,16 @@ function timeLabel(ms?: number): string {
   return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+/** 刷新按钮里的转圈图标：只在手动点刷新期间挂出来，转完由组件撤掉 */
+function SpinIcon() {
+  return (
+    <svg className="spin-ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+      <path d="M21 12a9 9 0 1 1-3-6.7" />
+      <path d="M21 4v5h-5" />
+    </svg>
+  )
+}
+
 function activityLabel(job: StagedJob): string {
   if (job.bossActive?.desc) return job.bossActive.desc
   if (job.bossActive?.online === true) return '在线'
@@ -49,6 +59,7 @@ export function StagingApp() {
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [notice, setNotice] = useState('')
 
   const load = useCallback(async () => {
@@ -71,6 +82,21 @@ export function StagingApp() {
   }, [])
 
   useEffect(() => { void load() }, [load])
+
+  /** 点刷新才转：本地读取几十毫秒就完了，补足最短时长才看得出在转，转完立刻收起 */
+  const MIN_SPIN = 500
+  const manualRefresh = useCallback(async () => {
+    if (refreshing) return
+    setRefreshing(true)
+    const startedAt = Date.now()
+    try {
+      await load()
+    } finally {
+      const left = MIN_SPIN - (Date.now() - startedAt)
+      if (left > 0) await new Promise((resolve) => setTimeout(resolve, left))
+      setRefreshing(false)
+    }
+  }, [load, refreshing])
 
   /** 切回这个标签页时自动刷新：抓取在后台进行，页面不该停在旧数据上 */
   useEffect(() => {
@@ -120,7 +146,15 @@ export function StagingApp() {
           </p>
         </div>
         <div className="actions" style={{ margin: 0 }}>
-          <button className="btn" disabled={loading} onClick={() => void load()}>{loading ? '刷新中…' : '刷新'}</button>
+          <button
+            className="btn refresh"
+            disabled={loading}
+            aria-busy={refreshing || undefined}
+            onClick={() => void manualRefresh()}
+          >
+            {refreshing && <SpinIcon />}
+            刷新
+          </button>
         </div>
       </div>
 
@@ -129,7 +163,7 @@ export function StagingApp() {
           缓存岗位 <span className="n">{jobs.length}</span>
         </button>
         <button className={view === 'chats' ? 'on' : ''} onClick={() => setView('chats')}>
-          已读到的会话 <span className="n">{chats.length}</span>
+          已读到的消息 <span className="n">{chats.length}</span>
         </button>
         <span className="sub">
           {view === 'chats'
