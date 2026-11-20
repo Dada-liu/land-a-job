@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_FILTER, applyFilter, countByState, matchesFilter, touchedAt } from '../src/lib/filter.js'
+import { DEFAULT_FILTER, applyFilter, countByState, matchesFilter, parseSalaryRange, touchedAt } from '../src/lib/filter.js'
 import type { StagedJob } from '../src/lib/types.js'
 
 const now = 1794454300000
@@ -58,6 +58,33 @@ describe('缓存岗位筛选', () => {
     expect(applyFilter(jobs, filter({ synced: true })).map((j) => j.key)).toEqual(['a'])
     expect(applyFilter(jobs, filter({ drafted: true })).map((j) => j.key)).toEqual(['a'])
     expect(applyFilter(jobs, filter({ hasJd: true, drafted: true })).map((j) => j.key)).toEqual(['a'])
+  })
+
+  it('薪资档位按区间交集命中，跨档岗位两边都看得到', () => {
+    const jobs = [
+      job('a', { salaryDesc: '10-15K' }),
+      job('b', { salaryDesc: '15-25K' }),
+      job('c', { salaryDesc: '30-40K·13薪' }),
+      job('d', { salaryDesc: '50-70K' }),
+      job('e', { salaryDesc: '面议' }),
+      job('f', { salaryDesc: '300-500元/天' }),
+    ]
+    expect(applyFilter(jobs, filter({ salary: '10-20' })).map((j) => j.key)).toEqual(['a', 'b'])
+    expect(applyFilter(jobs, filter({ salary: '20-30' })).map((j) => j.key)).toEqual(['b'])
+    expect(applyFilter(jobs, filter({ salary: '30-40' })).map((j) => j.key)).toEqual(['c'])
+    // 40-50K 一档留空：50-70K 的下界不含 40-50 区间，不跨档命中
+    expect(applyFilter(jobs, filter({ salary: '40-50' }))).toEqual([])
+    // 薪资不限 = 不过滤，面议/日薪也在里面（这类只能靠搜索框找）
+    expect(applyFilter(jobs, filter({ salary: 'all' }))).toHaveLength(6)
+  })
+
+  it('薪资文本只认 `a-bK` 区间，其余取不到范围', () => {
+    expect(parseSalaryRange('15-25K')).toEqual({ min: 15, max: 25 })
+    expect(parseSalaryRange('15-25k · 13薪')).toEqual({ min: 15, max: 25 })
+    expect(parseSalaryRange('25-15K')).toEqual({ min: 15, max: 25 })
+    expect(parseSalaryRange('面议')).toBeNull()
+    expect(parseSalaryRange('300-500元/天')).toBeNull()
+    expect(parseSalaryRange(undefined)).toBeNull()
   })
 
   it('默认按最近动作倒序，状态排序按流程走', () => {

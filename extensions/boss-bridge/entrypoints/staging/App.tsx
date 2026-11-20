@@ -1,28 +1,41 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   DEFAULT_FILTER,
+  SALARY_BUCKETS,
   STATE_LABELS,
   STATE_ORDER,
   applyFilter,
   countByState,
   touchedAt,
 } from '../../src/lib/filter.js'
-import type { ActivityFilter, SortKey, StagedFilter } from '../../src/lib/filter.js'
+import type { ActivityFilter, SalaryBucket, SortKey, StagedFilter } from '../../src/lib/filter.js'
 import { sendToBackground } from '../../src/lib/messages.js'
 import type { RuntimeResponse, RuntimeStatus } from '../../src/lib/messages.js'
 import type { ConversationSnapshot, StagedJob, StageState } from '../../src/lib/types.js'
+import { MultiSelect, Select } from './Dropdown'
+import type { DropdownItem } from './Dropdown'
 
-const ACTIVITY_OPTIONS: { key: ActivityFilter; label: string }[] = [
-  { key: 'all', label: '活跃度不限' },
-  { key: 'online', label: '在线' },
-  { key: 'desc', label: '有活跃描述' },
-  { key: 'unknown', label: '未知' },
+const ACTIVITY_ITEMS: DropdownItem[] = [
+  { value: 'all', label: '活跃度不限' },
+  { value: 'online', label: '在线' },
+  { value: 'desc', label: '有活跃描述' },
+  { value: 'unknown', label: '未知' },
 ]
 
-const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: 'recent', label: '最近动作' },
-  { key: 'company', label: '公司名' },
-  { key: 'state', label: '流程阶段' },
+/** 薪资档位只在 filter.ts 里维护一份，下拉直接用；没列的区间走顶部搜索框 */
+const SALARY_ITEMS: DropdownItem[] = SALARY_BUCKETS.map((b) => ({ value: b.value, label: b.label }))
+
+const SORT_ITEMS: DropdownItem[] = [
+  { value: 'recent', label: '最近动作' },
+  { value: 'company', label: '公司名' },
+  { value: 'state', label: '流程阶段' },
+]
+
+/** 三个可叠加的布尔条件合成一个多选下拉 */
+const MARK_ITEMS: DropdownItem[] = [
+  { value: 'hasJd', label: '已读到 JD' },
+  { value: 'drafted', label: '已有招呼语' },
+  { value: 'synced', label: '已写入 land-a-job' },
 ]
 
 function timeLabel(ms?: number): string {
@@ -114,13 +127,31 @@ export function StagingApp() {
     .filter((c) => !chatQuery.trim() || `${c.brandName ?? ''} ${c.lastMsg ?? ''}`.includes(chatQuery.trim()))
     .sort((a, b) => b.lastTS - a.lastTS), [chats, chatQuery])
 
-  const stateChips: (StageState | 'all')[] = [
-    'all',
-    ...STATE_ORDER.filter((s) => (counts[s] ?? 0) > 0),
-  ]
+  /** 阶段下拉：只列还有记录的阶段；当前选中的即使已经筛成 0 条也要留着，否则触发器会跳回「全部阶段」 */
+  const stateItems = useMemo<DropdownItem[]>(() => [
+    { value: 'all', label: '全部阶段', count: counts.all ?? 0 },
+    ...STATE_ORDER
+      .filter((s) => (counts[s] ?? 0) > 0 || filter.state === s)
+      .map((s) => ({ value: s, label: STATE_LABELS[s], count: counts[s] ?? 0 })),
+  ], [counts, filter.state])
+
+  /** 多选下拉的取值由三个布尔拼出来，回写时再拆开 */
+  const marks = useMemo(() => [
+    ...(filter.hasJd ? ['hasJd'] : []),
+    ...(filter.drafted ? ['drafted'] : []),
+    ...(filter.synced ? ['synced'] : []),
+  ], [filter.hasJd, filter.drafted, filter.synced])
 
   function patch(next: Partial<StagedFilter>) {
     setFilter((prev) => ({ ...prev, ...next }))
+  }
+
+  function patchMarks(next: string[]) {
+    patch({
+      hasJd: next.includes('hasJd'),
+      drafted: next.includes('drafted'),
+      synced: next.includes('synced'),
+    })
   }
 
   async function copy(text: string, label: string) {
@@ -182,54 +213,39 @@ export function StagingApp() {
           placeholder="搜索公司 / 岗位 / 城市 / 薪资 / 备注"
           onChange={(e) => patch({ q: e.target.value })}
         />
-        <div className="chips" style={{ marginLeft: 'auto' }}>
-          {SORT_OPTIONS.map((opt) => (
-            <button
-              key={opt.key}
-              className={`chip ${filter.sort === opt.key ? 'on' : ''}`}
-              onClick={() => patch({ sort: opt.key })}
-            >按{opt.label}</button>
-          ))}
+        <Select
+          label="阶段"
+          emptyValue="all"
+          value={filter.state}
+          items={stateItems}
+          onChange={(v) => patch({ state: v as StageState | 'all' })}
+        />
+        <Select
+          label="活跃度"
+          emptyValue="all"
+          value={filter.activity}
+          items={ACTIVITY_ITEMS}
+          onChange={(v) => patch({ activity: v as ActivityFilter })}
+        />
+        <Select
+          label="薪资"
+          emptyValue="all"
+          value={filter.salary}
+          items={SALARY_ITEMS}
+          onChange={(v) => patch({ salary: v as SalaryBucket })}
+        />
+        <MultiSelect label="标记" value={marks} items={MARK_ITEMS} onChange={patchMarks} />
+        <div className="filters" style={{ marginLeft: 'auto' }}>
+          <span className="sub" style={{ margin: 0, whiteSpace: 'nowrap' }}>命中 {visible.length} 条</span>
+          <Select
+            label="排序"
+            align="right"
+            emptyValue="recent"
+            value={filter.sort}
+            items={SORT_ITEMS}
+            onChange={(v) => patch({ sort: v as SortKey })}
+          />
         </div>
-      </div>
-
-      <div className="toolbar" style={{ marginTop: 0 }}>
-        <div className="chips">
-          {stateChips.map((s) => (
-            <button
-              key={s}
-              className={`chip ${filter.state === s ? 'on' : ''}`}
-              onClick={() => patch({ state: s })}
-            >
-              {s === 'all' ? '全部' : STATE_LABELS[s]}
-              <span className="n">{counts[s] ?? 0}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="toolbar" style={{ marginTop: 0 }}>
-        <div className="chips">
-          {ACTIVITY_OPTIONS.map((opt) => (
-            <button
-              key={opt.key}
-              className={`chip ${filter.activity === opt.key ? 'on' : ''}`}
-              onClick={() => patch({ activity: opt.key })}
-            >{opt.label}</button>
-          ))}
-        </div>
-        <label className="check" style={{ margin: 0 }}>
-          <input type="checkbox" checked={filter.hasJd} onChange={(e) => patch({ hasJd: e.target.checked })} />
-          <span>已读到 JD</span>
-        </label>
-        <label className="check" style={{ margin: 0 }}>
-          <input type="checkbox" checked={filter.drafted} onChange={(e) => patch({ drafted: e.target.checked })} />
-          <span>已有招呼语</span>
-        </label>
-        <label className="check" style={{ margin: 0 }}>
-          <input type="checkbox" checked={filter.synced} onChange={(e) => patch({ synced: e.target.checked })} />
-          <span>已写入 land-a-job</span>
-        </label>
       </div>
 
       {error && <p className="error">{error}</p>}
