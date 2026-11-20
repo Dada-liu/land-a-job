@@ -169,15 +169,48 @@ async function saveAutoState(state: AutoState): Promise<void> {
 }
 
 /**
- * 自动化只在**用户自己已经打开的岗位列表页**上操作。
+ * 自动化只在**用户自己已经打开的 BOSS 页面**上操作。
  * 刻意不调 `tabs.create`：新开标签 + 停留 1 秒 + 关闭，这一串在服务端看就是脚本。
+ *
+ * 认两种页面：搜索/列表页（能翻页、能点卡片），和独立详情页（点卡片之后会落到这里）。
+ * 后者是必须的——点卡片是整页导航，跳过去之后原来的「列表页」这个前提就不成立了。
  */
-async function jobListTabId(): Promise<number | null> {
-  const tabs = await chrome.tabs.query({ url: 'https://www.zhipin.com/web/geek/jobs*' })
-  const tab = tabs.find((item) => item.id !== undefined)
-  if (tab?.id === undefined) return null
-  await attachTab(tab.id)
-  return tab.id
+interface ZhipinTab {
+  tabId: number
+  kind: 'list' | 'detail'
+  /** 详情页地址栏里的岗位 ID */
+  jobId?: string
+}
+
+async function findZhipinTab(isActionable?: (jobId: string) => boolean): Promise<ZhipinTab | null> {
+  const tabs = await chrome.tabs.query({
+    url: ['https://www.zhipin.com/web/geek/jobs*', 'https://www.zhipin.com/job_detail/*'],
+  })
+  const usable = tabs.filter((t) => t.id !== undefined)
+  if (usable.length === 0) return null
+
+  const detailOf = (t: chrome.tabs.Tab) => /\/job_detail\/([^/?#]+)\.html/.exec(t.url ?? '')?.[1]
+  const list = usable.find((t) => (t.url ?? '').includes('/web/geek/jobs'))
+  /**
+   * 用户停在某个岗位详情页，且这个岗位正好有待办 → 就在这一页动手。
+   * 那是"我正在看这家"的明确信号，而且详情页一次只能操作一个岗位，范围最小。
+   * 详情页的岗位没有待办时才回到列表页，否则会被一个旧标签页卡死。
+   */
+  const actionableDetail = usable.find((t) => {
+    const id = detailOf(t)
+    return Boolean(id && isActionable?.(id))
+  })
+
+  const chosen = actionableDetail ?? list ?? usable[0]
+  if (chosen?.id === undefined) return null
+  await attachTab(chosen.id)
+
+  const jobId = detailOf(chosen)
+  return {
+    tabId: chosen.id,
+    kind: jobId ? 'detail' : 'list',
+    jobId,
+  }
 }
 
 interface AutoOutcome {
@@ -187,10 +220,19 @@ interface AutoOutcome {
   retryable?: boolean
 }
 
-/** 读一条候选的详情：点卡片（同页换面板）→ 读 DOM 的 JD → 按旁听到的活跃度判定 */
-async function autoOpenDetail(key: string, tabId: number): Promise<AutoOutcome> {
-  const opened = await sendToTab<ContentResponse>(tabId, { type: 'CONTENT_OPEN_JOB_CARD', id: key })
-  if (!opened.ok) return { ok: false, message: opened.reason }
+/** 读一条候选的详情：点卡片（或就地读详情页）→ 读 DOM 的 JD → 按旁听到的活跃度判定 */
+async function autoOpenDetail(key: string, tab: ZhipinTab): Promise<AutoOutcome> {
+  if (tab.kind === 'detail') {
+    if (tab.jobId !== key) {
+      return { ok: false, message: `当前详情页是 ${tab.jobId ?? '未知岗位'}，不是目标岗位，未读取` }
+    }
+  } else {
+    const opened = await sendToTab<ContentResponse>(tab.tabId, { type: 'CONTENT_OPEN_JOB_CARD', id: key })
+    if (!opened.ok) return { ok: false, message: opened.reason }
+  }
+
+  /** 详情页正文在整页上，分栏页在右侧面板里，指令不同 */
+  const readType: ContentRequest['type'] = tab.kind === 'detail' ? 'CONTENT_READ_JD' : 'CONTENT_READ_PANE_JD'
 
   /**
    * 换卡片后右侧面板要重新渲染，JD 不是立刻就有。
@@ -198,7 +240,7 @@ async function autoOpenDetail(key: string, tabId: number): Promise<AutoOutcome> 
    */
   let dom: ContentResponse = { ok: false, reason: '还没读' }
   for (let attempt = 0; attempt < 8; attempt += 1) {
-    dom = await sendToTab<ContentResponse>(tabId, { type: 'CONTENT_READ_PANE_JD' })
+    dom = await sendToTab<ContentResponse>(tab.tabId, { type: readType } as ContentRequest)
     if (dom.ok && dom.value) break
     await new Promise((resolve) => setTimeout(resolve, 600))
   }
@@ -240,12 +282,20 @@ async function autoOpenDetail(key: string, tabId: number): Promise<AutoOutcome> 
  * 只点按钮：默认招呼语是页面自己在 `friend/add.json` 里发出的，扩展不构造、不调用写接口。
  * 点完不等状态机立即改写——`greeted` 一律由旁听回执写入，避免"点了但没发出去"被记成已触达。
  */
-async function autoGreet(key: string, tabId: number): Promise<AutoOutcome> {
-  const opened = await sendToTab<ContentResponse>(tabId, { type: 'CONTENT_OPEN_JOB_CARD', id: key })
-  if (!opened.ok) return { ok: false, message: opened.reason }
-  await new Promise((resolve) => setTimeout(resolve, 1_200))
+async function autoGreet(key: string, tab: ZhipinTab): Promise<AutoOutcome> {
+  if (tab.kind === 'detail') {
+    /** 就地点：详情页本身已经有按钮，不必再回列表点卡片 */
+    if (tab.jobId !== key) {
+      return { ok: false, message: `当前详情页是 ${tab.jobId ?? '未知岗位'}，不是目标岗位，已放弃点击` }
+    }
+  } else {
+    const opened = await sendToTab<ContentResponse>(tab.tabId, { type: 'CONTENT_OPEN_JOB_CARD', id: key })
+    if (!opened.ok) return { ok: false, message: opened.reason }
+    await new Promise((resolve) => setTimeout(resolve, 1_200))
+  }
 
-  const clicked = await sendToTab<ContentResponse>(tabId, { type: 'CONTENT_CLICK_GREET' })
+  /** expectId 让内容脚本在点之前再核对一次岗位，点错公司不可逆 */
+  const clicked = await sendToTab<ContentResponse>(tab.tabId, { type: 'CONTENT_CLICK_GREET', expectId: key })
   if (!clicked.ok) return { ok: false, message: clicked.reason }
 
   /** 先记下"点过"，万一回执没来，也不会在同一分钟里重复点第二次 */
@@ -264,23 +314,23 @@ async function autoGreet(key: string, tabId: number): Promise<AutoOutcome> {
   return { ok: true, message: `${job?.brandName ?? key}：已点「立即沟通」，等回执确认` }
 }
 
-async function executeAuto(decision: AutoDecision, tabId: number): Promise<AutoOutcome> {
+async function executeAuto(decision: AutoDecision, tab: ZhipinTab): Promise<AutoOutcome> {
   const check = limiter.canAct()
   if (!check.ok && check.waitMs === 0) return { ok: false, message: check.reason }
   if (check.waitMs > 0) await new Promise((resolve) => setTimeout(resolve, check.waitMs))
 
   switch (decision.kind) {
     case 'scroll': {
-      const res = await sendToTab<ContentResponse>(tabId, { type: 'CONTENT_SCAN_JOBS', scroll: true })
+      const res = await sendToTab<ContentResponse>(tab.tabId, { type: 'CONTENT_SCAN_JOBS', scroll: true })
       limiter.noteRequest()
       return res.ok ? { ok: true, message: res.reason } : { ok: false, message: res.reason }
     }
     case 'openDetail':
       limiter.noteRequest()
-      return autoOpenDetail(decision.jobKey, tabId)
+      return autoOpenDetail(decision.jobKey, tab)
     case 'greet':
       limiter.noteRequest()
-      return autoGreet(decision.jobKey, tabId)
+      return autoGreet(decision.jobKey, tab)
     case 'sendGreeting':
       return { ok: false, message: '自动发定制招呼语尚未接入（P3）' }
     case 'sendResume':
@@ -301,9 +351,16 @@ async function tickAuto(): Promise<void> {
   const byAge = (a: StagedJob, b: StagedJob) => a.capturedAt - b.capturedAt
   const now = Date.now()
 
-  const tabId = await jobListTabId()
-  if (tabId === null) {
-    await saveAutoState({ ...state, waitReason: '没有打开的岗位搜索页（自动化只在你自己的列表页上运行）', lastTickAt: now })
+  /** 刚点过沟通、回执还没到的先排除，避免重复点 */
+  const readyKeys = jobs
+    .filter((j) => j.state === 'ready' && !(j.greetClickedAt && now - j.greetClickedAt < AUTO_GREET_RETRY_MS))
+    .sort(byAge)
+    .map((j) => j.key)
+  const readySet = new Set(readyKeys)
+
+  const tab = await findZhipinTab((id) => readySet.has(id))
+  if (tab === null) {
+    await saveAutoState({ ...state, waitReason: '没有打开的 BOSS 岗位页（自动化只在你自己的页面上运行）', lastTickAt: now })
     return
   }
 
@@ -312,7 +369,7 @@ async function tickAuto(): Promise<void> {
    * 直接发动作会得到「Receiving end does not exist」。这属于环境没就绪，
    * 不该计入失败次数（否则三次就把自己停了）。
    */
-  const alive = await sendToTab<ContentResponse>(tabId, { type: 'CONTENT_SELF_CHECK' })
+  const alive = await sendToTab<ContentResponse>(tab.tabId, { type: 'CONTENT_SELF_CHECK' })
   if (!alive.ok && /Receiving end does not exist|Could not establish connection/.test(alive.reason)) {
     await saveAutoState({ ...state, waitReason: `BOSS 页面还没接管新代码，刷新一下该页面会自动继续（${alive.reason.slice(0, 40)}）`, lastTickAt: now })
     return
@@ -320,10 +377,12 @@ async function tickAuto(): Promise<void> {
 
   /**
    * 暂存区里可能有上百条记录，而列表页当前只渲染几十张卡片。
-   * 先问页面有哪些卡片，只从「真的点得到」的记录里挑；一个都点不到就往下滚一次再试。
+   * 先问页面有哪些卡片，只从「真的点得到」的记录里挑。
+   * 详情页没有卡片，可操作的只有地址栏里那一个岗位。
    */
   const visibleIds = async (): Promise<Set<string>> => {
-    const res = await sendToTab<ContentResponse>(tabId, { type: 'CONTENT_SCAN_JOBS', scroll: false })
+    if (tab.kind === 'detail') return new Set(tab.jobId ? [tab.jobId] : [])
+    const res = await sendToTab<ContentResponse>(tab.tabId, { type: 'CONTENT_SCAN_JOBS', scroll: false })
     if (!res.ok || !res.value) return new Set()
     try {
       return new Set((JSON.parse(res.value) as { id?: string }[]).map((c) => c.id).filter(Boolean) as string[])
@@ -338,17 +397,16 @@ async function tickAuto(): Promise<void> {
       || ((j.state === 'ready' || j.state === 'greeted') && !j.jdText?.trim()))
     .sort(byAge)
     .map((j) => j.key)
-  const readyKeys = jobs
-    .filter((j) => j.state === 'ready' && !(j.greetClickedAt && now - j.greetClickedAt < AUTO_GREET_RETRY_MS))
-    .sort(byAge)
-    .map((j) => j.key)
 
   const reachable = (keys: string[]) => keys.filter((key) => ids.has(key))
   /** 只有「要读详情」时才需要翻页找人；翻页本身由 scroll 决策负责 */
 
+  /** 详情页没法翻页，把 scan 关掉，免得决策一直在"翻一屏"上空转 */
+  const effective = tab.kind === 'detail' ? { ...settings, scan: false } : settings
+
   const ctx: AutoContext = {
     now,
-    settings,
+    settings: effective,
     state,
     tripped: limiter.snapshot.tripped,
     detailTargets: reachable(detailTargets),
@@ -374,9 +432,9 @@ async function tickAuto(): Promise<void> {
     return
   }
 
-  const outcome = await executeAuto(decision, tabId)
+  const outcome = await executeAuto(decision, tab)
   const next = outcome.ok
-    ? { ...afterAction(state, decision, Date.now(), settings), waitReason: outcome.message, lastTickAt: now }
+    ? { ...afterAction(state, decision, Date.now(), effective), waitReason: outcome.message, lastTickAt: now }
     : { ...afterFailure(state, Date.now(), outcome.message), lastTickAt: now }
   await saveAutoState(next)
   log(`自动化${outcome.ok ? '' : '失败'}：${outcome.message}`)

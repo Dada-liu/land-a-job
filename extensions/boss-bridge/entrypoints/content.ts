@@ -163,6 +163,8 @@ function readJobDetail(): ContentResponse {
   }
   const nameText = text('.name') ?? ''
   const payload = {
+    /** 地址栏反推的岗位 ID，落库前用来核对"读到的 JD 是不是这条记录的" */
+    id: paneJobId(),
     jdText,
     brandName: text('.company-name'),
     /** .name 里是「岗位名-城市 薪资」，只取薪资前面的岗位名 */
@@ -259,7 +261,16 @@ async function scanJobCards(scroll: boolean): Promise<ContentResponse> {
 }
 
 /** 右侧详情面板当前展示的是哪个岗位（「查看更多信息」的链接里带 ID） */
+/**
+ * 当前页面在讲哪个岗位。
+ *
+ * 两种页面都要认：搜索页靠右侧面板的「查看更多」链接反推，
+ * 独立详情页直接看地址栏——`/job_detail/<id>.html`。
+ * 后者此前没实现，导致在详情页上任何岗位级判断都会返回 undefined。
+ */
 function paneJobId(): string | undefined {
+  const fromPath = jobIdFromHref(location.pathname)
+  if (fromPath) return fromPath
   const more = document.querySelector('.job-detail-container .more-job-btn') as HTMLAnchorElement | null
   return jobIdFromHref(more?.getAttribute('href') ?? '') ?? undefined
 }
@@ -324,22 +335,30 @@ function readPaneDetail(): ContentResponse {
  * 只点击，不代发任何消息：默认招呼语由页面自己在请求里带上（`friend/add.json`），
  * 扩展依旧只从旁听里确认结果。找不到按钮就返回失败，不做"试试别的元素"。
  */
-async function clickGreet(): Promise<ContentResponse> {
-  const pane = document.querySelector('.job-detail-container')
-  if (!pane) return { ok: false, reason: '右侧详情面板没出现' }
-  const button = pane.querySelector('.op-btn-chat, .btn-greet, .btn-startchat') as HTMLElement | null
-  if (!button) return { ok: false, reason: '没找到「立即沟通」按钮（选择器 .op-btn-chat）' }
-
-  const label = String(button.textContent ?? '').trim()
-  if (!label.includes('沟通')) return { ok: false, reason: `命中的按钮不是「立即沟通」（文本：${label.slice(0, 10)}）` }
-  if (button.className.includes('disabled') || button.getAttribute('aria-disabled') === 'true') {
-    return { ok: false, reason: '「立即沟通」当前不可点（按钮是禁用态）' }
+async function clickGreet(expectId?: string): Promise<ContentResponse> {
+  const here = paneJobId()
+  if (expectId && here !== expectId) {
+    return { ok: false, reason: `页面上的岗位是 ${here ?? '未知'}，和目标 ${expectId} 不一致，已放弃点击` }
   }
+
+  /** 搜索页在右侧面板里，独立详情页在整页上——两套结构都要认。顺带排除浮层副本 */
+  const scope = document.querySelector('.job-detail-container') ?? document
+  const candidates = [
+    ...scope.querySelectorAll<HTMLElement>('.op-btn-chat, .btn-greet, .btn-startchat'),
+  ]
+  const button = candidates.find((el) => {
+    const label = String(el.textContent ?? '').trim()
+    if (!label.includes('沟通')) return false
+    if (el.className.includes('disabled') || el.getAttribute('aria-disabled') === 'true') return false
+    const box = el.getBoundingClientRect()
+    return box.width > 0 && box.height > 0
+  })
+  if (!button) return { ok: false, reason: '没找到可点的「立即沟通」按钮（.op-btn-chat / .btn-startchat）' }
 
   button.scrollIntoView({ block: 'center' })
   await sleep(200)
   button.click()
-  return { ok: true, reason: '已点击「立即沟通」，等页面自己发请求', value: paneJobId() }
+  return { ok: true, reason: '已点击「立即沟通」，等页面自己发请求', value: here }
 }
 
 export default defineContentScript({
@@ -368,7 +387,7 @@ export default defineContentScript({
           case 'CONTENT_READ_PANE_JD':
             return readPaneDetail()
           case 'CONTENT_CLICK_GREET':
-            return clickGreet()
+            return clickGreet(message.expectId)
           default:
             return { ok: false, reason: '未知的内容脚本指令' }
         }

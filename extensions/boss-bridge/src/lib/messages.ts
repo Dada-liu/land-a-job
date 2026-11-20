@@ -49,7 +49,8 @@ export type ContentRequest =
   /** 搜索页：读右侧详情面板的 JD 正文（只读） */
   | { type: 'CONTENT_READ_PANE_JD' }
   /** 搜索页：点面板里的「立即沟通」（只点击，默认招呼语由页面自己发） */
-  | { type: 'CONTENT_CLICK_GREET' }
+  /** expectId：点之前先核对页面上的岗位 ID，对不上就拒点（点错公司不可逆） */
+  | { type: 'CONTENT_CLICK_GREET'; expectId?: string }
 
 export interface ContentResponse {
   ok: boolean
