@@ -113,12 +113,21 @@ async function sendMessage(text: string, expectBrand?: string): Promise<ContentR
   if (!content) return { ok: false, reason: '要发送的内容是空的，已放弃' }
   if (content.length > 600) return { ok: false, reason: `内容太长（${content.length} 字），已放弃发送` }
 
+  /**
+   * 会话头部实际是 `.chat-conversation`（内容形如「王女士 易车 HRBP 更多 ai agent产品经理」）。
+   * 原来那套 `.chat-content .title / .chat-detail .name` 一个都匹配不到，header 恒为空字符串，
+   * 于是「发错公司」的校验从来没生效过——必须换成真能命中的节点。
+   */
   const header = String(
-    document.querySelector('.chat-content .title, .chat-content .name, .chat-detail .name, .chat-im .name')
-      ?.textContent ?? '',
-  ).trim()
-  if (expectBrand && header && !header.includes(expectBrand)) {
-    return { ok: false, reason: `当前会话是「${header}」，不是「${expectBrand}」，已放弃发送` }
+    (document.querySelector('.chat-conversation') as HTMLElement | null)?.innerText
+      ?? document.querySelector('.name-content')?.textContent
+      ?? '',
+  ).replace(/\s+/g, ' ').trim()
+  if (expectBrand) {
+    if (!header) return { ok: false, reason: '读不到当前会话的公司名，为免发错人已放弃发送' }
+    if (!header.includes(expectBrand)) {
+      return { ok: false, reason: `当前会话是「${header.slice(0, 30)}」，不是「${expectBrand}」，已放弃发送` }
+    }
   }
 
   const input = document.querySelector('.chat-input[contenteditable="true"]') as HTMLElement | null
@@ -139,23 +148,41 @@ async function sendMessage(text: string, expectBrand?: string): Promise<ContentR
     return { ok: false, reason: '文本没写进输入框（可能被富文本拦截），已放弃发送' }
   }
 
+  /**
+   * 发送按钮不能用 `.chat-op .btn-send, .btn-sure-v2` 这种并列选择器——它会命中
+   * 文档里更靠前的**隐藏「确定」span**（`span.btn-v2.btn-sure-v2`，同样带 btn-sure-v2），
+   * 点它毫无反应，输入框当然不会清空。必须按文案「发送」+ 可见 来挑。
+   */
+  const findSendButton = (): HTMLElement | null => {
+    const list = [...document.querySelectorAll<HTMLElement>('.chat-op .btn-send, .btn-send')]
+    return list.find((el) => {
+      if (!String(el.textContent ?? '').includes('发送')) return false
+      if (el.className.includes('disabled') || el.getAttribute('disabled') !== null) return false
+      const box = el.getBoundingClientRect()
+      return box.width > 0 && box.height > 0
+    }) ?? null
+  }
+
   /** 等发送按钮从 disabled 变可点：Vue 要等 input 事件生效才解除禁用 */
   const deadline = Date.now() + 3_000
-  let button: HTMLElement | null = null
-  while (Date.now() < deadline) {
-    const candidate = document.querySelector('.chat-op .btn-send, .btn-sure-v2') as HTMLElement | null
-    if (candidate && !candidate.className.includes('disabled')) {
-      button = candidate
-      break
-    }
+  let button = findSendButton()
+  while (!button && Date.now() < deadline) {
     await sleep(200)
+    button = findSendButton()
   }
   if (!button) return { ok: false, reason: '发送按钮一直是禁用状态，已放弃发送' }
 
   button.click()
-  await sleep(1_200)
-  /** 真发出去后 BOSS 会清空输入框，这是最可靠的成功信号 */
-  const left = String(input.innerText ?? '').trim()
+  /**
+   * 真发出去后 BOSS 会清空输入框，这是最可靠的成功信号。
+   * 但清空发生在请求回来之后，后台标签被节流时 1.2 秒根本不够——按 deadline 等。
+   */
+  const clearDeadline = Date.now() + 8_000
+  let left = String(input.innerText ?? '').trim()
+  while (left && Date.now() < clearDeadline) {
+    await sleep(200)
+    left = String(input.innerText ?? '').trim()
+  }
   if (left) return { ok: false, reason: '点了发送但输入框没清空，可能没发出去（去会话里确认一下）' }
   return { ok: true, reason: `已发送（${content.length} 字）`, value: content.slice(0, 40) }
 }
