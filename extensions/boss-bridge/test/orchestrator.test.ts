@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   afterAction,
   afterFailure,
+  afterSkip,
   decideAuto,
   emptyAutoState,
   inWindow,
@@ -36,6 +37,7 @@ function ctx(patch: Partial<AutoContext> = {}): AutoContext {
     state: state(),
     tripped: false,
     detailTargets: [],
+    jdTargets: [],
     ready: [],
     pendingGreeting: [],
     pendingResume: [],
@@ -122,6 +124,30 @@ describe('decideAuto 的优先级与预算', () => {
   it('详情读完才轮到打招呼', () => {
     const decision = decideAuto(ctx({ settings: settings(noScroll), ready: ['r1'] }))
     expect(decision).toMatchObject({ kind: 'greet', jobKey: 'r1' })
+  })
+
+  it('库里上百条缺 JD 的存量不会挡住打招呼', () => {
+    /**
+     * 真实事故：detailTargets 里混进了 113 条「已判过活跃度、只缺 JD」的记录，
+     * 每轮都去读详情，打招呼被饿了整整一天，一条都没打出去。
+     */
+    const decision = decideAuto(ctx({
+      settings: settings({ scan: true, scanDetail: true, greet: true }),
+      state: state({ lastScrollAt: 0 }),
+      detailTargets: [],
+      jdTargets: Array.from({ length: 113 }, (_, i) => `j${i}`),
+      ready: ['r1'],
+    }))
+    expect(decision).toMatchObject({ kind: 'greet', jobKey: 'r1' })
+  })
+
+  it('没有待打招呼的岗位时才去补 JD', () => {
+    const decision = decideAuto(ctx({
+      settings: settings({ scan: false, scanDetail: true, greet: true }),
+      jdTargets: ['j1'],
+      ready: [],
+    }))
+    expect(decision).toMatchObject({ kind: 'readJd', jobKey: 'j1' })
   })
 
   it('打招呼开关关着时不会点沟通（保守档默认如此）', () => {
@@ -239,6 +265,16 @@ describe('计数推进与休息', () => {
     for (let i = 0; i < 5; i += 1) s = afterFailure(s, NOW + i, 'x')
     expect(s.phase).toBe('idle')
     expect(s.failStreak).toBe(5)
+  })
+
+  it('「这条岗位做不了」只跳过，不算失败（否则几条已沟通过的就能熔断全自动）', () => {
+    const next = afterSkip(state({ failStreak: 2, phase: 'scan' }), NOW, '页面上没有「立即沟通」')
+    expect(next.failStreak).toBe(2)
+    /** 仍要推进时间戳，否则下一 tick 立刻重试同一条 */
+    expect(next.lastActionAt).toBe(NOW)
+    expect(next.waitReason).toContain('立即沟通')
+    /** 不能像 afterFailure 那样在连败 5 次时把 phase 打成 idle */
+    expect(next.phase).toBe('scan')
   })
 })
 

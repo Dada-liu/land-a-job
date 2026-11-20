@@ -127,7 +127,13 @@ export const SELECTOR_REGISTRY: SelectorEntry[] = [
   {
     key: 'jdBody',
     label: '职位描述区域',
-    selectors: ['.job-sec-text', '.job-detail-section', '[data-selector="job-description"]'],
+    selectors: [
+      '.job-sec-text',
+      /** 搜索页右侧分栏面板：JD 在 `.job-detail-body > .desc`，没有 `.job-sec-text`（2026-11-20 实测） */
+      '.job-detail-body .desc',
+      '.job-detail-section',
+      '[data-selector="job-description"]',
+    ],
     required: false,
     verified: false,
     page: 'job',

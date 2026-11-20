@@ -23,6 +23,7 @@ import {
   decideAuto,
   defaultAutoSettings,
   emptyAutoState,
+  afterSkip,
   localDay,
   startAutoState,
   stopAutoState,
@@ -235,6 +236,8 @@ interface AutoOutcome {
   message: string
   /** 环境没准备好（扩展刚重载、页面没刷新），不该计入失败次数 */
   retryable?: boolean
+  /** 这条岗位本身做不了（没有「立即沟通」等），跳过但不算失败 */
+  skip?: boolean
 }
 
 /** 读一条候选的详情：点卡片（或就地读详情页）→ 读 DOM 的 JD → 按旁听到的活跃度判定 */
@@ -313,7 +316,27 @@ async function autoGreet(key: string, tab: ZhipinTab): Promise<AutoOutcome> {
 
   /** expectId 让内容脚本在点之前再核对一次岗位，点错公司不可逆 */
   const clicked = await sendToTab<ContentResponse>(tab.tabId, { type: 'CONTENT_CLICK_GREET', expectId: key })
-  if (!clicked.ok) return { ok: false, message: clicked.reason }
+  if (!clicked.ok) {
+    /**
+     * 页面上没有「立即沟通」：多半这条是同一个岗位的重复记录，或这家的招呼早就打过了。
+     * 记下来当天不再挑它——否则每条这样的岗位都会计一次失败，5 条就把全自动停掉。
+     */
+    if (clicked.reason.includes('不可点')) {
+      const snap = await store.load()
+      const target = snap.jobs[key]
+      if (target) {
+        target.greetSkippedAt = Date.now()
+        target.greetSkipReason = clicked.reason
+        await store.save(snap)
+        return {
+          ok: false,
+          skip: true,
+          message: `${target.brandName}：「立即沟通」不可点（多半早就沟通过了），今天先跳过这条`,
+        }
+      }
+    }
+    return { ok: false, message: clicked.reason }
+  }
 
   /** 先记下"点过"，万一回执没来，也不会在同一分钟里重复点第二次 */
   const before = await store.load()
@@ -343,6 +366,7 @@ async function executeAuto(decision: AutoDecision, tab: ZhipinTab): Promise<Auto
       return res.ok ? { ok: true, message: res.reason } : { ok: false, message: res.reason }
     }
     case 'openDetail':
+    case 'readJd':
       limiter.noteRequest()
       return autoOpenDetail(decision.jobKey, tab)
     case 'greet':
@@ -372,7 +396,10 @@ async function tickAuto(): Promise<void> {
 
   /** 刚点过沟通、回执还没到的先排除，避免重复点；新的排前面 */
   const readyKeys = jobs
-    .filter((j) => j.state === 'ready' && !(j.greetClickedAt && now - j.greetClickedAt < AUTO_GREET_RETRY_MS))
+    .filter((j) => j.state === 'ready'
+      && !(j.greetClickedAt && now - j.greetClickedAt < AUTO_GREET_RETRY_MS)
+      /** 今天已经确认"页面上没有立即沟通"的不再挑（次日会自动恢复重试） */
+      && !(j.greetSkippedAt && localDay(j.greetSkippedAt) === localDay(now)))
     .sort(byNewest)
     .map((j) => j.key)
   const readySet = new Set(readyKeys)
@@ -415,10 +442,18 @@ async function tickAuto(): Promise<void> {
   }
 
   const ids = await visibleIds()
+  /** 还没判活跃度的：必须先读，读完才知道能不能打招呼 */
   const detailTargets = jobs
-    .filter((j) => j.state === 'needs_detail'
-      || ((j.state === 'ready' || j.state === 'greeted') && !j.jdText?.trim()))
+    .filter((j) => j.state === 'needs_detail')
     .sort(byAge)
+    .map((j) => j.key)
+  /**
+   * 已判过、只缺 JD 的：补 JD 只为定制简历服务，单独排队排在打招呼之后。
+   * 之前和 detailTargets 混在一起，113 条存量让每一轮都在读详情，打招呼一次都轮不到。
+   */
+  const jdTargets = jobs
+    .filter((j) => (j.state === 'ready' || j.state === 'greeted') && !j.jdText?.trim())
+    .sort(byNewest)
     .map((j) => j.key)
 
   const reachable = (keys: string[]) => keys.filter((key) => ids.has(key))
@@ -433,6 +468,12 @@ async function tickAuto(): Promise<void> {
     state,
     tripped: limiter.snapshot.tripped,
     detailTargets: reachable(detailTargets),
+    jdTargets: reachable(jdTargets),
+    /**
+     * 只从「屏幕上真的点得到」的岗位里挑。
+     * 库里 ready 有一百多条，列表只渲染十几张卡片；不筛就会挑到屏幕外的 key，
+     * 点空 → 失败 → 连续 5 次又把自己停下，表现就是「开了打招呼但一条没打」。
+     */
     ready: reachable(readyKeys),
     pendingGreeting: jobs
       .filter((j) => j.state === 'greeted' && j.greetDraft && !j.greetSentAt)
@@ -465,11 +506,13 @@ async function tickAuto(): Promise<void> {
   const outcome = await executeAuto(decision, tab)
   const next = outcome.ok
     ? { ...afterAction(state, decision, Date.now(), effective), waitReason: outcome.message, lastTickAt: now }
-    : { ...afterFailure(state, Date.now(), outcome.message), lastTickAt: now }
+    : outcome.skip
+      ? { ...afterSkip(state, Date.now(), outcome.message), lastTickAt: now }
+      : { ...afterFailure(state, Date.now(), outcome.message), lastTickAt: now }
   await saveAutoState(next)
   /** 动过手就把待机提示清掉，下次真正停下时能重新记一条 */
   lastAutoNote = ''
-  log(`自动化${outcome.ok ? '' : '失败'}：${outcome.message}`)
+  log(`自动化${outcome.ok ? '' : outcome.skip ? '跳过' : '失败'}：${outcome.message}`)
   await persistLimiter()
 }
 

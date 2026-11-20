@@ -77,6 +77,12 @@ export interface StagedJob {
    * 用途：回执没到时短期去重，避免一分钟内重复点同一家。
    */
   greetClickedAt?: number
+  /**
+   * 自动打开这条岗位后发现页面上没有「立即沟通」的时间（多半已沟通过 / 同一岗位的重复记录）。
+   * 当天不再挑它，但**不算失败**——否则几条这样的岗位就能把全自动熔断掉。
+   */
+  greetSkippedAt?: number
+  greetSkipReason?: string
   /** 定制招呼语已发出的时间；默认招呼语的时间记在 greetedAt */
   greetSentAt?: number
   repliedAt?: number

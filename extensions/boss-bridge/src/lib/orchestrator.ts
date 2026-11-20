@@ -77,11 +77,16 @@ export interface AutoContext {
   /** 风控熔断（RateLimiter.tripped） */
   tripped: boolean
   /**
-   * 需要读详情的岗位 key，按抓取时间从早到晚。
-   * 含两类：还没判活跃度的 `needs_detail`，以及已经判过但**没有 JD 正文**的
-   * `ready` / `greeted`——后者不定制简历就没法投，同样要补。
+   * 还没判活跃度的 `needs_detail` 岗位 key，按抓取时间从早到晚。
+   * 这类必须先读：不读就不知道能不能打招呼，所以优先级最高。
    */
   detailTargets: string[]
+  /**
+   * 已经判过、只是**没有 JD 正文**的 `ready` / `greeted` 岗位。
+   * 补 JD 只为之后的定制简历服务，和「能不能打招呼」无关——
+   * 混进 detailTargets 会让上百条存量把每一轮都吃掉，打招呼永远轮不到。
+   */
+  jdTargets: string[]
   /** 可打招呼但还没打的岗位 key */
   ready: string[]
   /** 已打过招呼、还没发定制招呼语的 key */
@@ -97,6 +102,8 @@ export type AutoDecision =
   /** 往下翻一屏列表，让页面自己加载下一页（零点击） */
   | { kind: 'scroll'; reason: string }
   | { kind: 'openDetail'; jobKey: string; reason: string }
+  /** 只为定制简历补 JD；活跃度已经判过，和打招呼无关，所以排在打招呼之后 */
+  | { kind: 'readJd'; jobKey: string; reason: string }
   | { kind: 'greet'; jobKey: string; reason: string }
   | { kind: 'sendGreeting'; jobKey: string; reason: string }
   | { kind: 'sendResume'; jobKey: string; reason: string }
@@ -191,6 +198,7 @@ export function decideAuto(ctx: AutoContext): AutoDecision {
   }
 
   const detailKey = ctx.detailTargets[0]
+  const jdKey = ctx.jdTargets[0]
   const greetKey = ctx.ready[0]
   const messageKey = ctx.pendingGreeting[0]
   const resumeKey = ctx.pendingResume[0]
@@ -214,6 +222,13 @@ export function decideAuto(ctx: AutoContext): AutoDecision {
   }
   if (settings.sendResume && state.sentToday < settings.dailyMessageLimit && resumeKey) {
     return { kind: 'sendResume', jobKey: resumeKey, reason: '发简历' }
+  }
+  /**
+   * 补 JD 排在打招呼之后：它只服务「定制简历」，不决定能不能打招呼。
+   * 库里上百条存量都缺 JD，放前面会把打招呼饿死好几十轮。
+   */
+  if (settings.scanDetail && state.scannedToday < settings.dailyScanLimit && jdKey) {
+    return { kind: 'readJd', jobKey: jdKey, reason: '给已通过闸门的岗位补 JD（供之后定制简历）' }
   }
   /**
    * 翻页：只是滚动，让页面自己请求下一页岗位。
@@ -255,7 +270,7 @@ export function afterAction(
   next.failStreak = 0
   next.lastStep = { at: now, text: describe(decision) }
 
-  if (decision.kind === 'openDetail') {
+  if (decision.kind === 'openDetail' || decision.kind === 'readJd') {
     next.scannedToday += 1
     next.phase = 'scan'
   } else if (decision.kind === 'scroll') {
@@ -293,6 +308,20 @@ export function afterFailure(state: AutoState, now: number, reason: string): Aut
   return next
 }
 
+/**
+ * 这条岗位做不了，但**不是环境坏了**（比如页面上根本没有「立即沟通」——
+ * 多半是同一个岗位的重复记录、或已经沟通过）。
+ *
+ * 和失败的区别：不涨 failStreak（否则连续几条"没有按钮"就把全自动停掉），
+ * 但必须推进 lastActionAt，否则下一 tick 立刻重试同一条。
+ */
+export function afterSkip(state: AutoState, now: number, reason: string): AutoState {
+  const next = dayRoll({ ...state }, now)
+  next.lastActionAt = now
+  next.waitReason = reason
+  return next
+}
+
 export function startAutoState(state: AutoState, now: number): AutoState {
   const fresh = dayRoll({ ...state }, now)
   /** 用户主动点「开始」＝愿意再试一次，把上次的连续失败清掉 */
@@ -312,6 +341,7 @@ function describe(decision: AutoDecision): string {
   switch (decision.kind) {
     case 'scroll': return '翻了一屏列表'
     case 'openDetail': return '读了一条岗位详情'
+    case 'readJd': return '补了一条岗位的 JD'
     case 'greet': return '打了一次招呼'
     case 'sendGreeting': return '发了一条定制招呼语'
     case 'sendResume': return '发了一份简历'

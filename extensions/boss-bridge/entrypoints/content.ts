@@ -147,15 +147,53 @@ async function scrollConversations(): Promise<ContentResponse> {
 }
 
 /**
+ * JD 正文的容器选择器，按「先精确后兜底」排列。
+ *
+ * 独立详情页和搜索页右侧分栏面板**不是同一套 DOM**（2026-11-20 实测）：
+ * - `/job_detail/<id>.html`：`.job-sec-text`
+ * - `/web/geek/jobs` 右侧 `.job-detail-container`：JD 在 `.job-detail-body > .desc`，
+ *   整页一个 `.job-sec-text` 都没有
+ *
+ * 只认 `.job-sec-text` 的结果是全自动每轮都读到空、报「JD 还没渲染」，
+ * 连续 5 次把自己熔断，一条招呼都发不出去。
+ */
+const JD_SELECTORS = [
+  '.job-sec-text',
+  '.job-detail-body .desc',
+  '.job-detail-box .desc',
+  '[data-selector="job-description"]',
+]
+
+/**
+ * 取元素文本：`innerText` 依赖布局，后台标签 / 懒渲染时可能是空字符串，
+ * 而 `??` 只在 null/undefined 时兜底，空串会直接把 JD 判成"没渲染"。这里两个都取，用长的。
+ */
+function elementText(el: Element | null): string {
+  if (!el) return ''
+  const inner = String((el as HTMLElement).innerText ?? '').trim()
+  const content = String(el.textContent ?? '').trim()
+  return inner.length >= content.length ? inner : content
+}
+
+/** 在给定根节点里找最长的 JD 文本（面板里还有 13 字的地址 `.desc`，取最长才不会选错） */
+function jdTextIn(root: ParentNode): string {
+  let best = ''
+  for (const selector of JD_SELECTORS) {
+    const candidate = elementText(root.querySelector(selector))
+    if (candidate.length > best.length) best = candidate
+  }
+  return best
+}
+
+/**
  * 新版详情页（`/job_detail/<encryptJobId>.html?securityId=...`）是 SSR：
  * JD 直接渲染在 `.job-sec-text`，**不再请求 `/wapi/zpgeek/job/detail.json`**
  * （2026-11-13 抓包确认）。所以这里只读 DOM，不发任何请求、不点任何按钮。
  */
 function readJobDetail(): ContentResponse {
-  const body = document.querySelector('.job-sec-text')
-  const jdText = String((body as HTMLElement | null)?.innerText ?? body?.textContent ?? '').trim()
+  const jdText = jdTextIn(document)
   if (jdText.length < 20) {
-    return { ok: false, reason: 'JD 区域还没渲染（.job-sec-text 为空或过短）' }
+    return { ok: false, reason: 'JD 区域还没渲染（.job-sec-text / .job-detail-body .desc 都为空或过短）' }
   }
   const text = (selector: string): string | undefined => {
     const value = String(document.querySelector(selector)?.textContent ?? '').replace(/\s+/g, ' ').trim()
@@ -302,16 +340,15 @@ async function openJobCard(id: string): Promise<ContentResponse> {
 }
 
 /**
- * 读右侧面板的 JD。和独立详情页共用同一套 DOM 结构，
- * 但**不新开页面**，所以这条路径不产生额外的导航请求。
+ * 读右侧面板的 JD。容器结构和独立详情页不同（面板是 `.job-detail-body > .desc`），
+ * 走同一套选择器链；**不新开页面**，所以这条路径不产生额外的导航请求。
  */
 function readPaneDetail(): ContentResponse {
   const pane = document.querySelector('.job-detail-container')
   if (!pane) return { ok: false, reason: '右侧详情面板还没出现（这个页面可能不是左右分栏的搜索页）' }
 
-  const body = pane.querySelector('.job-sec-text')
-  const jdText = String((body as HTMLElement | null)?.innerText ?? body?.textContent ?? '').trim()
-  if (jdText.length < 20) return { ok: false, reason: 'JD 区域还没渲染（.job-sec-text 为空或过短）' }
+  const jdText = jdTextIn(pane)
+  if (jdText.length < 20) return { ok: false, reason: 'JD 区域还没渲染（.job-sec-text / .job-detail-body .desc 都为空或过短）' }
 
   const text = (selector: string): string | undefined => {
     const value = String(pane.querySelector(selector)?.textContent ?? '').replace(/\s+/g, ' ').trim()
@@ -343,17 +380,46 @@ async function clickGreet(expectId?: string): Promise<ContentResponse> {
 
   /** 搜索页在右侧面板里，独立详情页在整页上——两套结构都要认。顺带排除浮层副本 */
   const scope = document.querySelector('.job-detail-container') ?? document
-  const candidates = [
-    ...scope.querySelectorAll<HTMLElement>('.op-btn-chat, .btn-greet, .btn-startchat'),
-  ]
-  const button = candidates.find((el) => {
-    const label = String(el.textContent ?? '').trim()
-    if (!label.includes('沟通')) return false
-    if (el.className.includes('disabled') || el.getAttribute('aria-disabled') === 'true') return false
-    const box = el.getBoundingClientRect()
-    return box.width > 0 && box.height > 0
-  })
-  if (!button) return { ok: false, reason: '没找到可点的「立即沟通」按钮（.op-btn-chat / .btn-startchat）' }
+  /**
+   * 点完卡片右侧要重新渲染，按钮不是立刻就有；只查一次会把"还在渲染"记成
+   * "这个岗位没有立即沟通"，连续几次还会把全自动熔断。这里轮询等它出现。
+   */
+  const findButton = (): HTMLElement | undefined => {
+    const candidates = [
+      ...scope.querySelectorAll<HTMLElement>('.op-btn-chat, .btn-greet, .btn-startchat'),
+    ]
+    return candidates.find((el) => {
+      const label = String(el.textContent ?? '').trim()
+      if (!label.includes('沟通')) return false
+      if (el.className.includes('disabled') || el.getAttribute('aria-disabled') === 'true') return false
+      const box = el.getBoundingClientRect()
+      return box.width > 0 && box.height > 0
+    })
+  }
+
+  let button = findButton()
+  for (let attempt = 0; attempt < 8 && !button; attempt += 1) {
+    await sleep(350)
+    /** 面板换岗位是异步的：每轮都重新核对是不是还在目标岗位上 */
+    const now = paneJobId()
+    if (expectId && now && now !== expectId) {
+      return { ok: false, reason: `页面上的岗位变成了 ${now}，和目标 ${expectId} 不一致，已放弃点击` }
+    }
+    button = findButton()
+  }
+  if (!button) {
+    /**
+     * 两种都见过：按钮根本没有，或者按钮在但带 `is-disabled`（BOSS 对已沟通的岗位
+     * 就是灰的「立即沟通」）。统一用「不可点」这个词，方便上层判定该跳过而非失败。
+     */
+    const any = scope.querySelectorAll('.op-btn-chat, .btn-greet, .btn-startchat').length
+    return {
+      ok: false,
+      reason: any > 0
+        ? '「立即沟通」不可点：按钮是灰色的（多半已沟通过）'
+        : '「立即沟通」不可点：页面上没有这个按钮',
+    }
+  }
 
   button.scrollIntoView({ block: 'center' })
   await sleep(200)
