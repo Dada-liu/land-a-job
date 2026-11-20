@@ -371,6 +371,11 @@ function readPaneDetail(): ContentResponse {
  *
  * 只点击，不代发任何消息：默认招呼语由页面自己在请求里带上（`friend/add.json`），
  * 扩展依旧只从旁听里确认结果。找不到按钮就返回失败，不做"试试别的元素"。
+ *
+ * 按钮文案有三种，含义完全不同（2026-11-20 实测，三者的 class 都是 `is-disabled`）：
+ * - 「立即沟通」可点 → 还没沟通过，点它
+ * - 「继续沟通」     → **此前已沟通过**，点它只会打开会话窗，不发 `friend/add.json`
+ * - 「立即沟通」灰的 → 面板换岗位时的渲染瞬态（实测 1.6 秒后即可点），等着，别下结论
  */
 async function clickGreet(expectId?: string): Promise<ContentResponse> {
   const here = paneJobId()
@@ -380,43 +385,50 @@ async function clickGreet(expectId?: string): Promise<ContentResponse> {
 
   /** 搜索页在右侧面板里，独立详情页在整页上——两套结构都要认。顺带排除浮层副本 */
   const scope = document.querySelector('.job-detail-container') ?? document
-  /**
-   * 点完卡片右侧要重新渲染，按钮不是立刻就有；只查一次会把"还在渲染"记成
-   * "这个岗位没有立即沟通"，连续几次还会把全自动熔断。这里轮询等它出现。
-   */
-  const findButton = (): HTMLElement | undefined => {
-    const candidates = [
-      ...scope.querySelectorAll<HTMLElement>('.op-btn-chat, .btn-greet, .btn-startchat'),
-    ]
-    return candidates.find((el) => {
-      const label = String(el.textContent ?? '').trim()
-      if (!label.includes('沟通')) return false
-      if (el.className.includes('disabled') || el.getAttribute('aria-disabled') === 'true') return false
-      const box = el.getBoundingClientRect()
-      return box.width > 0 && box.height > 0
-    })
+  const allButtons = (): HTMLElement[] => [
+    ...scope.querySelectorAll<HTMLElement>('.op-btn-chat, .btn-greet, .btn-startchat'),
+  ]
+  const clicked = (el: HTMLElement): boolean => {
+    if (el.className.includes('disabled') || el.getAttribute('aria-disabled') === 'true') return false
+    const box = el.getBoundingClientRect()
+    return box.width > 0 && box.height > 0
   }
 
+  /**
+   * 点完卡片右侧要重新渲染，按钮不是立刻就有；更麻烦的是渲染过程中会短暂出现一个
+   * **带 `is-disabled` 的旧按钮**（实测同一岗位 1.6 秒后就是可点的正常按钮）。
+   * 所以这里轮询 6 秒：只有一直是灰的才判"暂时点不了"，绝不锁死。
+   */
+  const findContinue = (): boolean => allButtons().some(
+    (el) => String(el.textContent ?? '').trim().includes('继续沟通'),
+  )
+  const findButton = (): HTMLElement | undefined => allButtons().find(
+    (el) => String(el.textContent ?? '').trim() === '立即沟通' && clicked(el),
+  )
   let button = findButton()
-  for (let attempt = 0; attempt < 8 && !button; attempt += 1) {
-    await sleep(350)
+  for (let attempt = 0; attempt < 12 && !button; attempt += 1) {
+    await sleep(500)
     /** 面板换岗位是异步的：每轮都重新核对是不是还在目标岗位上 */
     const now = paneJobId()
     if (expectId && now && now !== expectId) {
       return { ok: false, reason: `页面上的岗位变成了 ${now}，和目标 ${expectId} 不一致，已放弃点击` }
     }
+    /** 「继续沟通」一旦出现就是确定结论，不必再等 */
+    if (findContinue()) {
+      return { ok: false, reason: 'BOSS 上这个岗位显示「继续沟通」，说明此前已沟通过' }
+    }
     button = findButton()
   }
   if (!button) {
-    /**
-     * 两种都见过：按钮根本没有，或者按钮在但带 `is-disabled`（BOSS 对已沟通的岗位
-     * 就是灰的「立即沟通」）。统一用「不可点」这个词，方便上层判定该跳过而非失败。
-     */
-    const any = scope.querySelectorAll('.op-btn-chat, .btn-greet, .btn-startchat').length
+    /** 「继续沟通」是明确信号：BOSS 认为此前已经打过招呼了 */
+    if (findContinue()) {
+      return { ok: false, reason: 'BOSS 上这个岗位显示「继续沟通」，说明此前已沟通过' }
+    }
+    const any = allButtons().length
     return {
       ok: false,
       reason: any > 0
-        ? '「立即沟通」不可点：按钮是灰色的（多半已沟通过）'
+        ? '「立即沟通」不可点：按钮是灰色的（面板还没渲染完，稍后重试）'
         : '「立即沟通」不可点：页面上没有这个按钮',
     }
   }

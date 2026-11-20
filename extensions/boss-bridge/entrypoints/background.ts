@@ -165,6 +165,14 @@ async function getSettings(): Promise<BridgeSettings> {
 const AUTO_GREET_CONFIRM_WAIT_MS = 2_500
 /** 点过「立即沟通」但还没等到回执的记录，10 分钟内不再点第二次 */
 const AUTO_GREET_RETRY_MS = 10 * 60 * 1000
+/**
+ * 「立即沟通」暂时点不了时的冷却。
+ *
+ * 实测（2026-11-20）：卡片刚点开、右侧面板还在渲染时，按钮会短暂带上 `is-disabled`；
+ * 同一批岗位 1.6 秒后再读就是可点的正常按钮。所以这只是**暂时**状态，
+ * 冷却 10 分钟重试，绝不能锁一整天（那会把能投的岗位误判成已沟通）。
+ */
+const AUTO_GREET_SKIP_MS = 10 * 60 * 1000
 
 async function getAutoSettings(): Promise<AutoSettings> {
   const saved = await kv.get<Partial<AutoSettings>>(STORAGE_KEYS.auto)
@@ -318,7 +326,31 @@ async function autoGreet(key: string, tab: ZhipinTab): Promise<AutoOutcome> {
   const clicked = await sendToTab<ContentResponse>(tab.tabId, { type: 'CONTENT_CLICK_GREET', expectId: key })
   if (!clicked.ok) {
     /**
-     * 页面上没有「立即沟通」：多半这条是同一个岗位的重复记录，或这家的招呼早就打过了。
+     * 「继续沟通」是 BOSS 明确说"此前已经打过招呼了"。
+     *
+     * 把它归位成 `greeted`：不再占着 ready 队列、也不再被每分钟重试一次，
+     * 而且 pipeline 正好会给它生成定制招呼语（打过招呼的岗位才需要发第二条）。
+     * `greetedAt` 只能记检测时间——真实招呼时间在几天前，notes 里如实说明。
+     */
+    if (clicked.reason.includes('此前已沟通过')) {
+      const snap = await store.load()
+      const target = snap.jobs[key]
+      if (target) {
+        target.state = 'greeted'
+        target.greetedAt = target.greetedAt ?? Date.now()
+        target.notes = 'BOSS 显示「继续沟通」：此前已沟通过（自动检测，时间取检测时刻）'
+        delete target.greetSkippedAt
+        delete target.greetSkipReason
+        await store.save(snap)
+        return {
+          ok: false,
+          skip: true,
+          message: `${target.brandName}：BOSS 上已是「继续沟通」，记为已打招呼`,
+        }
+      }
+    }
+    /**
+     * 按钮在但点不了：岗位可能已关闭 / 平台限制了这家，**不能**当成已沟通。
      * 记下来当天不再挑它——否则每条这样的岗位都会计一次失败，5 条就把全自动停掉。
      */
     if (clicked.reason.includes('不可点')) {
@@ -331,7 +363,7 @@ async function autoGreet(key: string, tab: ZhipinTab): Promise<AutoOutcome> {
         return {
           ok: false,
           skip: true,
-          message: `${target.brandName}：「立即沟通」不可点（多半早就沟通过了），今天先跳过这条`,
+          message: `${target.brandName}：「立即沟通」暂时点不了（面板还在渲染），10 分钟后再试`,
         }
       }
     }
@@ -398,8 +430,8 @@ async function tickAuto(): Promise<void> {
   const readyKeys = jobs
     .filter((j) => j.state === 'ready'
       && !(j.greetClickedAt && now - j.greetClickedAt < AUTO_GREET_RETRY_MS)
-      /** 今天已经确认"页面上没有立即沟通"的不再挑（次日会自动恢复重试） */
-      && !(j.greetSkippedAt && localDay(j.greetSkippedAt) === localDay(now)))
+      /** 刚确认过"暂时点不了"的，冷却期内不再挑（按钮灰只是渲染瞬态，不是已沟通） */
+      && !(j.greetSkippedAt && now - j.greetSkippedAt < AUTO_GREET_SKIP_MS))
     .sort(byNewest)
     .map((j) => j.key)
   const readySet = new Set(readyKeys)
