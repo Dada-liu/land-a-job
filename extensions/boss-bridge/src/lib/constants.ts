@@ -118,6 +118,8 @@ export const DEFAULT_SETTINGS: BridgeSettings = {
   greetingTemplate:
     '您好，看到贵司{brandName}在招「{jobName}」，我很感兴趣。{highlights}希望能有机会进一步沟通，谢谢！',
   highlights: [],
+  /** 默认四类全留，等于不筛选；用户可在设置页勾选 */
+  captureCategories: ['experienced', 'campus', 'intern', 'outsourced'],
 }
 
 export const ALARM_NAME = 'boss-bridge-watch'

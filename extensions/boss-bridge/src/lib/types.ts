@@ -1,4 +1,6 @@
 /** 提案 §5 的暂存区模型；所有字段只来自被动旁听，不落的业务库。 */
+import type { JobCategory } from './job-category.js'
+
 export type StageState =
   | 'discovered'
   | 'filtered_out'
@@ -163,6 +165,11 @@ export interface BridgeSettings {
   greetingTemplate: string
   /** 招呼语里允许出现、且简历里确实有的关键词，默认空＝不编造 */
   highlights: string[]
+  /**
+   * 抓取时保留哪几类岗位（实习/校招/社招/外包，见 job-category.ts）。
+   * 默认四类全留＝不筛选；改这个不会回头补抓已经跳过的记录。
+   */
+  captureCategories: JobCategory[]
 }
 
 export interface StagingData {

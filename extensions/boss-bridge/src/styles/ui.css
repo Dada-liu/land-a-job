@@ -109,6 +109,9 @@ input[type=text], input[type=password], textarea {
 textarea { min-height: 70px; resize: vertical; line-height: 1.5; }
 input[type=checkbox] { accent-color: #1c1917; }
 .check { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 12px; }
+/* 设置页的多选组：一行放不下就换行，别把勾选框挤成两行文字 */
+.option-checks { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 4px 0 2px; }
+.option-checks .check { margin-bottom: 2px; }
 .hint { color: #a8a29e; font-size: 11px; line-height: 1.6; margin-top: 6px; }
 .list { max-height: 190px; overflow-y: auto; font-size: 12px; }
 .list .item { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid #f5f5f4; }
@@ -163,16 +166,54 @@ input[type=checkbox] { accent-color: #1c1917; }
 .pagewrap { max-width: 1160px; margin: 0 auto; padding: 26px 22px 56px; }
 .rowhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 16px 0 10px; }
-.chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.chip {
-  display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px;
-  border: 1px solid #d6d3d1; border-radius: 999px; background: #fff;
-  color: #57534e; font: inherit; font-size: 12px; cursor: pointer;
-}
-.chip:hover { border-color: #a8a29e; color: #1c1917; }
-.chip.on { background: #1c1917; border-color: #1c1917; color: #fff; }
-.chip .n { opacity: .65; font-variant-numeric: tabular-nums; }
+.filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .search { flex: 0 1 260px; min-width: 190px; }
+
+/* ---------- 缓存岗位页的筛选下拉（自绘，不用原生 select） ----------
+   ui.css 与 popup 共用，类名一律带 fdrop 前缀：别改成 .select / .menu 这类通用名 */
+.fdrop { position: relative; }
+.fdrop-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 9px;
+  border: 1px solid #d6d3d1; border-radius: 6px; background: #fff;
+  font: inherit; font-size: 12px; color: #1c1917; cursor: pointer; white-space: nowrap;
+}
+.fdrop-btn:hover { border-color: #a8a29e; background: #fafaf9; }
+.fdrop-btn:focus-visible { outline: 2px solid #a8a29e; outline-offset: 1px; }
+/* 有筛选生效时描边加深，扫一眼就知道哪几项在起作用 */
+.fdrop-btn.on { border-color: #1c1917; background: #f5f5f4; }
+.fdrop-k { color: #a8a29e; }
+.fdrop-btn.on .fdrop-k { color: #57534e; }
+.fdrop-chev { flex: none; color: #a8a29e; transition: transform .15s ease; }
+.fdrop.open .fdrop-chev { transform: rotate(180deg); }
+.fdrop-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 40;
+  min-width: 100%; max-height: 300px; overflow-y: auto; padding: 4px;
+  background: #fff; border: 1px solid #e7e5e4; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(28, 25, 23, .12);
+}
+/* 贴右边缘的下拉（排序）：右侧对齐，免得面板顶出页面 */
+.fdrop-menu.right { left: auto; right: 0; }
+.fdrop-opt {
+  display: flex; align-items: center; gap: 6px; width: 100%; padding: 6px 8px;
+  border: 0; border-radius: 5px; background: transparent; text-align: left;
+  font: inherit; font-size: 12px; color: #1c1917; cursor: pointer; white-space: nowrap;
+}
+.fdrop-opt:hover { background: #f5f5f4; }
+.fdrop-opt.on { background: #1c1917; color: #fff; }
+.fdrop-opt.on .fdrop-n { color: rgba(255, 255, 255, .7); }
+.fdrop-opt.quiet { color: #78716c; }
+.fdrop-tick { flex: none; width: 10px; font-size: 10px; }
+/* 多选的勾选框：和单选那个 ✓ 位宽对齐，两栏不会跳 */
+.fdrop-box {
+  flex: none; width: 12px; height: 12px; border: 1px solid #d6d3d1; border-radius: 3px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 9px; line-height: 1;
+}
+.fdrop-opt.on .fdrop-box { border-color: #fff; color: #1c1917; }
+.fdrop-text { flex: 1; }
+.fdrop-n { color: #a8a29e; font-variant-numeric: tabular-nums; }
+.fdrop-foot { margin-top: 4px; padding-top: 4px; border-top: 1px solid #f5f5f4; }
+
 .table {
   width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0;
   background: #fff; border: 1px solid #e7e5e4; border-radius: 10px;

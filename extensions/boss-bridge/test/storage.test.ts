@@ -16,9 +16,9 @@ const item = (securityId: string, bossOnline = true): JobListItem => ({
 describe('暂存区（只存 chrome.storage.local，0 落库）', () => {
   it('按 securityId 去重，跨轮 isNew 只在新的一天为 true', () => {
     const data = emptyStaging(now, day)
-    expect(mergeJobList(data, [item('a')], now, day)).toEqual({ added: 1, updated: 0 })
+    expect(mergeJobList(data, [item('a')], now, day)).toEqual({ added: 1, updated: 0, skipped: 0 })
     expect(data.jobs['enc-a'].isNew).toBe(true)
-    expect(mergeJobList(data, [item('a')], now + 1000, day)).toEqual({ added: 0, updated: 1 })
+    expect(mergeJobList(data, [item('a')], now + 1000, day)).toEqual({ added: 0, updated: 1, skipped: 0 })
     expect(data.jobs['enc-a'].isNew).toBe(false)
     mergeJobList(data, [item('a')], now + 86_400_000, '2026-11-13')
     expect(data.jobs['enc-a'].isNew).toBe(true)
@@ -388,5 +388,44 @@ describe('主键改成 encryptJobId（同岗位不再因 securityId 轮换而重
     dedupeStaging(data, now + 1000)
     expect(created?.key).toBe('chat:7:9')
     expect(Object.keys(data.jobs)).toEqual(['chat:7:9'])
+  })
+})
+
+describe('抓取时按岗位类型筛选', () => {
+  const named = (securityId: string, jobName: string, brandName = '某公司'): JobListItem => ({
+    securityId, jobName, brandName, bossOnline: true, encryptJobId: `enc-${securityId}`,
+  })
+
+  it('只勾社招时，实习/校招/外包都不进缓存，并返回跳过条数', () => {
+    const data = emptyStaging(now, day)
+    const result = mergeJobList(data, [
+      named('1', 'AI Agent 全栈开发工程师'),
+      named('2', 'AI Agent 开发实习生（Intern）'),
+      named('3', '【校招】Web前端开发工程师'),
+      named('4', '前端开发（驻场）'),
+    ], now, day, ['experienced'])
+    expect(result).toEqual({ added: 1, updated: 0, skipped: 3 })
+    expect(Object.keys(data.jobs)).toEqual(['enc-1'])
+  })
+
+  it('勾了实习就只留实习，社招反而被跳过', () => {
+    const data = emptyStaging(now, day)
+    mergeJobList(data, [named('1', '全栈开发'), named('2', '前端开发实习生')], now, day, ['intern'])
+    expect(Object.keys(data.jobs)).toEqual(['enc-2'])
+  })
+
+  it('一个都不勾等于不筛选（老数据缺字段时的兜底）', () => {
+    const data = emptyStaging(now, day)
+    const r = mergeJobList(data, [named('1', '前端开发实习生')], now, day, [])
+    expect(r).toEqual({ added: 1, updated: 0, skipped: 0 })
+  })
+
+  it('筛选只挡新的：已存在的记录不会因为改了筛选被删掉', () => {
+    const data = emptyStaging(now, day)
+    mergeJobList(data, [named('1', '前端开发实习生')], now, day)
+    expect(Object.keys(data.jobs)).toEqual(['enc-1'])
+    mergeJobList(data, [named('1', '前端开发实习生')], now + 1000, day, ['experienced'])
+    expect(Object.keys(data.jobs)).toEqual(['enc-1'])
+    expect(data.jobs['enc-1'].state).toBe('ready')
   })
 })

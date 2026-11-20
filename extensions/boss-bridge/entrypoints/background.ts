@@ -50,6 +50,7 @@ import {
   reverseJobKey,
   StagingStore,
 } from '../src/lib/storage.js'
+import { CATEGORY_LABELS } from '../src/lib/job-category.js'
 import type { BridgeSettings, StagedJob, StagingData } from '../src/lib/types.js'
 
 const kv = chromeKV()
@@ -153,7 +154,9 @@ async function sendToTab<T extends ContentResponse>(tabId: number, message: Cont
 }
 
 async function getSettings(): Promise<BridgeSettings> {
-  return (await kv.get<BridgeSettings>(STORAGE_KEYS.settings)) ?? DEFAULT_SETTINGS
+  const saved = await kv.get<BridgeSettings>(STORAGE_KEYS.settings)
+  /** 老版本存的设置没有新字段，读的时候补默认值，别让 undefined 漏到筛选逻辑里 */
+  return { ...DEFAULT_SETTINGS, ...(saved ?? {}) }
 }
 
 /* ---------------- 全自动：决策在 orchestrator.ts，这里只负责执行与落盘 ---------------- */
@@ -363,12 +366,14 @@ async function tickAuto(): Promise<void> {
   const data = await store.load()
   const jobs = Object.values(data.jobs)
   const byAge = (a: StagedJob, b: StagedJob) => a.capturedAt - b.capturedAt
+  /** 打招呼优先新抓的：8 天前的岗位多半已经招满，打了也是白发 */
+  const byNewest = (a: StagedJob, b: StagedJob) => b.capturedAt - a.capturedAt
   const now = Date.now()
 
-  /** 刚点过沟通、回执还没到的先排除，避免重复点 */
+  /** 刚点过沟通、回执还没到的先排除，避免重复点；新的排前面 */
   const readyKeys = jobs
     .filter((j) => j.state === 'ready' && !(j.greetClickedAt && now - j.greetClickedAt < AUTO_GREET_RETRY_MS))
-    .sort(byAge)
+    .sort(byNewest)
     .map((j) => j.key)
   const readySet = new Set(readyKeys)
 
@@ -431,7 +436,7 @@ async function tickAuto(): Promise<void> {
     ready: reachable(readyKeys),
     pendingGreeting: jobs
       .filter((j) => j.state === 'greeted' && j.greetDraft && !j.greetSentAt)
-      .sort(byAge)
+      .sort(byNewest)
       .map((j) => j.key),
     pendingResume: [],
   }
@@ -713,11 +718,18 @@ async function handleCaptured(url: string, body: unknown): Promise<void> {
       return
     case 'joblist': {
       const data = await store.load()
-      const { added, updated } = mergeJobList(data, captured.jobs)
+      const settings = await getSettings()
+      const { added, updated, skipped } = mergeJobList(data, captured.jobs, Date.now(), undefined, settings.captureCategories)
       await store.save(data)
       limiter.noteRequest(captured.jobs.length)
       await persistLimiter()
       if (added || updated) log(`发现岗位：新增 ${added}、更新 ${updated}（只存在扩展里，不写入 land-a-job）`)
+      if (skipped) {
+        const kept = settings.captureCategories.length
+          ? settings.captureCategories.map((id) => CATEGORY_LABELS[id]).join('/')
+          : '全部类型'
+        log(`按类型筛选跳过 ${skipped} 条（当前只收 ${kept}，在设置页可改）`)
+      }
       return
     }
     case 'detail': {

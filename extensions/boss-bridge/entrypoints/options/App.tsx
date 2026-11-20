@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { DEFAULT_SETTINGS } from '../../src/lib/constants.js'
+import { CATEGORY_LABELS, JOB_CATEGORIES, type JobCategory } from '../../src/lib/job-category.js'
 import { sendToBackground } from '../../src/lib/messages.js'
 import type { RuntimeResponse } from '../../src/lib/messages.js'
 import type { BridgeSettings } from '../../src/lib/types.js'
@@ -13,7 +14,10 @@ export function OptionsApp() {
   useEffect(() => {
     void sendToBackground<RuntimeResponse>({ type: 'GET_SETTINGS' }).then((res) => {
       if (res.ok && res.settings) {
-        setSettings(res.settings)
+        setSettings({
+          ...res.settings,
+          captureCategories: res.settings.captureCategories ?? DEFAULT_SETTINGS.captureCategories,
+        })
         setHighlights(res.settings.highlights.join('、'))
       }
     })
@@ -23,11 +27,32 @@ export function OptionsApp() {
     setSettings((prev) => ({ ...prev, ...next }))
   }
 
+  /** 一类都不留就等于什么都抓不到，直接拦住（比"空集＝不过滤"更容易理解） */
+  function toggleCategory(id: JobCategory, on: boolean) {
+    const cur = settings.captureCategories
+    const next = on
+      ? JOB_CATEGORIES.filter((c) => c === id || cur.includes(c))
+      : cur.filter((c) => c !== id)
+    if (next.length === 0) {
+      setNotice('')
+      setError('至少要保留一类，否则一个岗位都抓不到')
+      return
+    }
+    setError('')
+    patch({ captureCategories: next })
+  }
+
   async function save() {
     setNotice('')
     setError('')
+    const cats = settings.captureCategories ?? DEFAULT_SETTINGS.captureCategories
+    if (cats.length === 0) {
+      setError('至少要保留一类岗位类型')
+      return
+    }
     const next: BridgeSettings = {
       ...settings,
+      captureCategories: cats,
       highlights: highlights.split(/[、,，\n]/).map((s) => s.trim()).filter(Boolean),
     }
     const res = await sendToBackground<RuntimeResponse>({ type: 'SET_SETTINGS', settings: next })
@@ -69,6 +94,26 @@ export function OptionsApp() {
         <input type="checkbox" checked={settings.autoOpenDetail} onChange={(e) => patch({ autoOpenDetail: e.target.checked })} />
         <span>允许自动打开候选详情页（页面导航，不调用写接口；默认关闭）</span>
       </label>
+
+      <h2>抓取时按岗位类型筛选</h2>
+      <p className="sub">勾上的类型才会进缓存。只影响之后抓到的岗位，已有的不会被删；至少保留一类。</p>
+      <div className="option-checks">
+        {JOB_CATEGORIES.map((id) => (
+          <label className="check" key={id}>
+            <input
+              type="checkbox"
+              checked={settings.captureCategories.includes(id)}
+              onChange={(e) => toggleCategory(id, e.target.checked)}
+            />
+            <span>{CATEGORY_LABELS[id]}</span>
+          </label>
+        ))}
+      </div>
+      <div className="hint">
+        识别靠岗位名与公司名关键词：出现「实习/Intern」算实习，「校招/应届/XX届」算校招，
+        「外包/驻场/派遣/项目顾问」或几家人力外包公司算外包，其余算社招。
+        判定不看 JD 正文，也不看发布渠道。
+      </div>
 
       <h2>招呼语模板（0 token）</h2>
       <label className="field">

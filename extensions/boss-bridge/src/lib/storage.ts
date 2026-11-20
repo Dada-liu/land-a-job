@@ -1,6 +1,7 @@
 import { STAGING_LIMITS, STORAGE_KEYS } from './constants.js'
 import { canonicalJdUrl, sanitizeUntrustedText, type ConversationItem, type DetailCaptured, type JobListItem } from './parsers.js'
 import { listGate } from './activity.js'
+import { keepByCategory, type JobCategory } from './job-category.js'
 import { normalizeBrand } from './match.js'
 import type { ConversationSnapshot, StagedJob, StagingData, StageState } from './types.js'
 
@@ -125,14 +126,21 @@ export function mergeJobList(
   items: JobListItem[],
   now = Date.now(),
   day = new Date(now).toISOString().slice(0, 10),
-): { added: number; updated: number } {
+  captureCategories?: JobCategory[],
+): { added: number; updated: number; skipped: number } {
   let added = 0
   let updated = 0
+  /** 被类型筛掉的条数：只在抓取入口生效，已有记录不会被它删掉 */
+  let skipped = 0
   const isNewRound = data.runDay !== day
   for (const item of items) {
     if (!item.securityId && !item.encryptJobId && !item.jobName) continue
     const key = jobKey(item)
     if (!key) continue
+    if (!keepByCategory(item.jobName ?? '', item.brandName ?? '', captureCategories)) {
+      skipped += 1
+      continue
+    }
     const found = locateExisting(data, item)
     const existing = found?.job
     /** 存量记录还挂在旧主键（securityId）上：搬到规范主键，别留两条 */
@@ -177,7 +185,7 @@ export function mergeJobList(
   }
   data.runDay = day
   data.lastUpdated = now
-  return { added, updated }
+  return { added, updated, skipped }
 }
 
 /**
