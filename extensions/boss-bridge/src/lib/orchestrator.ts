@@ -44,6 +44,12 @@ export interface AutoSettings {
   restEvery: number
   restMinMs: number
   restMaxMs: number
+  /** 翻页挖干后轮换的搜索词；少于 2 个就当没有兜底 */
+  searchKeywords: string[]
+  /** 两次换词的最小间隔 */
+  searchGapMs: number
+  /** 每天换词上限 */
+  dailySearchLimit: number
 }
 
 export interface AutoState {
@@ -61,6 +67,16 @@ export interface AutoState {
   actionsInRun: number
   /** 上次翻页时间：翻页不能太密，否则像在刷接口 */
   lastScrollAt: number
+  /**
+   * 连续「滚了一轮但卡片没变多」的次数。
+   *
+   * 不能用滚动位置判断到底：滚到底是页面行为，位置不会自己恢复；
+   * 而「有没有新卡片」才是这个搜索词还有没有货的直接证据。
+   */
+  scrollStalls: number
+  /** 上次换搜索词的时间与今日次数 */
+  lastSearchAt: number
+  searchesToday: number
   /** 连续失败次数：到 5 就停，避免一直在同一个坏页面上重试 */
   failStreak: number
   /** 强制休息到什么时候 */
@@ -93,6 +109,8 @@ export interface AutoContext {
   pendingGreeting: string[]
   /** 已达发送条件、还没发简历的 key */
   pendingResume: string[]
+  /** 当前搜索页用的关键词（从地址栏读），换词时用来挑「下一个」 */
+  currentKeyword?: string
   rng?: () => number
 }
 
@@ -101,6 +119,8 @@ export type AutoDecision =
   | { kind: 'wait'; until: number; reason: string }
   /** 往下翻一屏列表，让页面自己加载下一页（零点击） */
   | { kind: 'scroll'; reason: string }
+  /** 换一个搜索词重新搜：只在翻页确实挖干时才用，低频兜底 */
+  | { kind: 'search'; keyword: string; reason: string }
   | { kind: 'openDetail'; jobKey: string; reason: string }
   /** 只为定制简历补 JD；活跃度已经判过，和打招呼无关，所以排在打招呼之后 */
   | { kind: 'readJd'; jobKey: string; reason: string }
@@ -120,6 +140,9 @@ export function emptyAutoState(day: string): AutoState {
     sentToday: 0,
     actionsInRun: 0,
     lastScrollAt: 0,
+    scrollStalls: 0,
+    lastSearchAt: 0,
+    searchesToday: 0,
     failStreak: 0,
     restUntil: 0,
   }
@@ -163,7 +186,36 @@ export function nextGapMs(settings: AutoSettings, rng: () => number = Math.rando
 function dayRoll(state: AutoState, now: number): AutoState {
   const today = localDay(now)
   if (state.day === today) return state
-  return { ...state, day: today, scannedToday: 0, greetedToday: 0, sentToday: 0 }
+  return { ...state, day: today, scannedToday: 0, greetedToday: 0, sentToday: 0, searchesToday: 0, scrollStalls: 0 }
+}
+
+/**
+ * 该换成哪个搜索词。返回 undefined 表示**现在不该换**：
+ * 关键词少于两个、今日换词次数用完、或者离上次换词还不够久。
+ *
+ * 这些闸门和翻页分开，是因为换词是页面级导航 + 一次完整搜索请求，
+ * 频率必须比滚动低一个量级，否则行为看起来就是在扫关键词。
+ */
+export function keywordToTry(
+  settings: AutoSettings,
+  state: AutoState,
+  current: string | undefined,
+  now: number,
+): string | undefined {
+  const list = settings.searchKeywords.filter((k) => k && k.trim())
+  if (list.length < 2) return undefined
+  if (settings.dailySearchLimit <= 0 || state.searchesToday >= settings.dailySearchLimit) return undefined
+  if (state.lastSearchAt && now - state.lastSearchAt < settings.searchGapMs) return undefined
+  /**
+   * 比较时忽略大小写和空格：地址栏里是 `agent开发`，配置里写的是 `Agent开发`，
+   * 精确比较会认为「当前词不在列表里」，于是又挑回同一个词，等于换了个寂寞。
+   */
+  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, '')
+  const needle = current ? norm(current) : ''
+  const index = needle ? list.findIndex((k) => norm(k) === needle) : -1
+  const pick = (i: number) => list[(i + list.length) % list.length] ?? ''
+  const next = pick(index + 1)
+  return norm(next) === needle ? (pick(index + 2) || next) : next
 }
 
 /**
@@ -233,9 +285,28 @@ export function decideAuto(ctx: AutoContext): AutoDecision {
   /**
    * 翻页：只是滚动，让页面自己请求下一页岗位。
    * 间隔刻意长（默认 2 分钟以上）——连续翻页比连续点击更像在刷数据。
+   *
+   * 滚了两轮都没有新卡片，说明这个搜索词挖干了，才轮到换词兜底。
+   * 换词比翻页更"重"（一次完整搜索 + 列表重置），所以间隔和每日次数都卡得更死。
    */
   if (settings.scan && now - state.lastScrollAt > settings.scrollGapMs) {
-    return { kind: 'scroll', reason: '翻一屏，看看有没有新岗位' }
+    const exhausted = state.scrollStalls >= 2
+    const keyword = exhausted ? keywordToTry(settings, state, ctx.currentKeyword, now) : undefined
+    if (keyword) {
+      return {
+        kind: 'search',
+        keyword,
+        reason: `「${ctx.currentKeyword ?? '当前词'}」翻到底没有新岗位，换「${keyword}」再搜`,
+      }
+    }
+    /** 挖干了但换词被闸门挡住（次数/间隔）：老实待着，别原地空滚 */
+    if (exhausted) {
+      return {
+        kind: 'idle',
+        reason: `「${ctx.currentKeyword ?? '当前词'}」已翻到底，换词还要等（今日 ${state.searchesToday}/${settings.dailySearchLimit}，间隔 ${Math.round(settings.searchGapMs / 60_000)} 分钟）`,
+      }
+    }
+    return { kind: 'scroll', reason: '往下滚一屏，看看有没有新岗位' }
   }
 
   /**
@@ -275,6 +346,13 @@ export function afterAction(
     next.phase = 'scan'
   } else if (decision.kind === 'scroll') {
     next.lastScrollAt = now
+    next.phase = 'scan'
+  } else if (decision.kind === 'search') {
+    /** 换词等于把列表重置，翻页节奏也重新开始，否则下一 tick 立刻又去滚 */
+    next.lastScrollAt = now
+    next.lastSearchAt = now
+    next.searchesToday += 1
+    next.scrollStalls = 0
     next.phase = 'scan'
   } else if (decision.kind === 'greet') {
     next.greetedToday += 1
@@ -340,6 +418,7 @@ function clock(min: number): string {
 function describe(decision: AutoDecision): string {
   switch (decision.kind) {
     case 'scroll': return '翻了一屏列表'
+    case 'search': return `换了个搜索词（${decision.keyword}）`
     case 'openDetail': return '读了一条岗位详情'
     case 'readJd': return '补了一条岗位的 JD'
     case 'greet': return '打了一次招呼'

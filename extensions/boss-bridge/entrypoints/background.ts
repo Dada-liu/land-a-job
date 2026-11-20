@@ -206,6 +206,8 @@ interface ZhipinTab {
   kind: 'list' | 'detail'
   /** 详情页地址栏里的岗位 ID */
   jobId?: string
+  /** 当前地址（换搜索词时要在原 URL 上改 query，保留 city 等筛选） */
+  url?: string
 }
 
 async function findZhipinTab(isActionable?: (jobId: string) => boolean): Promise<ZhipinTab | null> {
@@ -236,6 +238,7 @@ async function findZhipinTab(isActionable?: (jobId: string) => boolean): Promise
     tabId: chosen.id,
     kind: jobId ? 'detail' : 'list',
     jobId,
+    url: chosen.url,
   }
 }
 
@@ -246,6 +249,109 @@ interface AutoOutcome {
   retryable?: boolean
   /** 这条岗位本身做不了（没有「立即沟通」等），跳过但不算失败 */
   skip?: boolean
+  /** 只有滚动会带：这一轮滚完卡片有没有变多 */
+  grew?: boolean
+}
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** 在已附着的标签里执行一段 JS 拿值；失败返回 null，由调用方决定怎么兜底 */
+async function evalInTab<T>(tabId: number, expression: string): Promise<T | null> {
+  try {
+    const res = (await chrome.debugger.sendCommand({ tabId }, 'Runtime.evaluate', {
+      expression,
+      returnByValue: true,
+      awaitPromise: true,
+    })) as { result?: { value?: T } }
+    return res.result?.value ?? null
+  } catch {
+    return null
+  }
+}
+
+const CARD_COUNT = `document.querySelectorAll('.job-card-box').length`
+
+/**
+ * 滚动到底部，让页面自己去请求下一页。
+ *
+ * **必须用真实滚轮事件**（CDP `Input.dispatchMouseEvent`）。2026-11-20 实测：
+ * - 给 `scrollTop` 赋值：连滚 6×700px 到底，卡片恒为 15 张，一次都不加载；
+ * - 真实滚轮：15 → 30 → 45，每滚到底附近自动补 15 条。
+ * 页面监听的是滚轮输入，不是 `scrollTop` 变化；而且 CDP 事件的 `isTrusted=true`，
+ * 和人手走同一个输入通道，比合成 `WheelEvent`（`isTrusted=false`）安全得多。
+ */
+async function autoScroll(tabId: number): Promise<AutoOutcome> {
+  const before = (await evalInTab<number>(tabId, CARD_COUNT)) ?? 0
+  if (before === 0) return { ok: false, message: '列表还没渲染出卡片，这轮先不滚' }
+
+  /** 滚轮要落在列表上：鼠标停在右侧详情面板上会滚错区域 */
+  const anchor = await evalInTab<{ x: number; y: number }>(tabId, `(() => {
+    const cards = [...document.querySelectorAll('.job-card-box')];
+    const visible = cards.find((c) => { const b = c.getBoundingClientRect(); return b.top > 90 && b.bottom < innerHeight - 20; });
+    const el = visible || cards[0];
+    if (!el) return null;
+    const b = el.getBoundingClientRect();
+    return {
+      x: Math.round(b.x + b.width / 2),
+      y: Math.round(Math.max(120, Math.min(innerHeight - 100, b.y + b.height / 2))),
+    };
+  })()`)
+  if (!anchor) return { ok: false, message: '找不到可滚的岗位卡片位置' }
+
+  /**
+   * 一轮只滚 2–3 段：每滚到底页面补 15 条，滚太多段会在一次动作里连翻 4 页，
+   * 比人快得多。宁可下一轮再滚（间隔 2 分钟），也不要一口气冲到底。
+   */
+  const steps = 2 + Math.floor(Math.random() * 2)
+  for (let i = 0; i < steps; i += 1) {
+    /** 每段距离和间隔都抖动：固定步长是最容易被识别的机器特征 */
+    const deltaY = 380 + Math.round(Math.random() * 220)
+    try {
+      await chrome.debugger.sendCommand({ tabId }, 'Input.dispatchMouseEvent', {
+        type: 'mouseWheel',
+        x: anchor.x,
+        y: anchor.y,
+        deltaX: 0,
+        deltaY,
+        modifiers: 0,
+      })
+    } catch (error) {
+      return { ok: false, message: `滚轮事件发送失败：${(error as Error).message}` }
+    }
+    await wait(800 + Math.round(Math.random() * 400))
+  }
+
+  /** 滚到底后给页面留出请求下一页并渲染的时间 */
+  await wait(2_500)
+  const after = (await evalInTab<number>(tabId, CARD_COUNT)) ?? before
+  return {
+    ok: true,
+    grew: after > before,
+    message: after > before
+      ? `往下滚了 ${steps} 段（卡片 ${before} → ${after}）`
+      : `往下滚了 ${steps} 段（卡片仍 ${after} 张）`,
+  }
+}
+
+/**
+ * 换搜索词：只在翻页确实挖干时兜底。
+ *
+ * 用 `chrome.tabs.update` 走真实导航（等于用户在搜索框改词），只改 `query`、
+ * 保留 city 等其它筛选条件。这是一次完整搜索请求，所以频率由决策层卡死
+ * （间隔 ≥ 10 分钟、每天 8 次），绝不能当主循环。
+ */
+async function autoSearch(tabId: number, keyword: string): Promise<AutoOutcome> {
+  const tab = await chrome.tabs.get(tabId)
+  const current = tab.url ?? ''
+  if (!current.includes('/web/geek/jobs')) {
+    return { ok: false, message: '当前不在搜索结果页，这轮不换搜索词' }
+  }
+  const next = new URL(current)
+  next.searchParams.set('query', keyword)
+  await chrome.tabs.update(tabId, { url: next.toString() })
+  /** 等新结果渲染，顺便让页面自己发首屏请求（扩展只旁听） */
+  await wait(3_500)
+  return { ok: true, message: `已换成「${keyword}」重新搜索` }
 }
 
 /** 读一条候选的详情：点卡片（或就地读详情页）→ 读 DOM 的 JD → 按旁听到的活跃度判定 */
@@ -393,9 +499,15 @@ async function executeAuto(decision: AutoDecision, tab: ZhipinTab): Promise<Auto
 
   switch (decision.kind) {
     case 'scroll': {
-      const res = await sendToTab<ContentResponse>(tab.tabId, { type: 'CONTENT_SCAN_JOBS', scroll: true })
-      limiter.noteRequest()
-      return res.ok ? { ok: true, message: res.reason } : { ok: false, message: res.reason }
+      /** 滚动用真实滚轮事件，不用内容脚本改 scrollTop（那样页面根本不加载） */
+      const res = await autoScroll(tab.tabId)
+      if (res.ok) limiter.noteRequest()
+      return res
+    }
+    case 'search': {
+      const res = await autoSearch(tab.tabId, decision.keyword)
+      if (res.ok) limiter.noteRequest()
+      return res
     }
     case 'openDetail':
     case 'readJd':
@@ -512,6 +624,13 @@ async function tickAuto(): Promise<void> {
       .sort(byNewest)
       .map((j) => j.key),
     pendingResume: [],
+    currentKeyword: (() => {
+      try {
+        return new URL(tab.url ?? '').searchParams.get('query') ?? undefined
+      } catch {
+        return undefined
+      }
+    })(),
   }
 
   const decision = decideAuto(ctx)
@@ -536,11 +655,18 @@ async function tickAuto(): Promise<void> {
   }
 
   const outcome = await executeAuto(decision, tab)
-  const next = outcome.ok
+  let next = outcome.ok
     ? { ...afterAction(state, decision, Date.now(), effective), waitReason: outcome.message, lastTickAt: now }
     : outcome.skip
       ? { ...afterSkip(state, Date.now(), outcome.message), lastTickAt: now }
       : { ...afterFailure(state, Date.now(), outcome.message), lastTickAt: now }
+  /**
+   * 「这个搜索词还有没有货」只有执行层知道（滚完卡片有没有变多），
+   * 决策层据此判断该继续滚还是换词。
+   */
+  if (decision.kind === 'scroll' && outcome.ok) {
+    next = { ...next, scrollStalls: outcome.grew ? 0 : next.scrollStalls + 1 }
+  }
   await saveAutoState(next)
   /** 动过手就把待机提示清掉，下次真正停下时能重新记一条 */
   lastAutoNote = ''

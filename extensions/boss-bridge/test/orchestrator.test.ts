@@ -6,6 +6,7 @@ import {
   decideAuto,
   emptyAutoState,
   inWindow,
+  keywordToTry,
   localDay,
   nextGapMs,
   nextWindowStart,
@@ -193,6 +194,54 @@ describe('decideAuto 的优先级与预算', () => {
       ready: [],
     }))
     expect(decision.kind).toBe('scroll')
+  })
+
+  it('只滚了一轮没新卡片，继续滚而不是换词', () => {
+    const decision = decideAuto(ctx({
+      settings: settings({ scan: true, scanDetail: false, greet: false }),
+      state: state({ lastScrollAt: 0, scrollStalls: 1 }),
+      currentKeyword: 'Agent开发',
+    }))
+    expect(decision.kind).toBe('scroll')
+  })
+
+  it('滚两轮都没有新卡片，才换搜索词', () => {
+    const decision = decideAuto(ctx({
+      settings: settings({ scan: true, scanDetail: false, greet: false }),
+      state: state({ lastScrollAt: 0, scrollStalls: 2 }),
+      currentKeyword: 'Agent开发',
+    }))
+    expect(decision).toMatchObject({ kind: 'search', keyword: 'AI Agent' })
+  })
+
+  it('换词间隔没到就先待着，不原地空滚（滚了也没用）', () => {
+    const decision = decideAuto(ctx({
+      settings: settings({ scan: true, scanDetail: false, greet: false }),
+      state: state({ lastScrollAt: 0, scrollStalls: 2, lastSearchAt: NOW - 60_000, searchesToday: 1 }),
+      currentKeyword: 'Agent开发',
+    }))
+    expect(decision.kind).toBe('idle')
+    expect(decision.kind === 'idle' && decision.reason).toContain('翻到底')
+  })
+
+  it('今日换词次数用完就不再换', () => {
+    const decision = decideAuto(ctx({
+      settings: settings({ scan: true, scanDetail: false, greet: false }),
+      state: state({ lastScrollAt: 0, scrollStalls: 3, searchesToday: AUTO_DEFAULTS.dailySearchLimit }),
+      currentKeyword: 'Agent开发',
+    }))
+    expect(decision.kind).toBe('idle')
+  })
+
+  it('换词只改配置里的词表，别的筛选不动（挑的是「下一个」）', () => {
+    const settingsNow = settings({ scan: true, scanDetail: false, greet: false })
+    expect(keywordToTry(settingsNow, state({ scrollStalls: 2 }), '大模型应用开发', NOW)).toBe('LLM 应用开发')
+    /** 词表里没有当前词时从头取 */
+    expect(keywordToTry(settingsNow, state(), '不存在的词', NOW)).toBe('Agent开发')
+    /** 地址栏是小写 'agent开发'，配置里是 'Agent开发'：要认成同一个词，换下一个而不是原地打转 */
+    expect(keywordToTry(settingsNow, state(), 'agent开发', NOW)).toBe('AI Agent')
+    /** 只有一个词就没得换 */
+    expect(keywordToTry(settings({ searchKeywords: ['唯一'] }), state(), '唯一', NOW)).toBeUndefined()
   })
 
   it('当日达到扫描上限就停（含详情）', () => {

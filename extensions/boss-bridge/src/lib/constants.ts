@@ -104,6 +104,17 @@ export const AUTO_DEFAULTS = {
   restEvery: 5,
   restMinMs: 60_000,
   restMaxMs: 180_000,
+  /**
+   * 翻页挖干后轮换的搜索词。
+   *
+   * 只在「滚到底两轮都没有新卡片」时才换——每次换词是一次完整搜索请求 + 列表重置，
+   * 真人不会几分钟换一个关键词，所以它只能当低频兜底，不能当主循环。
+   */
+  searchKeywords: ['Agent开发', 'AI Agent', '大模型应用开发', 'LLM 应用开发'] as string[],
+  /** 两次换词的最小间隔：比翻页还稀，避免像在扫关键词 */
+  searchGapMs: 10 * 60_000,
+  /** 每天换词上限（含自动翻页挖干的次数），到点就老实待着 */
+  dailySearchLimit: 8,
 } as const
 
 /** 自动化的 tick 间隔（chrome.alarms 最小 1 分钟） */
