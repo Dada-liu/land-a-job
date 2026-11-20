@@ -209,7 +209,7 @@ input[type=checkbox] { accent-color: #1c1917; }
   display: inline-flex; align-items: center; justify-content: center;
   font-size: 9px; line-height: 1;
 }
-.fdrop-opt.on .fdrop-box { border-color: #fff; color: #1c1917; }
+.fdrop-opt.on .fdrop-box { border-color: #fff; background: #fff; color: #1c1917; }
 .fdrop-text { flex: 1; }
 .fdrop-n { color: #a8a29e; font-variant-numeric: tabular-nums; }
 .fdrop-foot { margin-top: 4px; padding-top: 4px; border-top: 1px solid #f5f5f4; }
@@ -260,3 +260,82 @@ input[type=checkbox] { accent-color: #1c1917; }
 .viewtabs > button.on { color: #1c1917; font-weight: 500; box-shadow: inset 0 -2px #1c1917; }
 .viewtabs .n { font-variant-numeric: tabular-nums; opacity: .6; margin-left: 3px; }
 .viewtabs .sub { margin-left: auto; font-size: 11px; padding-bottom: 4px; text-align: right; }
+
+/* ---------------- 设置页（options） ----------------
+   与 popup 共用这个文件，类名统一带 opt- 前缀，避免和 .check/.empty 之类撞车 */
+.opt-wrap { max-width: 680px; margin: 0 auto; padding-bottom: 96px; }
+.opt-head { margin-bottom: 14px; }
+.opt-head h1 { font-size: 17px; margin-bottom: 6px; }
+.opt-desc { margin: 0; color: #78716c; font-size: 12px; line-height: 1.65; }
+.opt-card { background: #fff; border: 1px solid #e7e5e4; border-radius: 10px; padding: 14px 16px 16px; margin-bottom: 12px; }
+.opt-card-head { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
+.opt-card-head h2 { margin: 0 0 4px; font-size: 13px; }
+.opt-step {
+  flex: none; width: 20px; height: 20px; border-radius: 999px;
+  background: #1c1917; color: #fff; font-size: 11px; line-height: 20px; text-align: center;
+}
+.opt-field { display: block; margin-bottom: 12px; }
+.opt-label { display: block; margin-bottom: 5px; font-size: 12px; color: #44403c; }
+.opt-help { display: block; margin-top: 5px; color: #a8a29e; font-size: 11px; line-height: 1.6; }
+.opt-help code { background: #f5f5f4; border-radius: 4px; padding: 1px 4px; font-size: 10.5px; }
+.opt-inline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.opt-inline .opt-help { margin-top: 0; }
+
+/* 类型选择：整块可点，选中靠边框加粗 + 勾号，不用再去读一行小字 */
+.opt-cats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.opt-cat {
+  display: block; text-align: left; padding: 9px 11px; border: 1px solid #e7e5e4;
+  border-radius: 8px; background: #fff; font: inherit; cursor: pointer;
+  transition: border-color .12s ease, background .12s ease;
+}
+.opt-cat:hover { border-color: #d6d3d1; background: #fcfcfb; }
+.opt-cat.on { border-color: #1c1917; background: #fafaf9; box-shadow: inset 0 0 0 1px #1c1917; }
+.opt-cat-top { display: flex; align-items: center; gap: 7px; }
+.opt-cat-box {
+  flex: none; width: 14px; height: 14px; border-radius: 4px; border: 1px solid #d6d3d1;
+  color: #fff; font-size: 10px; line-height: 12px; text-align: center;
+}
+.opt-cat.on .opt-cat-box { background: #1c1917; border-color: #1c1917; }
+.opt-cat-name { font-size: 12.5px; font-weight: 500; }
+.opt-cat-eg { display: block; margin-top: 4px; color: #a8a29e; font-size: 11px; line-height: 1.5; }
+.opt-summary { margin: 10px 0 0; font-size: 12px; color: #44403c; }
+.opt-tag {
+  margin-left: 8px; padding: 1px 6px; border-radius: 999px;
+  border: 1px solid #d6d3d1; color: #78716c; font-size: 10.5px;
+}
+
+.opt-details { margin-top: 8px; padding-top: 8px; border-top: 1px solid #f5f5f4; }
+.opt-details summary { cursor: pointer; font-size: 11.5px; color: #78716c; }
+.opt-details summary:hover { color: #1c1917; }
+.opt-list { margin: 8px 0 0; padding-left: 16px; color: #57534e; font-size: 11.5px; line-height: 1.75; }
+.opt-list b { font-weight: 500; color: #292524; }
+
+/* 招呼语预览：外壳做出"聊天里那条消息"的感觉，一眼能看出读者会看到什么 */
+.opt-preview { margin: 2px 0 12px; padding: 9px 11px; border: 1px solid #e7e5e4; border-radius: 8px; background: #fafaf9; }
+.opt-preview-head { display: flex; justify-content: space-between; gap: 8px; color: #a8a29e; font-size: 11px; }
+.opt-count { font-variant-numeric: tabular-nums; }
+.opt-count.over { color: #a32d2d; }
+.opt-preview-text { margin: 6px 0 0; color: #292524; font-size: 12px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+
+.opt-switch { display: flex; align-items: flex-start; gap: 8px; padding: 8px 0; border-bottom: 1px solid #f5f5f4; }
+.opt-switch:last-of-type { border-bottom: 0; }
+.opt-switch input { margin-top: 2px; }
+.opt-switch b { display: block; font-size: 12px; font-weight: 500; }
+.opt-switch em { display: block; margin-top: 3px; color: #a8a29e; font-size: 11px; font-style: normal; line-height: 1.6; }
+
+.opt-rules { margin-top: 10px; padding: 9px 11px; background: #fafaf9; border-radius: 8px; }
+.opt-rules-title { color: #78716c; font-size: 11.5px; }
+.opt-rules .opt-list { margin-top: 4px; }
+
+.opt-savebar {
+  position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin: 0 -16px; padding: 10px 16px;
+  background: rgba(250, 250, 249, .94); backdrop-filter: blur(6px); border-top: 1px solid #e7e5e4;
+}
+.opt-saved { color: #78716c; font-size: 12px; }
+.opt-dirty { color: #92400e; font-size: 12px; }
+.opt-error { color: #a32d2d; font-size: 12px; }
+
+@media (max-width: 560px) {
+  .opt-cats { grid-template-columns: 1fr; }
+}
