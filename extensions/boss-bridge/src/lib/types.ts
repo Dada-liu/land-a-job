@@ -85,6 +85,11 @@ export interface StagedJob {
   greetSkipReason?: string
   /** 定制招呼语已发出的时间；默认招呼语的时间记在 greetedAt */
   greetSentAt?: number
+  /**
+   * 自动发定制语失败/对不上会话的时间。冷却期内不再挑这一条，
+   * 避免同一条一直失败把动作全耗光。
+   */
+  greetSentSkippedAt?: number
   repliedAt?: number
   /** 用户自己接手了会话时置 true，自动化立即停止（ai-job 原则） */
   manual?: boolean

@@ -13,6 +13,7 @@ import { canSend, canUpload, sanitizeFileName } from '../src/lib/attachment.js'
 import { LandBridge } from '../src/lib/bridge.js'
 import type { ContentRequest, ContentResponse, RuntimeRequest, RuntimeResponse, RuntimeStatus } from '../src/lib/messages.js'
 import { MESSAGE_SCHEMA_VERSION } from '../src/lib/messages.js'
+import { buildGreeting } from '../src/lib/greeting.js'
 import { detectSent } from '../src/lib/outgoing.js'
 import { parseResponse, type CapturedResponse, type ConversationItem } from '../src/lib/parsers.js'
 import { runPipeline, type ActionResult } from '../src/lib/pipeline.js'
@@ -279,6 +280,23 @@ interface AutoOutcome {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+/** 在已附着的标签里发一次真实滚轮（页面只认滚轮，改 scrollTop 不加载） */
+async function dispatchWheel(tabId: number, point: { x: number; y: number }, deltaY: number): Promise<boolean> {
+  try {
+    await chrome.debugger.sendCommand({ tabId }, 'Input.dispatchMouseEvent', {
+      type: 'mouseWheel',
+      x: point.x,
+      y: point.y,
+      deltaX: 0,
+      deltaY,
+      modifiers: 0,
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** 在已附着的标签里执行一段 JS 拿值；失败返回 null，由调用方决定怎么兜底 */
 async function evalInTab<T>(tabId: number, expression: string): Promise<T | null> {
   try {
@@ -516,6 +534,120 @@ async function autoGreet(key: string, tab: ZhipinTab): Promise<AutoOutcome> {
   return { ok: true, message: `${job?.brandName ?? key}：已点「立即沟通」，等回执确认` }
 }
 
+/** 找已打开的消息页；自动发定制语只在这一页里操作，绝不新开标签 */
+async function findChatTab(): Promise<number | null> {
+  try {
+    const tabs = await chrome.tabs.query({ url: 'https://www.zhipin.com/web/geek/chat*' })
+    return tabs.find((t) => t.id !== undefined)?.id ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 打开目标公司的会话。找不到就在会话列表里**边滚边找**。
+ *
+ * 消息页的会话列表是虚拟列表（始终只有 ~40 个 `.friend-content`，滚动时内容在换），
+ * 所以「滚到底再找一次」永远找不到；只能滚一段、匹配一次。
+ */
+async function openConversationInChat(chatTab: number, brandName: string): Promise<AutoOutcome> {
+  const open = () => sendToTab<ContentResponse>(chatTab, { type: 'CONTENT_OPEN_CONVERSATION', brandName })
+  const first = await open()
+  if (first.ok) return { ok: true, message: first.reason }
+
+  await attachTab(chatTab)
+  /** 先回到列表顶部：上一轮可能把它滚到了底部，从底部只能往下滚，什么都找不到 */
+  await evalInTab(chatTab, `(() => {
+    const list = document.querySelector('.user-list-content');
+    if (list) list.scrollTop = 0;
+    return 1;
+  })()`)
+  await wait(500)
+  const point = await evalInTab<{ x: number; y: number }>(chatTab, `(() => {
+    const list = document.querySelector('.user-list-content') ?? document.querySelector('.friend-content')?.parentElement;
+    if (!list) return null;
+    const b = list.getBoundingClientRect();
+    return { x: Math.round(b.x + b.width / 2), y: Math.round(b.y + b.height / 2) };
+  })()`)
+  if (!point) return { ok: false, skip: true, message: first.reason }
+
+  /**
+   * 会话列表是虚拟列表（页面上始终只有 ~40 个 `.friend-content`，滚动时内容在换），
+   * 所以只能「滚一段、匹配一次」。会话按时间倒序，目标岗位通常在前十几屏内，
+   * 20 屏 × 700px 足够覆盖近期的全部会话；找不到就放弃，不猜。
+   */
+  for (let i = 0; i < 20; i += 1) {
+    if (!(await dispatchWheel(chatTab, point, 700))) break
+    await wait(650)
+    const retry = await open()
+    if (retry.ok) return { ok: true, message: retry.reason }
+  }
+  return { ok: false, skip: true, message: `${first.reason}（滚了 20 屏也没找到）` }
+}
+
+/** 这条岗位的定制语暂时发不出去：冷却 10 分钟再试，别让它一直占着动作 */
+async function markGreetSentSkipped(key: string): Promise<void> {
+  const snap = await store.load()
+  const target = snap.jobs[key]
+  if (!target) return
+  target.greetSentSkippedAt = Date.now()
+  await store.save(snap)
+}
+
+/**
+ * 自动发定制招呼语。
+ *
+ * 文案**现场渲染**：模板来自设置页的「招呼语怎么写」，变量只有岗位名/公司名/薪资
+ * 加上简历里确实有的关键词（`buildGreeting` 本身不编造）。这样用户改完模板，
+ * 下一条发出去的就是新模板，不会用到 pipeline 那轮缓存下来的旧草稿。
+ *
+ * 两个前置条件：消息页已经打开、会话能按公司名对上。任一不满足就放弃，绝不乱发。
+ */
+async function autoSendGreeting(key: string): Promise<AutoOutcome> {
+  const data = await store.load()
+  const job = data.jobs[key]
+  if (!job) return { ok: false, message: '暂存记录不存在' }
+  if (job.greetSentAt) return { ok: false, skip: true, message: `${job.brandName}：定制招呼语已经发过了` }
+  if (job.manual) return { ok: false, skip: true, message: `${job.brandName}：你已经接手这个会话，自动化不介入` }
+
+  const settings = await getSettings()
+  const text = buildGreeting(settings.greetingTemplate, job, settings.highlights)
+  if (!text.trim()) return { ok: false, message: '招呼语模板渲染出来是空的，检查一下设置页' }
+
+  const chatTab = await findChatTab()
+  if (chatTab === null) {
+    /** 环境没就绪，不算失败：否则开着自动发、又忘了开消息页，5 分钟就把全自动熔断 */
+    return { ok: false, skip: true, message: '没有打开 BOSS 消息页（自动发定制语只在你自己的页面上操作）' }
+  }
+
+  const opened = await openConversationInChat(chatTab, job.brandName)
+  if (!opened.ok) {
+    /** 会话列表里对不上公司名：不猜、不发，冷却 10 分钟再试，免得同一条把动作全耗光 */
+    await markGreetSentSkipped(key)
+    return { ok: false, skip: true, message: opened.message }
+  }
+  await wait(600)
+
+  const sent = await sendToTab<ContentResponse>(chatTab, {
+    type: 'CONTENT_SEND_MESSAGE',
+    text,
+    expectBrand: job.brandName,
+  })
+  if (!sent.ok) {
+    await markGreetSentSkipped(key)
+    return { ok: false, message: sent.reason }
+  }
+
+  const after = await store.load()
+  const target = after.jobs[key]
+  if (target) {
+    target.greetSentAt = Date.now()
+    await store.save(after)
+  }
+  log(`${job.brandName}：已自动发送定制招呼语（${text.length} 字）`)
+  return { ok: true, message: `${job.brandName}：已发送定制招呼语` }
+}
+
 async function executeAuto(decision: AutoDecision, tab: ZhipinTab): Promise<AutoOutcome> {
   const check = limiter.canAct()
   if (!check.ok && check.waitMs === 0) return { ok: false, message: check.reason }
@@ -541,7 +673,8 @@ async function executeAuto(decision: AutoDecision, tab: ZhipinTab): Promise<Auto
       limiter.noteRequest()
       return autoGreet(decision.jobKey, tab)
     case 'sendGreeting':
-      return { ok: false, message: '自动发定制招呼语尚未接入（P3）' }
+      limiter.noteRequest()
+      return autoSendGreeting(decision.jobKey)
     case 'sendResume':
       return { ok: false, message: '自动发简历尚未接入（P4）' }
     default:
@@ -643,8 +776,14 @@ async function tickAuto(): Promise<void> {
      * 点空 → 失败 → 连续 5 次又把自己停下，表现就是「开了打招呼但一条没打」。
      */
     ready: reachable(readyKeys),
+    /**
+     * 定制招呼语：所有「打过招呼、还没发定制版」的都排队。
+     * 文案在执行时用**当前设置里的模板**现渲染，用户改了模板立刻生效，
+     * 不再依赖 pipeline 那一轮缓存下来的 `greetDraft`。
+     */
     pendingGreeting: jobs
-      .filter((j) => j.state === 'greeted' && j.greetDraft && !j.greetSentAt)
+      .filter((j) => j.state === 'greeted' && !j.greetSentAt
+        && !(j.greetSentSkippedAt && now - j.greetSentSkippedAt < AUTO_GREET_SKIP_MS))
       .sort(byNewest)
       .map((j) => j.key),
     pendingResume: [],

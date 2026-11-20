@@ -192,55 +192,21 @@ export function PopupApp() {
   /** 全自动的实时状态；未开启时也带上（显示"未开启"而不是整块消失） */
   const auto = status?.auto
 
-  const ready = staged.filter((j) => j.state === 'ready')
-  /**
-   * 已手动打过招呼：定制招呼语只给这一类生成，没打过招呼的不产出文案。
-   * 按打招呼时间倒序——刚在 BOSS 上点过「立即沟通」的那家排最上面，方便马上复制发出；
-   * 缺时间的（历史回填不完整的）沉到最后，内部再按抓取时间新→旧。
-   */
-  const greeted = staged
-    .filter((j) => j.state === 'greeted')
-    .sort((a, b) => {
-      if (a.greetedAt && b.greetedAt) return b.greetedAt - a.greetedAt
-      if (a.greetedAt) return -1
-      if (b.greetedAt) return 1
-      return b.capturedAt - a.capturedAt
-    })
   const replied = staged.filter((j) => j.state === 'replied')
   const tailored = staged.filter((j) => j.state === 'tailored')
   const uploaded = staged.filter((j) => j.state === 'uploaded')
   const sentJobs = staged.filter((j) => j.state === 'sent')
   /** 定制的前提是已落库（P2 建了 queued 投递），所以按钮只对 replied 生效 */
   const canTailor = replied.length > 0
-  const drafts = greeted.filter((j) => j.greetDraft)
-  const allDrafts = drafts
-    .map((j) => `【${j.brandName} · ${j.jobName}】\n${j.greetDraft}`)
-    .join('\n\n')
 
   /** 回复之后才用得到的计数，折叠起来单独显示 */
   const progressTotal = replied.length + tailored.length + uploaded.length + sentJobs.length
-  /** 下一步该点哪个：有回复就定制，有草稿就等回复，什么都没就先去监听 */
-  const currentStep = uploaded.length > 0
-    ? 4
-    : replied.length > 0
-      ? 3
-      : drafts.length === 0
-        ? (status?.capturing ? 2 : 1)
-        : 0
+  /** 下一步该点哪个：有回复就定制，都上传了就等发简历 */
+  const currentStep = uploaded.length > 0 ? 3 : replied.length > 0 ? 2 : 1
 
   useEffect(() => {
     if (progressTotal > 0) setShowProgress(true)
   }, [progressTotal])
-
-  async function copy(text: string) {
-    if (!text) return
-    try {
-      await navigator.clipboard.writeText(text)
-      setToast({ kind: 'ok', text: `已复制 ${text.length} 字` })
-    } catch (e) {
-      setToast({ kind: 'error', text: `复制失败：${(e as Error).message}` })
-    }
-  }
 
   return (
     <div className="wrap">
@@ -279,7 +245,7 @@ export function PopupApp() {
         </div>
       </div>
       {/* 提示条正好落在副标题上：提示期间把它淡出，避免露出半截字 */}
-      <p className={`sub top-sub${toast ? ' dimmed' : ''}`}>默认只出草稿、不碰发送；打开下面的「全自动」才会替你翻页和沟通。</p>
+      <p className={`sub top-sub${toast ? ' dimmed' : ''}`}>默认只翻页、不碰发送；打开下面的「全自动」才会替你打招呼，勾了「自动发定制语」才会按设置里的模板发第二条。</p>
 
       {auto && (
         <div className="card auto">
@@ -334,15 +300,15 @@ export function PopupApp() {
             {status?.capturing ? `监听中 · ${status.attachedTabCount ?? 1} 个页面` : '未开始'}
           </span>
         </div>
-        <div className="row">
-          <span className="label">发送方式</span>
+        <div className="row" title="只影响「筛选并生成招呼语」这条流水线；会不会真的发消息由下面的自动化开关决定">
+          <span className="label">流水线发送</span>
           <span className={`badge ${status?.dryRun ? 'on' : 'warn'}`}>
             {status?.dryRun ? '只出草稿' : '可确认发送'}
           </span>
         </div>
         <div className="row"><span className="label">已收集岗位</span><span className="value">{status?.jobs ?? 0} 条</span></div>
         <div className="row"><span className="label">可打招呼（HR 近期活跃）</span><span className="value">{status?.ready ?? 0} 条</span></div>
-        <div className="row" title="在 BOSS 页面上点过「立即沟通」的公司；定制招呼语只为这些记录生成">
+        <div className="row" title="在 BOSS 页面上点过「立即沟通」的公司；开启「自动发定制语」后，扩展按设置里的模板给这些公司发第二条">
           <span className="label">已打招呼</span><span className="value">{status?.greeted ?? 0} 条</span>
         </div>
 
@@ -391,20 +357,6 @@ export function PopupApp() {
               <div className="actions">
                 <button
                   className="btn"
-                  title="给已打过招呼的岗位按当前模板生成定制招呼语；没打过招呼的不生成"
-                  disabled={busy}
-                  onClick={() => act({ type: 'RUN_PIPELINE' }, '已生成，草稿见下方')}
-                >筛选并生成招呼语</button>
-              </div>
-            </div>
-          </div>
-
-          <div className={`step ${currentStep === 3 ? 'active' : ''}`}>
-            <div className="rail"><span className="step-no" aria-hidden="true">3</span></div>
-            <div className="step-body">
-              <div className="actions">
-                <button
-                  className="btn"
                   title="按岗位 JD 生成一版对应简历，并导出 PDF"
                   disabled={busy || !canTailor}
                   onClick={() => act({ type: 'RUN_TAILOR', keys: replied.map((j) => j.key) }, '已按 JD 定制并导出 PDF')}
@@ -419,8 +371,8 @@ export function PopupApp() {
             </div>
           </div>
 
-          <div className={`step ${currentStep === 4 ? 'active' : ''}`}>
-            <div className="rail"><span className="step-no" aria-hidden="true">4</span></div>
+          <div className={`step ${currentStep === 3 ? 'active' : ''}`}>
+            <div className="rail"><span className="step-no" aria-hidden="true">3</span></div>
             <div className="step-body">
               <div className="actions">
                 <button
@@ -439,43 +391,6 @@ export function PopupApp() {
           </div>
         )}
       </div>
-
-      <h2>定制招呼语（已打招呼 {greeted.length} 条 · 最近的 {Math.min(10, greeted.length)} 条）</h2>
-      <div className="card list drafts">
-        {greeted.length === 0 && (
-          <p className="sub">
-            还没有打过招呼的公司。先到 BOSS 岗位页点「立即沟通」发出默认招呼语，扩展记下后再点「筛选并生成招呼语」。
-            {ready.length > 0 ? `（现在有 ${ready.length} 条可打招呼）` : ''}
-          </p>
-        )}
-        {greeted.slice(0, 10).map((job) => (
-          <div className="draft" key={job.key}>
-            <div className="draft-head">
-              <span className="draft-title">{job.brandName} · {job.jobName}</span>
-              <button
-                className="copy"
-                disabled={!job.greetDraft}
-                onClick={() => void copy(job.greetDraft ?? '')}
-              >复制</button>
-            </div>
-            {/* 空草稿用 pending，别用 empty：staging 页的 .empty 带 44px 上下内边距 */}
-            <p className={job.greetDraft ? 'draft-text' : 'draft-text pending'}>
-              {job.greetDraft ?? '待生成（再点一次「筛选并生成招呼语」）'}
-            </p>
-          </div>
-        ))}
-      </div>
-      {greeted.length > 0 && (
-        <div className="actions">
-          <button className="btn" onClick={() => void copy(allDrafts)}>复制全部草稿（{drafts.length}）</button>
-          <button
-            className="btn"
-            disabled={busy || drafts.length === 0}
-            onClick={() => act({ type: 'CLEAR_DRAFTS' }, '草稿已清空，再点「筛选并生成招呼语」按当前模板重写')}
-          >重生成草稿</button>
-        </div>
-      )}
-      <p className="hint">顺序是：你先在 BOSS 上点「立即沟通」发默认招呼语 → 扩展记下时间并生成定制版 → 你复制定制版去聊天页发第二条。扩展不会替你点发送。</p>
 
       {replied.length > 0 && (
         <>

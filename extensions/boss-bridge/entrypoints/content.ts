@@ -66,9 +66,16 @@ async function uploadPdf(fileName: string, base64: string): Promise<ContentRespo
 }
 
 async function openConversation(brandName: string): Promise<ContentResponse> {
+  /**
+   * 匹配用的是 `.name-box` 而不是 `.name-text`：
+   * 会话项的标题是「人名 + 公司名 + 职位」（如「陈女士微创软件招聘者」），
+   * `.name-text` 只有人名，拿公司名去匹配永远找不到。
+   */
   const items = Array.from(document.querySelectorAll('.friend-content')).map((el) => ({
     el,
-    label: String(el.querySelector('.name-text')?.textContent ?? el.textContent ?? '').trim(),
+    label: String(
+      el.querySelector('.name-box')?.textContent ?? el.querySelector('.name-text')?.textContent ?? el.textContent ?? '',
+    ).trim(),
   }))
   if (!items.length) return { ok: false, reason: '会话列表还没渲染出来（.friend-content 为 0）' }
 
@@ -78,13 +85,79 @@ async function openConversation(brandName: string): Promise<ContentResponse> {
   }
   ;(hit.el as HTMLElement).click()
 
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    await sleep(500)
+  /**
+   * 用时间预算等输入区出现。写死「20 × 500ms」在后台标签页会变成 20 秒
+   * （setTimeout 被节流到 1s），一撞上 background 的 12 秒超时就报「内容脚本没响应」。
+   */
+  const deadline = Date.now() + 6_000
+  while (Date.now() < deadline) {
+    await sleep(250)
     if (document.querySelector('.chat-input[contenteditable="true"]')) {
       return { ok: true, reason: `已打开「${brandName}」的会话`, value: hit.label }
     }
   }
-  return { ok: false, reason: `点了「${brandName}」，但 10 秒内聊天输入区没出现` }
+  return { ok: false, reason: `点了「${brandName}」，但 6 秒内聊天输入区没出现` }
+}
+
+/**
+ * 在已打开的会话里发一条文本。
+ *
+ * 只服务「自动发定制招呼语」：文本来自设置里的「招呼语怎么写」模板（`buildGreeting` 渲染），
+ * 用户显式打开那个开关才走到这里。发错人不可撤销，所以：
+ * 1. 能读到对方名字就核对，对不上不发；
+ * 2. 写完先校验输入框内容，再等发送按钮从 disabled 变可点；
+ * 3. 发送后用「输入框被清空」确认真的发出去了。
+ */
+async function sendMessage(text: string, expectBrand?: string): Promise<ContentResponse> {
+  const content = text.trim()
+  if (!content) return { ok: false, reason: '要发送的内容是空的，已放弃' }
+  if (content.length > 600) return { ok: false, reason: `内容太长（${content.length} 字），已放弃发送` }
+
+  const header = String(
+    document.querySelector('.chat-content .title, .chat-content .name, .chat-detail .name, .chat-im .name')
+      ?.textContent ?? '',
+  ).trim()
+  if (expectBrand && header && !header.includes(expectBrand)) {
+    return { ok: false, reason: `当前会话是「${header}」，不是「${expectBrand}」，已放弃发送` }
+  }
+
+  const input = document.querySelector('.chat-input[contenteditable="true"]') as HTMLElement | null
+  if (!input) return { ok: false, reason: '找不到聊天输入框（.chat-input[contenteditable=true]）' }
+
+  input.focus()
+  /** 先清空：上一条没发出去的内容留在框里会被拼在一起 */
+  const range = document.createRange()
+  range.selectNodeContents(input)
+  const selection = window.getSelection()
+  selection?.removeAllRanges()
+  selection?.addRange(range)
+  document.execCommand('delete')
+  document.execCommand('insertText', false, content)
+
+  const written = String(input.innerText ?? '').trim()
+  if (!written.includes(content.slice(0, 8))) {
+    return { ok: false, reason: '文本没写进输入框（可能被富文本拦截），已放弃发送' }
+  }
+
+  /** 等发送按钮从 disabled 变可点：Vue 要等 input 事件生效才解除禁用 */
+  const deadline = Date.now() + 3_000
+  let button: HTMLElement | null = null
+  while (Date.now() < deadline) {
+    const candidate = document.querySelector('.chat-op .btn-send, .btn-sure-v2') as HTMLElement | null
+    if (candidate && !candidate.className.includes('disabled')) {
+      button = candidate
+      break
+    }
+    await sleep(200)
+  }
+  if (!button) return { ok: false, reason: '发送按钮一直是禁用状态，已放弃发送' }
+
+  button.click()
+  await sleep(1_200)
+  /** 真发出去后 BOSS 会清空输入框，这是最可靠的成功信号 */
+  const left = String(input.innerText ?? '').trim()
+  if (left) return { ok: false, reason: '点了发送但输入框没清空，可能没发出去（去会话里确认一下）' }
+  return { ok: true, reason: `已发送（${content.length} 字）`, value: content.slice(0, 40) }
 }
 
 function checkResumeButton(): ContentResponse {
@@ -458,6 +531,8 @@ export default defineContentScript({
             return uploadPdf(message.fileName, message.base64)
           case 'CONTENT_OPEN_CONVERSATION':
             return openConversation(message.brandName)
+          case 'CONTENT_SEND_MESSAGE':
+            return sendMessage(message.text, message.expectBrand)
           case 'CONTENT_CHECK_RESUME_BUTTON':
             return checkResumeButton()
           case 'CONTENT_SCROLL_CONVERSATIONS':

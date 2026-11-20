@@ -32,11 +32,17 @@ export type RuntimeRequest =
   /** 自动化参数：按 patch 合并，popup 只传要改的字段 */
   | { type: 'SET_AUTO_SETTINGS'; auto: Partial<AutoSettings> }
 
-/** background → 内容脚本；确定性 DOM 动作，绝不代发聊天消息 */
+/** background → 内容脚本；确定性 DOM 动作。只有 `CONTENT_SEND_MESSAGE` 会代发消息，
+ *  且仅用于用户显式开启的「自动发定制招呼语」 */
 export type ContentRequest =
   | { type: 'CONTENT_SELF_CHECK' }
   | { type: 'CONTENT_UPLOAD_PDF'; fileName: string; base64: string }
   | { type: 'CONTENT_OPEN_CONVERSATION'; brandName: string }
+  /**
+   * 在已打开的会话里发一条文本。
+   * `expectBrand` 用于发送前核对当前会话，对不上就不发——发错人不可撤销。
+   */
+  | { type: 'CONTENT_SEND_MESSAGE'; text: string; expectBrand?: string }
   | { type: 'CONTENT_CHECK_RESUME_BUTTON' }
   /** 只滚动会话列表，触发页面自己加载后续分页；不点击、不输入、不发请求 */
   | { type: 'CONTENT_SCROLL_CONVERSATIONS' }
