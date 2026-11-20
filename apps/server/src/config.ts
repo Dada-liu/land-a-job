@@ -27,6 +27,18 @@ export const DEFAULT_PORT = Number.parseInt(process.env.LAND_PORT ?? '', 10) || 
 
 export const APP_VERSION = VERSION
 
+export interface PositionHubConfig {
+  baseUrl: string
+  token: string
+}
+
+export function readPositionHubConfig(): PositionHubConfig | null {
+  const baseUrl = process.env.POSITION_HUB_BASE_URL?.trim().replace(/\/+$/, '')
+  const token = process.env.POSITION_HUB_TOKEN?.trim()
+  if (!baseUrl || !token) return null
+  return { baseUrl, token }
+}
+
 /**
  * 允许跨域调用本机 API 的 Chrome 扩展 ID 白名单（逗号分隔，默认空＝关闭）。
  * 扩展 manifest 里用 key 固定 ID，这里填同一个值。

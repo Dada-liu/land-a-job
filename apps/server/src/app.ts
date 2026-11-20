@@ -1,7 +1,7 @@
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify'
 import { closeAllSessions } from './apply/session.js'
 import { registerAuth } from './auth.js'
-import { EXTENSION_ORIGINS } from './config.js'
+import { EXTENSION_ORIGINS, readPositionHubConfig, type PositionHubConfig } from './config.js'
 import { registerExtensionCors } from './extension-cors.js'
 import { openDb, type Db } from './db/index.js'
 import { registerErrorHandler } from './errors.js'
@@ -19,6 +19,8 @@ export interface BuildAppOptions {
   logger?: FastifyBaseLogger | false
   /** 扩展 CORS 白名单；不传时读 LAND_EXTENSION_ORIGINS（默认空＝关闭） */
   extensionOrigins?: ReadonlySet<string>
+  /** 公开岗位库上游；不传时读 POSITION_HUB_BASE_URL / POSITION_HUB_TOKEN */
+  positionHub?: PositionHubConfig | null
 }
 
 export interface LandApp {
@@ -50,7 +52,13 @@ export async function buildApp(options: BuildAppOptions): Promise<LandApp> {
   registerAuth(app, options.token)
 
   const ws = attachWs(app.server)
-  registerRoutes(app, { db, token: options.token, ws, port: options.port })
+  registerRoutes(app, {
+    db,
+    token: options.token,
+    ws,
+    port: options.port,
+    positionHub: options.positionHub === undefined ? readPositionHubConfig() : options.positionHub,
+  })
 
   if (options.webRoot) await registerStatic(app, options.webRoot)
 

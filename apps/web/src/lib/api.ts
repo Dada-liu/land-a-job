@@ -110,7 +110,7 @@ async function readError(res: Response): Promise<ApiError> {
   }
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+async function requestEnvelope<T>(method: string, path: string, body?: unknown): Promise<Envelope<T>> {
   const token = await getToken()
   const res = await fetch(`/api${path}`, {
     method,
@@ -123,11 +123,15 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   })
   if (res.status === 401) invalidateToken()
   if (!res.ok) throw await readError(res)
-  const payload = (await res.json()) as Envelope<T>
-  return payload.data
+  return (await res.json()) as Envelope<T>
+}
+
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  return (await requestEnvelope<T>(method, path, body)).data
 }
 
 export const apiGet = <T>(path: string): Promise<T> => request<T>('GET', path)
+export const apiGetPage = <T>(path: string): Promise<Envelope<T[]>> => requestEnvelope<T[]>('GET', path)
 export const apiPost = <T>(path: string, body?: unknown): Promise<T> => request<T>('POST', path, body)
 export const apiPatch = <T>(path: string, body: unknown): Promise<T> => request<T>('PATCH', path, body)
 export const apiDelete = <T>(path: string, body?: unknown): Promise<T> => request<T>('DELETE', path, body)
@@ -300,6 +304,51 @@ export const patchJob = (id: string, body: Partial<JobInput> & Record<string, un
   apiPatch<JobDto>(`/jobs/${id}`, body)
 export const deleteJob = (id: string): Promise<{ id: string; deleted: boolean }> =>
   apiDelete<{ id: string; deleted: boolean }>(`/jobs/${id}`)
+
+export interface PublicJobSummaryDto extends JobSummaryDto {
+  companyName: string
+  cities: string[]
+  salaryText: string | null
+  source: string | null
+  externalId: string | null
+  department: string | null
+  employmentType: string | null
+  postedAt: string | null
+  firstSeenAt: string
+  lastSeenAt: string
+}
+
+export interface PublicJobListParams {
+  q?: string
+  status?: string
+  city?: string
+  sort?: 'updated' | 'posted' | 'firstSeen'
+  limit?: number
+  cursor?: string
+}
+
+export interface PublicJobPage {
+  items: PublicJobSummaryDto[]
+  limit: number
+  nextCursor: string | null
+}
+
+export const listPublicJobs = async (params: PublicJobListParams = {}): Promise<PublicJobPage> => {
+  const search = new URLSearchParams({ limit: String(params.limit ?? 50) })
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '' || key === 'limit') continue
+    search.set(key, String(value))
+  }
+  const page = await apiGetPage<PublicJobSummaryDto>(`/public-jobs?${search.toString()}`)
+  return {
+    items: page.data,
+    limit: page.meta?.limit ?? params.limit ?? 50,
+    nextCursor: page.meta?.nextCursor ?? null,
+  }
+}
+
+export const favoritePublicJob = (id: string): Promise<{ job: JobDto; duplicate: boolean }> =>
+  apiPost<{ job: JobDto; duplicate: boolean }>(`/public-jobs/${encodeURIComponent(id)}/favorite`, {})
 
 /* ------------------------------- 投递 ------------------------------- */
 

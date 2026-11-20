@@ -183,6 +183,37 @@ const dict: Dict = {
   选择公司: 'Choose a company',
   '把招聘要求整段粘进来；关键词和匹配度都是从这段文字里算的':
     'Paste the full requirements here; keywords and fit are both derived from this text.',
+
+  // ——— 公开库与收藏 ———
+  私有库: 'Private library',
+  公开库: 'Public library',
+  '岗位来自 Position Hub 的公开职位仓库。收藏后会带入完整 JD，并出现在私有库中。':
+    'Jobs come from the Position Hub public repository. Favorites include the full JD and appear in your private library.',
+  '收藏失败：{message}': 'Could not save favorite: {message}',
+  公开库城市筛选: 'Filter public jobs by city',
+  公开库状态筛选: 'Filter public jobs by status',
+  公开库排序: 'Sort public jobs',
+  按发布时间: 'By posting date',
+  按收录时间: 'By collection date',
+  '本页 {count} 个岗位': '{count} jobs on this page',
+  '搜索公开岗位、公司、城市、关键词或 JD 正文': 'Search public jobs, companies, cities, keywords, or JD text',
+  搜索公开岗位: 'Search public jobs',
+  '加载公开岗位…': 'Loading public jobs…',
+  没有符合条件的公开岗位: 'No public jobs match these filters',
+  '换个关键词或城市再试。': 'Try another keyword or city.',
+  更新时间: 'Updated',
+  操作: 'Actions',
+  '已收藏 {title}': 'Saved {title}',
+  '收藏 {title}': 'Save {title}',
+  已收藏: 'Saved',
+  '收藏中…': 'Saving…',
+  收藏: 'Save',
+  上一页: 'Previous',
+  '第 {page} 页': 'Page {page}',
+  '加载中…': 'Loading…',
+  下一页: 'Next',
+  '该岗位已在私有库': 'This job is already in your private library',
+  已收藏到私有库: 'Saved to your private library',
 }
 
 export default dict

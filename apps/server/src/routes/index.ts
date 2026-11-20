@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { APP_VERSION, SERVICE_NAME } from '../config.js'
+import { APP_VERSION, SERVICE_NAME, type PositionHubConfig } from '../config.js'
 import { countTables, schemaVersion, type Db } from '../db/index.js'
 import { ok } from '../reply.js'
 import { scanSkills } from '../skills/scan.js'
@@ -12,6 +12,7 @@ import { registerHealthRoutes } from './health.js'
 import { registerInterviewRoutes } from './interviews.js'
 import { registerJobRoutes } from './jobs.js'
 import { registerOfferRoutes } from './offers.js'
+import { registerPublicJobRoutes } from './public-jobs.js'
 import { registerQuestionRoutes } from './questions.js'
 import { registerResumeRoutes } from './resumes.js'
 import { registerSettingsRoutes } from './settings.js'
@@ -23,6 +24,7 @@ export interface RouteDeps {
   token: string
   ws: WsHub
   port: number
+  positionHub: PositionHubConfig | null
 }
 
 export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
@@ -56,6 +58,7 @@ export function registerRoutes(app: FastifyInstance, deps: RouteDeps): void {
 
   registerCompanyRoutes(app, deps)
   registerJobRoutes(app, deps)
+  registerPublicJobRoutes(app, deps)
   registerResumeRoutes(app, deps)
   registerApplicationRoutes(app, deps)
   registerInterviewRoutes(app, deps)

@@ -13,7 +13,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['packages/*/test/**/*.test.ts', 'apps/*/test/**/*.test.ts'],
+    include: ['packages/*/test/**/*.test.{ts,tsx}', 'apps/*/test/**/*.test.{ts,tsx}'],
     // html.ts 动态 import jsdom（约 3MB）在并行 worker 里首次转译可到 10s+；
     // 20s 会在 CI 并发时把「慢但正确」的用例误判成超时。
     testTimeout: 45_000,
