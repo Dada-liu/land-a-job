@@ -110,6 +110,20 @@ function log(message: string): void {
   console.log('[boss-bridge]', message)
 }
 
+/**
+ * 待机原因也要进日志。
+ *
+ * 之前只在真正执行动作时 log，idle/wait 只写进 state.waitReason——用户看到的是
+ * "开了自动但什么都没发生"，事后连原因都查不到（state 会被下一次动作覆盖）。
+ * 同一句原因只记一次，免得每分钟刷屏。
+ */
+let lastAutoNote = ''
+function noteAutoIdle(reason: string): void {
+  if (reason === lastAutoNote) return
+  lastAutoNote = reason
+  log(`自动化待机：${reason}`)
+}
+
 /** 复用已开的页面标签，没有就后台新建一个；返回 tabId 供内容脚本通信 */
 async function ensureTab(url: string): Promise<number | null> {
   const pattern = `${url}*`
@@ -360,7 +374,9 @@ async function tickAuto(): Promise<void> {
 
   const tab = await findZhipinTab((id) => readySet.has(id))
   if (tab === null) {
-    await saveAutoState({ ...state, waitReason: '没有打开的 BOSS 岗位页（自动化只在你自己的页面上运行）', lastTickAt: now })
+    const reason = '没有打开的 BOSS 岗位页（自动化只在你自己的页面上运行）'
+    noteAutoIdle(reason)
+    await saveAutoState({ ...state, waitReason: reason, lastTickAt: now })
     return
   }
 
@@ -371,7 +387,9 @@ async function tickAuto(): Promise<void> {
    */
   const alive = await sendToTab<ContentResponse>(tab.tabId, { type: 'CONTENT_SELF_CHECK' })
   if (!alive.ok && /Receiving end does not exist|Could not establish connection/.test(alive.reason)) {
-    await saveAutoState({ ...state, waitReason: `BOSS 页面还没接管新代码，刷新一下该页面会自动继续（${alive.reason.slice(0, 40)}）`, lastTickAt: now })
+    const reason = 'BOSS 页面还没接管新代码，刷新一下该页面会自动继续'
+    noteAutoIdle(reason)
+    await saveAutoState({ ...state, waitReason: reason, lastTickAt: now })
     return
   }
 
@@ -420,7 +438,13 @@ async function tickAuto(): Promise<void> {
 
   const decision = decideAuto(ctx)
   if (decision.kind === 'idle' || decision.kind === 'wait') {
-    const reason = detailTargets.length > 0 && ctx.detailTargets.length === 0 && decision.kind === 'idle'
+    /**
+     * 只有在决策本身说不出原因时（兜底的"没有待处理项"）才补一句"卡片不在本页"。
+     * 之前无条件覆盖，把"预算已满"这类明确原因也盖成"没有待办卡片"，
+     * 排查时会一路查错方向。
+     */
+    const vague = decision.kind === 'idle' && decision.reason.includes('当前没有待处理项')
+    const reason = vague && detailTargets.length > 0 && ctx.detailTargets.length === 0
       ? `列表页上没有待办的岗位卡片（${detailTargets.length} 条候选不在当前搜索结果里，换个关键词或往下滚）`
       : decision.reason
     await saveAutoState({
@@ -429,6 +453,7 @@ async function tickAuto(): Promise<void> {
       waitReason: reason,
       lastTickAt: now,
     })
+    noteAutoIdle(reason)
     return
   }
 
@@ -437,6 +462,8 @@ async function tickAuto(): Promise<void> {
     ? { ...afterAction(state, decision, Date.now(), effective), waitReason: outcome.message, lastTickAt: now }
     : { ...afterFailure(state, Date.now(), outcome.message), lastTickAt: now }
   await saveAutoState(next)
+  /** 动过手就把待机提示清掉，下次真正停下时能重新记一条 */
+  lastAutoNote = ''
   log(`自动化${outcome.ok ? '' : '失败'}：${outcome.message}`)
   await persistLimiter()
 }
@@ -1283,7 +1310,17 @@ export default defineBackground(() => {
             result: toAutoSnapshot(await getAutoState(), await getAutoSettings(), Date.now()),
           }
         case 'SET_AUTO_SETTINGS': {
+          const before = await getAutoSettings()
           const settings = await saveAutoSettings(message.auto)
+          /** 开关变更记一行：事后排查"到底开的是哪一项"全靠它 */
+          const labels: Record<string, string> = {
+            scan: '自动翻页', scanDetail: '自动读详情', greet: '自动打招呼',
+            sendGreeting: '自动发定制语', sendResume: '自动发简历',
+          }
+          const changed = Object.keys(labels)
+            .filter((k) => (before as unknown as Record<string, boolean>)[k] !== (settings as unknown as Record<string, boolean>)[k])
+            .map((k) => `${labels[k]}→${(settings as unknown as Record<string, boolean>)[k] ? '开' : '关'}`)
+          if (changed.length) log(`自动化开关变更：${changed.join('、')}`)
           if (settings.enabled) {
             await chrome.alarms.create(AUTO_ALARM_NAME, { periodInMinutes: AUTO_TICK_MINUTES })
           } else {

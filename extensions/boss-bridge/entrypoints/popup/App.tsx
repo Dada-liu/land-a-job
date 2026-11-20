@@ -295,7 +295,8 @@ export function PopupApp() {
               读详情 {auto.scannedToday}/{auto.limits.scan} · 招呼 {auto.greetedToday}/{auto.limits.greet} · 消息 {auto.sentToday}/{auto.limits.send}
             </span>
           </div>
-          <p className="sub auto-note">{auto.lastStepText ?? auto.waitReason ?? '尚未执行任何动作'}</p>
+          {/* 待机原因比上一步动作更新鲜：先显示它，否则"翻了一屏"会一直挂在那里把原因盖住 */}
+          <p className="sub auto-note">{auto.waitReason ?? auto.lastStepText ?? '尚未执行任何动作'}</p>
 
           <div className="actions">
             <button className="btn primary" disabled={busy || auto.enabled} onClick={() => void act({ type: 'START_AUTO' }, '已开启全自动，每分钟推进一个动作')}>

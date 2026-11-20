@@ -150,6 +150,25 @@ describe('decideAuto 的优先级与预算', () => {
     expect(decision.kind).toBe('idle')
   })
 
+  it('手头有可打的岗位时先打招呼，不先翻页', () => {
+    /** 翻页间隔早已到点，但屏幕上有 ready → 必须先动手，否则"开了自动却毫无动静" */
+    const decision = decideAuto(ctx({
+      settings: settings({ scan: true, scanDetail: false, greet: true }),
+      state: state({ lastScrollAt: 0 }),
+      ready: ['r1'],
+    }))
+    expect(decision).toMatchObject({ kind: 'greet', jobKey: 'r1' })
+  })
+
+  it('没有可打的岗位时才翻页找新的', () => {
+    const decision = decideAuto(ctx({
+      settings: settings({ scan: true, scanDetail: false, greet: true }),
+      state: state({ lastScrollAt: 0 }),
+      ready: [],
+    }))
+    expect(decision.kind).toBe('scroll')
+  })
+
   it('当日达到扫描上限就停（含详情）', () => {
     const decision = decideAuto(ctx({
       settings: settings({ scan: false, scanDetail: true }),

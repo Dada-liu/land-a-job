@@ -200,12 +200,12 @@ export function decideAuto(ctx: AutoContext): AutoDecision {
     return { kind: 'openDetail', jobKey: detailKey, reason: '补一条候选的详情与 JD' }
   }
   /**
-   * 翻页：只是滚动，让页面自己请求下一页岗位。
-   * 间隔刻意长（默认 2 分钟以上）——连续翻页比连续点击更像在刷数据。
+   * 顺序：先做**有明确结果**的动作，最后才是翻页。
+   *
+   * 翻页曾被排在打招呼前面，结果是「打开自动打招呼后第一个动作永远是翻一屏」：
+   * 翻页不涨任何计数、界面毫无变化，用户以为没生效就停了。而屏幕上已经有
+   * 可打的岗位时，翻页本身也没有意义——先把手头的打完再去找新的。
    */
-  if (settings.scan && now - state.lastScrollAt > settings.scrollGapMs) {
-    return { kind: 'scroll', reason: '翻一屏，看看有没有新岗位' }
-  }
   if (settings.greet && state.greetedToday < settings.dailyGreetLimit && greetKey) {
     return { kind: 'greet', jobKey: greetKey, reason: '给一条通过闸门的岗位打招呼' }
   }
@@ -215,11 +215,30 @@ export function decideAuto(ctx: AutoContext): AutoDecision {
   if (settings.sendResume && state.sentToday < settings.dailyMessageLimit && resumeKey) {
     return { kind: 'sendResume', jobKey: resumeKey, reason: '发简历' }
   }
+  /**
+   * 翻页：只是滚动，让页面自己请求下一页岗位。
+   * 间隔刻意长（默认 2 分钟以上）——连续翻页比连续点击更像在刷数据。
+   */
+  if (settings.scan && now - state.lastScrollAt > settings.scrollGapMs) {
+    return { kind: 'scroll', reason: '翻一屏，看看有没有新岗位' }
+  }
 
+  /**
+   * 落到这里说明"有活但做不了"。必须说清是哪一道闸挡的——
+   * 之前统一报"当前没有待处理项"，预算用满也这么显示，用户根本查不出原因。
+   */
+  if (settings.greet && greetKey) {
+    return { kind: 'idle', reason: `今日打招呼已达上限（${state.greetedToday}/${settings.dailyGreetLimit}），明天再来` }
+  }
+  if ((settings.sendGreeting || settings.sendResume) && (messageKey || resumeKey)) {
+    return { kind: 'idle', reason: `今日发消息已达上限（${state.sentToday}/${settings.dailyMessageLimit}），明天再来` }
+  }
   if (settings.scanDetail && state.scannedToday >= settings.dailyScanLimit) {
     return { kind: 'idle', reason: `今日已读 ${state.scannedToday} 条详情，达到上限` }
   }
-  return { kind: 'idle', reason: '当前没有待处理项' }
+  const anySwitch = settings.scan || settings.scanDetail || settings.greet || settings.sendGreeting || settings.sendResume
+  if (!anySwitch) return { kind: 'idle', reason: '开关全关着，先勾一项要它做什么' }
+  return { kind: 'idle', reason: '当前没有待处理项（屏幕上没有符合条件的目标，可能需要翻页或换搜索词）' }
 }
 
 /** 动作成功后推进计数；返回新状态（不改入参） */
