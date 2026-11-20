@@ -10,6 +10,8 @@ import {
   localDay,
   nextGapMs,
   nextWindowStart,
+  scrollGapFor,
+  searchGapFor,
   startAutoState,
   stopAutoState,
   toAutoSnapshot,
@@ -333,6 +335,24 @@ describe('节奏与快照', () => {
       const gap = nextGapMs(settings({ gapMinMs: 4000, gapMaxMs: 12000 }), () => r)
       expect(gap).toBeGreaterThanOrEqual(4000)
       expect(gap).toBeLessThanOrEqual(12000)
+    }
+  })
+
+  it('翻页间隔在 100–200 秒随机，且同一个起点算出的值不变', () => {
+    for (const last of [0, NOW, NOW + 12_345, NOW + 999_999]) {
+      const gap = scrollGapFor(settings(), last)
+      expect(gap).toBeGreaterThanOrEqual(100_000)
+      expect(gap).toBeLessThanOrEqual(200_000)
+      /** 必须可重复：每次 tick 都算一个不同的值，wait until 会来回跳 */
+      expect(scrollGapFor(settings(), last)).toBe(gap)
+    }
+  })
+
+  it('换词间隔在 500–800 秒随机', () => {
+    for (const last of [0, NOW, NOW + 12_345]) {
+      const gap = searchGapFor(settings(), last)
+      expect(gap).toBeGreaterThanOrEqual(500_000)
+      expect(gap).toBeLessThanOrEqual(800_000)
     }
   })
 

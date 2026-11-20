@@ -100,7 +100,12 @@ export const AUTO_DEFAULTS = {
   dailyMessageLimit: 60,
   gapMinMs: 4000,
   gapMaxMs: 12000,
-  scrollGapMs: 120_000,
+  /**
+   * 两次翻页的间隔区间（100–200s）。
+   * 固定间隔本身就是机器特征：真人滚一屏的时间不会精确到秒。
+   */
+  scrollGapMinMs: 100_000,
+  scrollGapMaxMs: 200_000,
   restEvery: 5,
   restMinMs: 60_000,
   restMaxMs: 180_000,
@@ -111,8 +116,9 @@ export const AUTO_DEFAULTS = {
    * 真人不会几分钟换一个关键词，所以它只能当低频兜底，不能当主循环。
    */
   searchKeywords: ['Agent开发', 'AI Agent', '大模型应用开发', 'LLM 应用开发'] as string[],
-  /** 两次换词的最小间隔：比翻页还稀，避免像在扫关键词 */
-  searchGapMs: 10 * 60_000,
+  /** 两次换词的最小间隔区间（500–800s），比翻页稀得多，避免像在扫关键词 */
+  searchGapMinMs: 500_000,
+  searchGapMaxMs: 800_000,
   /** 每天换词上限（含自动翻页挖干的次数），到点就老实待着 */
   dailySearchLimit: 8,
 } as const

@@ -143,14 +143,38 @@ async function ensureTab(url: string): Promise<number | null> {
 }
 
 /** 内容脚本没注入（页面在扩展安装前就开着）时给出可执行的提示，而不是抛栈 */
-async function sendToTab<T extends ContentResponse>(tabId: number, message: ContentRequest): Promise<T> {
+/**
+ * 给内容脚本发消息，**必须带超时**。
+ *
+ * 页面在加载/导航中时 `chrome.tabs.sendMessage` 的 promise 可能一直不 settle，
+ * 而 tickAuto 是每分钟一次的长链：一个 await 挂住，后面每次都挂在同一处，
+ * 表现就是「自动化开着但一动不动，日志一条没有」。超时后返回失败，tick 能继续收尾。
+ */
+async function sendToTab<T extends ContentResponse>(
+  tabId: number,
+  message: ContentRequest,
+  /**
+   * 12 秒而不是 8 秒：后台标签页的 `setTimeout` 会被 Chrome 节流到最少 1 秒，
+   * 内容脚本内部任何按次数写死的等待都会成倍变长（踩过：8×400ms 实际 8 秒）。
+   */
+  timeoutMs = 12_000,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
   try {
-    return (await chrome.tabs.sendMessage(tabId, message)) as T
+    const res = await Promise.race([
+      chrome.tabs.sendMessage(tabId, message),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${Math.round(timeoutMs / 1000)} 秒没有响应`)), timeoutMs)
+      }),
+    ])
+    return res as T
   } catch (error) {
     return {
       ok: false,
       reason: `内容脚本没响应（${(error as Error).message.slice(0, 80)}）；刷新一下该页面再试`,
     } as T
+  } finally {
+    if (timer) clearTimeout(timer)
   }
 }
 
@@ -299,10 +323,10 @@ async function autoScroll(tabId: number): Promise<AutoOutcome> {
   if (!anchor) return { ok: false, message: '找不到可滚的岗位卡片位置' }
 
   /**
-   * 一轮只滚 2–3 段：每滚到底页面补 15 条，滚太多段会在一次动作里连翻 4 页，
-   * 比人快得多。宁可下一轮再滚（间隔 2 分钟），也不要一口气冲到底。
+   * 一轮只滚 1–2 段：每滚到底页面就会补 15 条，滚太多段等于在一次动作里连翻好几页。
+   * 宁可下一轮再滚（间隔 100–200s 随机），也不要一口气冲到底。
    */
-  const steps = 2 + Math.floor(Math.random() * 2)
+  const steps = 1 + Math.floor(Math.random() * 2)
   for (let i = 0; i < steps; i += 1) {
     /** 每段距离和间隔都抖动：固定步长是最容易被识别的机器特征 */
     const deltaY = 380 + Math.round(Math.random() * 220)
@@ -655,9 +679,15 @@ async function tickAuto(): Promise<void> {
   }
 
   const outcome = await executeAuto(decision, tab)
+  /**
+   * 页面正在导航/卸载时消息必然收不到响应。这是环境问题，不是「这条岗位坏了」——
+   * 计进失败次数会让全自动在几次导航后就熔断（表现：开着但一动不动）。
+   */
+  const transient = !outcome.ok
+    && /内容脚本没响应|Receiving end does not exist|Could not establish connection|message channel closed/.test(outcome.message)
   let next = outcome.ok
     ? { ...afterAction(state, decision, Date.now(), effective), waitReason: outcome.message, lastTickAt: now }
-    : outcome.skip
+    : outcome.skip || transient
       ? { ...afterSkip(state, Date.now(), outcome.message), lastTickAt: now }
       : { ...afterFailure(state, Date.now(), outcome.message), lastTickAt: now }
   /**
@@ -670,7 +700,17 @@ async function tickAuto(): Promise<void> {
   await saveAutoState(next)
   /** 动过手就把待机提示清掉，下次真正停下时能重新记一条 */
   lastAutoNote = ''
-  log(`自动化${outcome.ok ? '' : outcome.skip ? '跳过' : '失败'}：${outcome.message}`)
+  /**
+   * 日志必须带「做的是什么动作、对哪个岗位」，否则只看到「内容脚本没响应」根本查不出
+   * 卡在哪个 DOM 动作上——这类超时以前排查了一下午。
+   */
+  const what = decision.kind === 'scroll'
+    ? '翻页'
+    : decision.kind === 'search'
+      ? `换词「${decision.keyword}」`
+      : `${decision.kind === 'greet' ? '打招呼' : '读详情'}（${decision.jobKey.slice(0, 12)}）`
+  const tag = outcome.ok ? '' : (outcome.skip || transient) ? '跳过' : '失败'
+  log(`自动化${tag}：${what} → ${outcome.message}`)
   await persistLimiter()
 }
 
@@ -1261,7 +1301,9 @@ export default defineBackground(() => {
 
   chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === ALARM_NAME) void watchReplies()
-    if (alarm.name === AUTO_ALARM_NAME) void tickAuto()
+    if (alarm.name === AUTO_ALARM_NAME) {
+      void tickAuto().catch((error: Error) => log(`自动化异常：${error.message.slice(0, 120)}`))
+    }
   })
 
   /** service worker 被回收后 alarm 可能丢了，启动时按开关恢复一次 */
@@ -1506,7 +1548,7 @@ export default defineBackground(() => {
           await saveAutoState(state)
           await chrome.alarms.create(AUTO_ALARM_NAME, { periodInMinutes: AUTO_TICK_MINUTES })
           log('已开启全自动：每分钟推进一个动作，随时可以暂停')
-          void tickAuto()
+          void tickAuto().catch((error: Error) => log(`自动化异常：${error.message.slice(0, 120)}`))
           return { ok: true, result: toAutoSnapshot(state, settings, Date.now()) }
         }
         case 'STOP_AUTO': {

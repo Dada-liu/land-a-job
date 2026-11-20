@@ -325,18 +325,15 @@ async function openJobCard(id: string): Promise<ContentResponse> {
 
   link.scrollIntoView({ block: 'center' })
   await sleep(250)
-  link.click()
-
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    await sleep(400)
-    if (paneJobId() === id) {
-      const title = String(
-        document.querySelector('.job-detail-container .job-name, .job-detail-container .name')?.textContent ?? '',
-      ).trim()
-      return { ok: true, reason: `已打开「${title || id}」的详情`, value: id }
-    }
-  }
-  return { ok: false, reason: '点了卡片，但右侧详情没有切到这个岗位（站点可能改成新标签打开）' }
+  /**
+   * **先把响应发出去，再点击**。
+   *
+   * 点卡片有时会整页导航到 `/job_detail/<id>.html`，content script 随页面卸载，
+   * 这时 `sendResponse` 永远发不出去 → background 侧 8 秒超时 → 连点几次把全自动熔断。
+   * 延迟 50ms 点击，让响应先走；点没点上由下一步的 `expectId` 核对兜底。
+   */
+  setTimeout(() => link.click(), 50)
+  return { ok: true, reason: '已点击岗位卡片，等页面切换', value: id }
 }
 
 /**
@@ -406,8 +403,16 @@ async function clickGreet(expectId?: string): Promise<ContentResponse> {
     (el) => String(el.textContent ?? '').trim() === '立即沟通' && clicked(el),
   )
   let button = findButton()
-  for (let attempt = 0; attempt < 12 && !button; attempt += 1) {
-    await sleep(500)
+  /**
+   * 用**时间预算**而不是「次数 × 固定间隔」。
+   *
+   * 后台标签页里 Chrome 会把 `setTimeout` 节流到最少 1 秒，`sleep(400)` 实际是 1 秒；
+   * 写死 8 次就变成 8 秒，正好撞上 background 的 8 秒超时，报「内容脚本没响应」。
+   * 按 deadline 判断，无论被怎么节流都不会超过预算。
+   */
+  const deadline = Date.now() + 4_000
+  while (!button && Date.now() < deadline) {
+    await sleep(200)
     /** 面板换岗位是异步的：每轮都重新核对是不是还在目标岗位上 */
     const now = paneJobId()
     if (expectId && now && now !== expectId) {
@@ -435,7 +440,8 @@ async function clickGreet(expectId?: string): Promise<ContentResponse> {
 
   button.scrollIntoView({ block: 'center' })
   await sleep(200)
-  button.click()
+  /** 同 openJobCard：点完 BOSS 常直接跳聊天页，先回响应再点，否则响应丢在导航里 */
+  setTimeout(() => button.click(), 50)
   return { ok: true, reason: '已点击「立即沟通」，等页面自己发请求', value: here }
 }
 

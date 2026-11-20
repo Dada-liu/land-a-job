@@ -38,16 +38,18 @@ export interface AutoSettings {
   /** 相邻动作间隔区间（毫秒），实际值在区间内随机 */
   gapMinMs: number
   gapMaxMs: number
-  /** 两次翻页的最小间隔：翻页太密就是在刷接口 */
-  scrollGapMs: number
+  /** 两次翻页的最小间隔区间（毫秒），实际值在区间内随机：固定秒数本身就是机器特征 */
+  scrollGapMinMs: number
+  scrollGapMaxMs: number
   /** 每做几个动作强制休息一次 */
   restEvery: number
   restMinMs: number
   restMaxMs: number
   /** 翻页挖干后轮换的搜索词；少于 2 个就当没有兜底 */
   searchKeywords: string[]
-  /** 两次换词的最小间隔 */
-  searchGapMs: number
+  /** 两次换词的最小间隔区间（毫秒），同样随机 */
+  searchGapMinMs: number
+  searchGapMaxMs: number
   /** 每天换词上限 */
   dailySearchLimit: number
 }
@@ -183,6 +185,33 @@ export function nextGapMs(settings: AutoSettings, rng: () => number = Math.rando
   return Math.round(gapMinMs + (gapMaxMs - gapMinMs) * mix)
 }
 
+/**
+ * 伪随机 0~1：同一个种子永远得到同一个值。
+ *
+ * 间隔要随机（固定秒数是机器特征），但**不能每次 tick 都变**——否则第 30 秒算出
+ * 要等 180 秒、第 60 秒又算出只要等 100 秒，`wait until` 会来回跳。
+ * 以"上一次动作的时间"作种子，同一个间隔从头到尾只算出一个值。
+ */
+function hash01(seed: number): number {
+  const x = Math.sin(seed * 12.9898) * 43758.5453
+  return x - Math.floor(x)
+}
+
+function randomBetween(min: number, max: number, seed: number): number {
+  const mix = (hash01(seed + 1) + hash01(seed + 101)) / 2
+  return Math.round(min + (max - min) * mix)
+}
+
+/** 这次翻页要等多久：100–200s 之间，由上次翻页时间决定 */
+export function scrollGapFor(settings: AutoSettings, lastScrollAt: number): number {
+  return randomBetween(settings.scrollGapMinMs, settings.scrollGapMaxMs, lastScrollAt)
+}
+
+/** 这次换词要等多久：500–800s 之间，由上次换词时间决定 */
+export function searchGapFor(settings: AutoSettings, lastSearchAt: number): number {
+  return randomBetween(settings.searchGapMinMs, settings.searchGapMaxMs, lastSearchAt)
+}
+
 function dayRoll(state: AutoState, now: number): AutoState {
   const today = localDay(now)
   if (state.day === today) return state
@@ -205,7 +234,7 @@ export function keywordToTry(
   const list = settings.searchKeywords.filter((k) => k && k.trim())
   if (list.length < 2) return undefined
   if (settings.dailySearchLimit <= 0 || state.searchesToday >= settings.dailySearchLimit) return undefined
-  if (state.lastSearchAt && now - state.lastSearchAt < settings.searchGapMs) return undefined
+  if (state.lastSearchAt && now - state.lastSearchAt < searchGapFor(settings, state.lastSearchAt)) return undefined
   /**
    * 比较时忽略大小写和空格：地址栏里是 `agent开发`，配置里写的是 `Agent开发`，
    * 精确比较会认为「当前词不在列表里」，于是又挑回同一个词，等于换了个寂寞。
@@ -284,12 +313,14 @@ export function decideAuto(ctx: AutoContext): AutoDecision {
   }
   /**
    * 翻页：只是滚动，让页面自己请求下一页岗位。
-   * 间隔刻意长（默认 2 分钟以上）——连续翻页比连续点击更像在刷数据。
+   * 间隔在 100–200s 之间随机（由上次翻页时间决定，同一轮内不变）——
+   * 固定秒数本身就是机器特征。
    *
    * 滚了两轮都没有新卡片，说明这个搜索词挖干了，才轮到换词兜底。
    * 换词比翻页更"重"（一次完整搜索 + 列表重置），所以间隔和每日次数都卡得更死。
    */
-  if (settings.scan && now - state.lastScrollAt > settings.scrollGapMs) {
+  const scrollGap = scrollGapFor(settings, state.lastScrollAt)
+  if (settings.scan && now - state.lastScrollAt > scrollGap) {
     const exhausted = state.scrollStalls >= 2
     const keyword = exhausted ? keywordToTry(settings, state, ctx.currentKeyword, now) : undefined
     if (keyword) {
@@ -303,7 +334,7 @@ export function decideAuto(ctx: AutoContext): AutoDecision {
     if (exhausted) {
       return {
         kind: 'idle',
-        reason: `「${ctx.currentKeyword ?? '当前词'}」已翻到底，换词还要等（今日 ${state.searchesToday}/${settings.dailySearchLimit}，间隔 ${Math.round(settings.searchGapMs / 60_000)} 分钟）`,
+        reason: `「${ctx.currentKeyword ?? '当前词'}」已翻到底，换词还要等（今日 ${state.searchesToday}/${settings.dailySearchLimit}，间隔 ${Math.round(settings.searchGapMinMs / 60_000)}–${Math.round(settings.searchGapMaxMs / 60_000)} 分钟）`,
       }
     }
     return { kind: 'scroll', reason: '往下滚一屏，看看有没有新岗位' }
@@ -324,6 +355,14 @@ export function decideAuto(ctx: AutoContext): AutoDecision {
   }
   const anySwitch = settings.scan || settings.scanDetail || settings.greet || settings.sendGreeting || settings.sendResume
   if (!anySwitch) return { kind: 'idle', reason: '开关全关着，先勾一项要它做什么' }
+  /** 手头没活、只是翻页间隔还没到：说清楚是在等，别报成"没有待处理项" */
+  if (settings.scan && now - state.lastScrollAt <= scrollGap) {
+    return {
+      kind: 'wait',
+      until: state.lastScrollAt + scrollGap,
+      reason: `等翻页间隔（${Math.round(scrollGap / 1000)} 秒）`,
+    }
+  }
   return { kind: 'idle', reason: '当前没有待处理项（屏幕上没有符合条件的目标，可能需要翻页或换搜索词）' }
 }
 
@@ -448,6 +487,8 @@ export interface AutoSnapshot {
   limits: { scan: number; greet: number; send: number }
   windowLabel: string
   switches: { scan: boolean; scanDetail: boolean; greet: boolean; sendGreeting: boolean; sendResume: boolean }
+  /** 备用搜索词：设置页要能读出来编辑 */
+  searchKeywords: string[]
 }
 
 export function toAutoSnapshot(state: AutoState, settings: AutoSettings, now: number): AutoSnapshot {
@@ -476,5 +517,6 @@ export function toAutoSnapshot(state: AutoState, settings: AutoSettings, now: nu
       sendGreeting: settings.sendGreeting,
       sendResume: settings.sendResume,
     },
+    searchKeywords: [...settings.searchKeywords],
   }
 }

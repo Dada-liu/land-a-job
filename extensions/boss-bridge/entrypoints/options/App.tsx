@@ -5,6 +5,7 @@ import { CATEGORY_LABELS, JOB_CATEGORIES, type JobCategory } from '../../src/lib
 import { sendToBackground } from '../../src/lib/messages.js'
 import type { RuntimeResponse } from '../../src/lib/messages.js'
 import type { BridgeSettings } from '../../src/lib/types.js'
+import type { AutoSnapshot } from '../../src/lib/orchestrator.js'
 
 /** 每个类型的判据举例：光说"外包"没人知道指什么，给个真实标题最省事 */
 const CATEGORY_EXAMPLES: Record<JobCategory, string> = {
@@ -30,21 +31,33 @@ export function OptionsApp() {
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const [savedJson, setSavedJson] = useState('')
+  /** 备用搜索词用文本编辑，顿号/逗号分隔；和后端数组互转 */
+  const [keywordsText, setKeywordsText] = useState('')
+  const [savedKeywords, setSavedKeywords] = useState('')
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    void sendToBackground<RuntimeResponse>({ type: 'GET_SETTINGS' }).then((res) => {
-      if (res.ok && res.settings) {
+    void (async () => {
+      const [settingsRes, autoRes] = await Promise.all([
+        sendToBackground<RuntimeResponse>({ type: 'GET_SETTINGS' }),
+        sendToBackground<RuntimeResponse>({ type: 'GET_AUTO' }),
+      ])
+      if (settingsRes.ok && settingsRes.settings) {
         const next = {
-          ...res.settings,
-          captureCategories: res.settings.captureCategories ?? DEFAULT_SETTINGS.captureCategories,
+          ...settingsRes.settings,
+          captureCategories: settingsRes.settings.captureCategories ?? DEFAULT_SETTINGS.captureCategories,
         }
         setSettings(next)
-        setHighlights(res.settings.highlights.join('、'))
-        setSavedJson(JSON.stringify(normalize(next, res.settings.highlights.join('、'))))
-        setLoaded(true)
+        setHighlights(settingsRes.settings.highlights.join('、'))
+        setSavedJson(JSON.stringify(normalize(next, settingsRes.settings.highlights.join('、'))))
       }
-    })
+      if (autoRes.ok) {
+        const words = (autoRes.result as AutoSnapshot | undefined)?.searchKeywords ?? []
+        setKeywordsText(words.join('、'))
+        setSavedKeywords(words.join('、'))
+      }
+      setLoaded(true)
+    })()
   }, [])
 
   function patch(next: Partial<BridgeSettings>) {
@@ -69,7 +82,11 @@ export function OptionsApp() {
   }
 
   const current = useMemo(() => normalize(settings, highlights), [settings, highlights])
-  const dirty = loaded && savedJson !== '' && JSON.stringify(current) !== savedJson
+  const parsedKeywords = useMemo(
+    () => keywordsText.split(/[、,，\n]/).map((s) => s.trim()).filter(Boolean),
+    [keywordsText],
+  )
+  const dirty = loaded && savedJson !== '' && (JSON.stringify(current) !== savedJson || keywordsText !== savedKeywords)
 
   /** 直接调生产代码的生成函数，预览和真正发出去的文案保证一致 */
   const preview = useMemo(
@@ -84,14 +101,28 @@ export function OptionsApp() {
       setError('至少要保留一类岗位类型')
       return false
     }
-    const res = await sendToBackground<RuntimeResponse>({ type: 'SET_SETTINGS', settings: current })
-    if (res.ok) {
-      setSavedJson(JSON.stringify(current))
-      setNotice('已保存，下次抓取就按新设置走')
-      return true
+    /** 只有一个词等于没有兜底：翻到底就彻底停住了，所以至少留两个 */
+    if (parsedKeywords.length < 2) {
+      setError('备用搜索词至少填两个，否则翻到底就没得换了')
+      return false
     }
-    setError(res.error)
-    return false
+    const res = await sendToBackground<RuntimeResponse>({ type: 'SET_SETTINGS', settings: current })
+    if (!res.ok) {
+      setError(res.error)
+      return false
+    }
+    const autoRes = await sendToBackground<RuntimeResponse>({
+      type: 'SET_AUTO_SETTINGS',
+      auto: { searchKeywords: parsedKeywords },
+    })
+    if (!autoRes.ok) {
+      setError(autoRes.error)
+      return false
+    }
+    setSavedJson(JSON.stringify(current))
+    setSavedKeywords(parsedKeywords.join('、'))
+    setNotice('已保存，下次抓取就按新设置走')
+    return true
   }
 
   async function test() {
@@ -181,6 +212,20 @@ export function OptionsApp() {
           当前会抓：<b>{kept.join('、')}</b>
           {kept.length === JOB_CATEGORIES.length && <span className="opt-tag">等于不筛选</span>}
         </p>
+
+        <label className="opt-field">
+          <span className="opt-label">备用搜索词</span>
+          <input
+            type="text"
+            value={keywordsText}
+            onChange={(e) => { setKeywordsText(e.target.value); setNotice('') }}
+            placeholder="Agent开发、AI Agent、大模型应用开发"
+          />
+          <span className="opt-help">
+            用顿号或逗号分隔，至少两个。自动翻页把当前词翻到底（连续两轮没有新岗位）后才换下一个，
+            换词间隔 500–800 秒随机、每天最多 8 次——换词是一次完整重新搜索，比翻页重得多。
+          </span>
+        </label>
 
         <details className="opt-details">
           <summary>怎么判断类型？</summary>
