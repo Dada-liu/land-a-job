@@ -110,6 +110,24 @@ describe('P2 回复后延迟落库（回放第三轮真实回复）', () => {
     expect(job.landSync).toMatchObject({ companyId: 'c-1', jobId: 'j-1', applicationId: 'a-1', fitScore: 72 })
   })
 
+  it('建岗时把列表上的薪资换成元传过去（正文里通常没有薪资）', async () => {
+    const { bridge, calls } = mockBridge()
+    const job = staged({ salaryDesc: '20-40K·13薪' })
+    await syncOnReply(peerReply, snapshot(selfGreeting), job, bridge, { now: () => now })
+    expect(calls.find((c) => c.name === 'createJob')?.args[0]).toMatchObject({
+      salaryMin: 20_000, salaryMax: 40_000,
+    })
+  })
+
+  it('薪资是「面议」时不传空字段', async () => {
+    const { bridge, calls } = mockBridge()
+    const job = staged({ salaryDesc: '面议' })
+    await syncOnReply(peerReply, snapshot(selfGreeting), job, bridge, { now: () => now })
+    const input = calls.find((c) => c.name === 'createJob')?.args[0] as Record<string, unknown>
+    expect(input).not.toHaveProperty('salaryMin')
+    expect(input).not.toHaveProperty('salaryMax')
+  })
+
   it('未读数恒为 0 不影响落库', async () => {
     const { bridge, names } = mockBridge()
     expect(peerReply.unreadMsgCount).toBe(0)

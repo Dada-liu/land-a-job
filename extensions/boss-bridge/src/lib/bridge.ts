@@ -25,6 +25,12 @@ export interface JobCreateInput {
   title: string
   jdUrl: string
   city?: string
+  /**
+   * 月薪区间（元）。BOSS 列表上的 `12-18K` 在这里换算成 12000/18000。
+   * 不传就留空——服务端只能从 JD 正文猜，而 BOSS 正文基本不带薪资。
+   */
+  salaryMin?: number
+  salaryMax?: number
 }
 
 export interface ApplicationCreateInput {
@@ -142,6 +148,8 @@ export class LandBridge {
       jdUrl: input.jdUrl,
       channel: 'boss',
       ...(input.city ? { city: input.city } : {}),
+      ...(input.salaryMin != null ? { salaryMin: input.salaryMin } : {}),
+      ...(input.salaryMax != null ? { salaryMax: input.salaryMax } : {}),
     })
     return row.id
   }

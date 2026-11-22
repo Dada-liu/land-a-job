@@ -1,6 +1,7 @@
 import { activeEvidence } from './activity.js'
 import type { ConversationItem } from './parsers.js'
 import { detectReply } from './reply.js'
+import { salaryRangeYuan } from './salary.js'
 import { conversationKey } from './storage.js'
 import type { ConversationSnapshot, LandSyncRecord, StagedJob } from './types.js'
 
@@ -10,7 +11,14 @@ export interface BridgeLike {
   findCompanyByName(name: string): Promise<{ id: string } | null>
   createCompany(name: string, city?: string): Promise<string>
   findJobByUrl(url: string): Promise<{ id: string } | null>
-  createJob(input: { companyId: string; title: string; jdUrl: string; city?: string }): Promise<string>
+  createJob(input: {
+    companyId: string
+    title: string
+    jdUrl: string
+    city?: string
+    salaryMin?: number
+    salaryMax?: number
+  }): Promise<string>
   importJd(jobId: string, text: string, url: string): Promise<void>
   scoreJob(jobId: string): Promise<number | null>
   findApplicationByJob(jobId: string): Promise<{ id: string; status?: string } | null>
@@ -99,11 +107,17 @@ export async function syncRepliedJob(
 
   const existingJob = await bridge.findJobByUrl(job.url)
   const reusedJob = Boolean(existingJob)
+  /**
+   * 薪资只在建岗时传一次：BOSS 的薪资在列表卡片上，JD 正文里往往没有，
+   * 服务端从正文推断不出来。已有的岗位不覆盖，人工改过的值优先。
+   */
+  const salary = salaryRangeYuan(job.salaryDesc)
   const jobId = existingJob?.id ?? await bridge.createJob({
     companyId,
     title: job.jobName,
     jdUrl: job.url,
     ...(job.city ? { city: job.city } : {}),
+    ...(salary ? { salaryMin: salary.min, salaryMax: salary.max } : {}),
   })
 
   let fitScore: number | null = null
