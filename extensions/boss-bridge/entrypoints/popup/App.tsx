@@ -116,6 +116,19 @@ function IconButton({
 /** 操作反馈统一走顶部浮层：底部两行提示用户根本扫不到（尤其 popup 已经很长时） */
 type Toast = { kind: 'ok' | 'error'; text: string }
 
+/**
+ * 顶部 tab。顺序按使用流程排：先开监听，才轮得到全自动；回复和日志是「回头看」的。
+ * 原来这四块是一条长滚动，全自动夹在中间，开监听要往下找。
+ */
+const TABS = [
+  { id: 'listen', label: '监听' },
+  { id: 'auto', label: '全自动' },
+  { id: 'replies', label: '招聘方回复' },
+  { id: 'logs', label: '日志' },
+] as const
+
+type TabId = (typeof TABS)[number]['id']
+
 export function PopupApp() {
   const [status, setStatus] = useState<RuntimeStatus | null>(null)
   const [staged, setStaged] = useState<StagedJob[]>([])
@@ -124,6 +137,7 @@ export function PopupApp() {
   const [busy, setBusy] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [showProgress, setShowProgress] = useState(false)
+  const [tab, setTab] = useState<TabId>('listen')
 
   const refresh = useCallback(async () => {
     const [s, j, l] = await Promise.all([
@@ -189,6 +203,23 @@ export function PopupApp() {
     }
   }
 
+  /**
+   * 开全自动之前必须先有页面监听。
+   *
+   * 没有 Network 旁听，点了「立即沟通」也不会有人把 `friend/add.json` 的响应写回
+   * `greeted`：状态一直停在 ready，冷却一过就重复打同一家。所以这里先拦一道，
+   * 顺手把用户带到「监听」页——提示完还让他自己找按钮，等于没说。
+   * 后台也有一道同样的闸门，绕过 popup 直接发消息同样会被拒。
+   */
+  async function startAuto() {
+    if (!status?.capturing) {
+      setToast({ kind: 'error', text: '开始全自动需要先开启页面监听' })
+      setTab('listen')
+      return
+    }
+    await act({ type: 'START_AUTO' }, '已开启全自动，每分钟推进一个动作')
+  }
+
   /** 全自动的实时状态；未开启时也带上（显示"未开启"而不是整块消失） */
   const auto = status?.auto
 
@@ -245,8 +276,27 @@ export function PopupApp() {
         </div>
       </div>
       {/* 提示条正好落在副标题上：提示期间把它淡出，避免露出半截字 */}
-      <p className={`sub top-sub${toast ? ' dimmed' : ''}`}>默认只翻页、不碰发送；打开下面的「全自动」才会替你打招呼，勾了「自动发定制语」才会按设置里的模板发第二条。</p>
+      <p className={`sub top-sub${toast ? ' dimmed' : ''}`}>先在「监听」开启页面监听，「全自动」才能读到你点招呼的回执；勾了「自动发定制语」才会按模板发第二条。</p>
 
+      <div className="ptabs" role="tablist" aria-label="BOSS 桥接">
+        {TABS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            id={`tab-${item.id}`}
+            aria-selected={tab === item.id}
+            aria-controls={`panel-${item.id}`}
+            className={tab === item.id ? 'on' : undefined}
+            onClick={() => setTab(item.id)}
+          >
+            {item.label}
+            {item.id === 'replies' && replied.length > 0 && <span className="n">{replied.length}</span>}
+          </button>
+        ))}
+      </div>
+
+      <div role="tabpanel" id="panel-auto" className="pblock" aria-labelledby="tab-auto" hidden={tab !== 'auto'}>
       {auto && (
         <div className="card auto">
           <div className="row">
@@ -265,7 +315,7 @@ export function PopupApp() {
           <p className="sub auto-note">{auto.waitReason ?? auto.lastStepText ?? '尚未执行任何动作'}</p>
 
           <div className="actions">
-            <button className="btn primary" disabled={busy || auto.enabled} onClick={() => void act({ type: 'START_AUTO' }, '已开启全自动，每分钟推进一个动作')}>
+            <button className="btn primary" disabled={busy || auto.enabled} onClick={() => void startAuto()}>
               开始全自动
             </button>
             <button className="btn" disabled={busy || !auto.enabled} onClick={() => void act({ type: 'STOP_AUTO' }, '已暂停全自动')}>
@@ -292,7 +342,10 @@ export function PopupApp() {
           </p>
         </div>
       )}
+      {!auto && <p className="sub">正在读取状态…</p>}
+      </div>
 
+      <div role="tabpanel" id="panel-listen" className="pblock" aria-labelledby="tab-listen" hidden={tab !== 'listen'}>
       <div className="card">
         <div className="row">
           <span className="label">监听状态</span>
@@ -391,11 +444,13 @@ export function PopupApp() {
           </div>
         )}
       </div>
+      </div>
 
+      <div role="tabpanel" id="panel-replies" className="pblock" aria-labelledby="tab-replies" hidden={tab !== 'replies'}>
       {replied.length > 0 && (
         <>
           <h2>招聘方已回复（{replied.length}）</h2>
-          <div className="card list">
+          <div className="card list wide">
             {replied.map((job) => (
               <div className="item" key={job.key}>
                 <span>{job.brandName} · {job.jobName}</span>
@@ -411,7 +466,7 @@ export function PopupApp() {
       {tailored.length > 0 && (
         <>
           <h2>已定制简历（{tailored.length}）</h2>
-          <div className="card list">
+          <div className="card list wide">
             {tailored.map((job) => (
               <div className="item" key={job.key}>
                 <span>{job.brandName} · {job.jobName}</span>
@@ -425,9 +480,14 @@ export function PopupApp() {
         </>
       )}
 
+      <p className="hint">「监听」页的「检查新回复」会让会话页重新拉一次消息列表；BOSS 是单页应用，页面一直挂着就不会自己刷新。</p>
+      </div>
+
+      <div role="tabpanel" id="panel-logs" className="pblock" aria-labelledby="tab-logs" hidden={tab !== 'logs'}>
       <h2>运行日志</h2>
       <div className="card logs">
         {logs.length === 0 ? '（暂无）' : logs.slice(-12).reverse().map((line, i) => <div key={`${line}-${i}`}>{line}</div>)}
+      </div>
       </div>
     </div>
   )

@@ -233,6 +233,14 @@ interface ZhipinTab {
   jobId?: string
   /** 当前地址（换搜索词时要在原 URL 上改 query，保留 city 等筛选） */
   url?: string
+  /**
+   * attach 失败的原因。
+   *
+   * 没有 Network 旁听，点了「立即沟通」也不会有人把 `friend/add.json` 的响应写回
+   * `greeted`，动作结果根本无法确认。所以这种情况必须单独报，不能混成普通失败，
+   * 更不能照常动手——否则会在冷却期里反复打同一家。
+   */
+  attachError?: string
 }
 
 async function findZhipinTab(isActionable?: (jobId: string) => boolean): Promise<ZhipinTab | null> {
@@ -256,7 +264,18 @@ async function findZhipinTab(isActionable?: (jobId: string) => boolean): Promise
 
   const chosen = actionableDetail ?? list ?? usable[0]
   if (chosen?.id === undefined) return null
-  await attachTab(chosen.id)
+
+  /**
+   * attach 会顺带开启 Network 旁听，是「动作能不能被确认」的前提。
+   * 失败时不再往上抛（抛出会让 tick 直接断在半路、lastTickAt 不动，看起来像"开着却一动不动"），
+   * 而是记在返回值上，由 tickAuto 统一报「监听不可用」并跳过本轮动作。
+   */
+  let attachError: string | undefined
+  try {
+    await attachTab(chosen.id)
+  } catch (error) {
+    attachError = (error as Error).message
+  }
 
   const jobId = detailOf(chosen)
   return {
@@ -264,6 +283,7 @@ async function findZhipinTab(isActionable?: (jobId: string) => boolean): Promise
     kind: jobId ? 'detail' : 'list',
     jobId,
     url: chosen.url,
+    attachError,
   }
 }
 
@@ -708,6 +728,17 @@ async function tickAuto(): Promise<void> {
   const tab = await findZhipinTab((id) => readySet.has(id))
   if (tab === null) {
     const reason = '没有打开的 BOSS 岗位页（自动化只在你自己的页面上运行）'
+    noteAutoIdle(reason)
+    await saveAutoState({ ...state, waitReason: reason, lastTickAt: now })
+    return
+  }
+
+  /**
+   * 附着失败＝没有 Network 旁听。此时点「立即沟通」不会有回执落库，
+   * `greeted` 永远不动、冷却一到就会重复打同一家，所以本轮什么也不做，先把话说清楚。
+   */
+  if (tab.attachError) {
+    const reason = `监听不可用（${tab.attachError.slice(0, 60)}），动作结果无法确认，先去「监听」点一次开始`
     noteAutoIdle(reason)
     await saveAutoState({ ...state, waitReason: reason, lastTickAt: now })
     return
@@ -1682,6 +1713,13 @@ export default defineBackground(() => {
           return { ok: true, result: { results } }
         }
         case 'START_AUTO': {
+          /**
+           * 没有监听就没有回执：点了「立即沟通」也等不到 `friend/add.json` 被写回，
+           * 状态会一直停在 ready，冷却一过又去打同一家。所以宁可不启动。
+           */
+          if (attachedTabs.size === 0) {
+            return { ok: false, error: '开始全自动需要先开启页面监听' }
+          }
           const settings = await saveAutoSettings({ enabled: true })
           const state = startAutoState(await getAutoState(), Date.now())
           await saveAutoState(state)
