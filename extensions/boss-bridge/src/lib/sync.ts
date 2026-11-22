@@ -1,7 +1,7 @@
 import { activeEvidence } from './activity.js'
 import type { ConversationItem } from './parsers.js'
 import { detectReply } from './reply.js'
-import { salaryRangeYuan } from './salary.js'
+import { salaryMonthsOf, salaryRangeYuan } from './salary.js'
 import { conversationKey } from './storage.js'
 import type { ConversationSnapshot, LandSyncRecord, StagedJob } from './types.js'
 
@@ -18,6 +18,7 @@ export interface BridgeLike {
     city?: string
     salaryMin?: number
     salaryMax?: number
+    salaryMonths?: number
   }): Promise<string>
   importJd(jobId: string, text: string, url: string): Promise<void>
   scoreJob(jobId: string): Promise<number | null>
@@ -112,12 +113,14 @@ export async function syncRepliedJob(
    * 服务端从正文推断不出来。已有的岗位不覆盖，人工改过的值优先。
    */
   const salary = salaryRangeYuan(job.salaryDesc)
+  const salaryMonths = salaryMonthsOf(job.salaryDesc)
   const jobId = existingJob?.id ?? await bridge.createJob({
     companyId,
     title: job.jobName,
     jdUrl: job.url,
     ...(job.city ? { city: job.city } : {}),
     ...(salary ? { salaryMin: salary.min, salaryMax: salary.max } : {}),
+    ...(salaryMonths ? { salaryMonths } : {}),
   })
 
   let fitScore: number | null = null

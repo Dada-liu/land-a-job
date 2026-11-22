@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { salaryRangeYuan } from '../src/lib/salary.js'
+import { salaryMonthsOf, salaryRangeYuan } from '../src/lib/salary.js'
 
 describe('salaryRangeYuan', () => {
   it('K 区间换算成元', () => {
@@ -40,5 +40,29 @@ describe('salaryRangeYuan', () => {
 
   it('顺序写反也能纠正', () => {
     expect(salaryRangeYuan('40-20K')).toEqual({ min: 20_000, max: 40_000 })
+  })
+})
+
+describe('salaryMonthsOf', () => {
+  it('认「N 薪」后缀', () => {
+    expect(salaryMonthsOf('23-45K·13薪')).toBe(13)
+    expect(salaryMonthsOf('25-40K·15薪')).toBe(15)
+    expect(salaryMonthsOf('20-30K 14薪')).toBe(14)
+    expect(salaryMonthsOf('18-25K·13 薪')).toBe(13)
+  })
+
+  it('没写就是 null，不默认 12', () => {
+    expect(salaryMonthsOf('15-25K')).toBeNull()
+    expect(salaryMonthsOf('面议')).toBeNull()
+    expect(salaryMonthsOf(undefined)).toBeNull()
+  })
+
+  it('超出 12–24 的当月数不可信', () => {
+    expect(salaryMonthsOf('10-15K·10薪')).toBeNull()
+    expect(salaryMonthsOf('30-50K·36薪')).toBeNull()
+  })
+
+  it('数字和「薪」不相邻时不算', () => {
+    expect(salaryMonthsOf('薪资 15-25K')).toBeNull()
   })
 })

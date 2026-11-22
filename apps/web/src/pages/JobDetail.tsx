@@ -64,7 +64,7 @@ export default function JobDetail() {
   const [queueOpen, setQueueOpen] = useState(false)
   const [directApplyOpen, setDirectApplyOpen] = useState(false)
   const [tailorOpen, setTailorOpen] = useState(false)
-  const [form, setForm] = useState({ title: '', status: 'open', priority: 3, city: '', salaryMin: '', salaryMax: '', jdText: '', jdUrl: '' })
+  const [form, setForm] = useState({ title: '', status: 'open', priority: 3, city: '', salaryMin: '', salaryMax: '', salaryMonths: '', jdText: '', jdUrl: '' })
   const [collection, setCollection] = useState<JdCollectionDto | null>(null)
   const [jdNotice, setJdNotice] = useState<{ kind: 'error'; text: string } | null>(null)
 
@@ -87,6 +87,7 @@ export default function JobDetail() {
         city: form.city || null,
         salaryMin: form.salaryMin ? Number(form.salaryMin) * 1000 : null,
         salaryMax: form.salaryMax ? Number(form.salaryMax) * 1000 : null,
+        salaryMonths: form.salaryMonths ? Number(form.salaryMonths) : null,
         jdText: form.jdText || null,
         jdUrl: form.jdUrl || null,
       })
@@ -176,6 +177,7 @@ export default function JobDetail() {
       city: data.city ?? '',
       salaryMin: data.salaryMin ? String(data.salaryMin / 1000) : '',
       salaryMax: data.salaryMax ? String(data.salaryMax / 1000) : '',
+      salaryMonths: data.salaryMonths ? String(data.salaryMonths) : '',
       jdText: data.jdText ?? '',
       jdUrl: data.jdUrl ?? '',
     })
@@ -211,7 +213,7 @@ export default function JobDetail() {
           company: data.companyName ?? t('未知公司'),
           city: data.city ?? t('城市未填'),
           salary: [
-            `${money(data.salaryMin)}-${money(data.salaryMax)}`,
+            `${money(data.salaryMin)}-${money(data.salaryMax)}${data.salaryMonths ? `·${data.salaryMonths}薪` : ''}`,
             salarySourceShort(data.salarySource) ? `（${salarySourceShort(data.salarySource)}）` : '',
           ].join(''),
           channel: t(CHANNEL_OPTIONS.find((item) => item.value === data.channel)?.label ?? '其他'),
@@ -429,6 +431,16 @@ export default function JobDetail() {
               <Input
                 value={form.salaryMax}
                 onChange={(event) => setForm({ ...form, salaryMax: event.target.value.replace(/\D/g, '') })}
+              />
+            </Field>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <Field label={t('发薪月数（13 薪填 13）')}>
+              <Input
+                value={form.salaryMonths}
+                placeholder="12"
+                data-testid="job-salary-months"
+                onChange={(event) => setForm({ ...form, salaryMonths: event.target.value.replace(/\D/g, '').slice(0, 2) })}
               />
             </Field>
           </div>

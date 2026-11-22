@@ -54,7 +54,7 @@ describe('表结构映射与 DDL 一致', () => {
 
 describe('迁移', () => {
   it('schema 版本号已推进', () => {
-    expect(db.pragma('user_version', { simple: true })).toBe(3)
+    expect(db.pragma('user_version', { simple: true })).toBe(4)
   })
 
   it('002 迁移给岗位补上了采集来源列', () => {
@@ -65,6 +65,11 @@ describe('迁移', () => {
   it('003 迁移给岗位补上了薪资来源列', () => {
     const columns = (db.pragma('table_info(job)') as { name: string }[]).map((column) => column.name)
     expect(columns).toContain('salary_source')
+  })
+
+  it('004 迁移给岗位补上了发薪月数列', () => {
+    const columns = (db.pragma('table_info(job)') as { name: string }[]).map((column) => column.name)
+    expect(columns).toContain('salary_months')
   })
 
   it('重复执行迁移是幂等的（二次打开不报错）', () => {

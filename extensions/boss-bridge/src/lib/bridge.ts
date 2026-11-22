@@ -31,6 +31,8 @@ export interface JobCreateInput {
    */
   salaryMin?: number
   salaryMax?: number
+  /** 发薪月数：`23-45K·13薪` 的 13；没写就留空，别默认 12 */
+  salaryMonths?: number
 }
 
 export interface ApplicationCreateInput {
@@ -152,6 +154,7 @@ export class LandBridge {
       ...(input.salaryMax != null ? { salaryMax: input.salaryMax } : {}),
       /** 声明来源：这是招聘平台列表卡片上的价格，比从 JD 正文抽的准 */
       ...(input.salaryMin != null || input.salaryMax != null ? { salarySource: 'listing' } : {}),
+      ...(input.salaryMonths != null ? { salaryMonths: input.salaryMonths } : {}),
     })
     return row.id
   }

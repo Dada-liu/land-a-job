@@ -243,6 +243,8 @@ export interface JobSummaryDto {
   salaryMax: number | null
   /** listing / jd / manual；null = 迁移前录入，来源未知 */
   salarySource: string | null
+  /** 发薪月数（13 薪就是 13）；null = 招聘页没写 */
+  salaryMonths: number | null
   level: string | null
   keywords: string[] | null
   fitScore: number | null

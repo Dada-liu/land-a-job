@@ -21,6 +21,11 @@ const jobFields = {
   salaryMin: zMoney.nullish(),
   salaryMax: zMoney.nullish(),
   salarySource: z.enum(SALARY_SOURCES).nullish(),
+  /**
+   * 每年发几个月工资（`23-45K·13薪` 里的 13）。
+   * 岗位卡片上的价格是「月薪 × 月数」，只记月薪会低估总包；NULL = 没写，按 12 理解。
+   */
+  salaryMonths: z.number().int().min(1).max(24).nullish(),
   level: zOptText(40),
   keywords: z.array(z.string().trim().min(1).max(40)).max(40).nullish(),
   status: z.enum(JOB_STATUSES),
@@ -70,6 +75,8 @@ export interface JobDto {
   salaryMax: number | null
   /** listing / jd / manual；NULL = 迁移前录入，来源未知 */
   salarySource: string | null
+  /** 发薪月数（13 薪就是 13）；NULL = 招聘页没写 */
+  salaryMonths: number | null
   level: string | null
   keywords: string[] | null
   fitScore: number | null

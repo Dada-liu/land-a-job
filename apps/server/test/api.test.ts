@@ -163,6 +163,31 @@ describe('岗位 CRUD', () => {
     expect(job.body.data.salarySource).toBe('listing')
   })
 
+  it('13 薪的月数单独存，不折进月薪', async () => {
+    const company = await app.call('POST', '/companies', { name: '十三薪公司' })
+    const job = await app.call('POST', '/jobs', {
+      companyId: company.body.data.id,
+      title: 'AI Agent 开发',
+      salaryMin: 23_000,
+      salaryMax: 45_000,
+      salaryMonths: 13,
+      salarySource: 'listing',
+    })
+    expect(job.body.data).toMatchObject({ salaryMin: 23_000, salaryMax: 45_000, salaryMonths: 13 })
+    const patched = await app.call('PATCH', `/jobs/${job.body.data.id}`, { salaryMonths: 15 })
+    expect(patched.body.data.salaryMonths).toBe(15)
+  })
+
+  it('月数超出 1–24 会被挡下', async () => {
+    const company = await app.call('POST', '/companies', { name: '异常月数公司' })
+    const result = await app.call('POST', '/jobs', {
+      companyId: company.body.data.id,
+      title: '前端',
+      salaryMonths: 36,
+    })
+    expect(result.status).toBe(400)
+  })
+
   it('不给薪资就不带来源', async () => {
     const company = await app.call('POST', '/companies', { name: '无薪资公司' })
     const job = await app.call('POST', '/jobs', { companyId: company.body.data.id, title: '待定岗位' })

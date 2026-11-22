@@ -115,7 +115,7 @@ describe('P2 回复后延迟落库（回放第三轮真实回复）', () => {
     const job = staged({ salaryDesc: '20-40K·13薪' })
     await syncOnReply(peerReply, snapshot(selfGreeting), job, bridge, { now: () => now })
     expect(calls.find((c) => c.name === 'createJob')?.args[0]).toMatchObject({
-      salaryMin: 20_000, salaryMax: 40_000,
+      salaryMin: 20_000, salaryMax: 40_000, salaryMonths: 13,
     })
   })
 

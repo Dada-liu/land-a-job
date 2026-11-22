@@ -157,6 +157,7 @@ const dict: Dict = {
   已关闭: 'Closed',
   '月薪下限 (K)': 'Min monthly salary (K)',
   '月薪上限 (K)': 'Max monthly salary (K)',
+  '发薪月数（13 薪填 13）': 'Paid months per year (13 for 13th-month pay)',
   'JD 链接': 'JD URL',
   '{matched}/{total} 个词在简历里有证据': '{matched}/{total} keywords have evidence in your resume',
   没有可突出的词: 'No keywords to emphasize',

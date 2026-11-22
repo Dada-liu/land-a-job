@@ -14,6 +14,7 @@ const MIGRATIONS: Migration[] = [
   { version: 1, name: '001_init' },
   { version: 2, name: '002_jd_source' },
   { version: 3, name: '003_salary_source' },
+  { version: 4, name: '004_salary_months' },
 ]
 
 export function migrate(db: Db): void {

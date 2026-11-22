@@ -51,3 +51,19 @@ export function salaryRangeYuan(desc?: string | null): { min: number; max: numbe
   }
   return null
 }
+
+/**
+ * 每年发几个月工资：`23-45K·13薪` → 13，`25-40K·15薪` → 15。
+ *
+ * 只认 12–24 这个区间：BOSS 上常见 13/14/15/16 薪，低于 12 的写法基本是
+ * 「12 薪以下」这类描述或别的东西（试用期比例等），当成月数会算错总包。
+ */
+export function salaryMonthsOf(desc?: string | null): number | null {
+  const text = String(desc ?? '').trim()
+  if (!text) return null
+  const match = text.match(/(\d{1,2})\s*薪/)
+  if (!match) return null
+  const months = Number(match[1])
+  if (!Number.isInteger(months) || months < 12 || months > 24) return null
+  return months
+}

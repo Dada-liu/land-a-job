@@ -14,10 +14,12 @@ import { FitBar, FitScore } from '../components/FitScore'
 import { errorText, useToast } from '../components/Toast'
 import { useT } from '../i18n'
 
-function salary(value: { salaryMin: number | null; salaryMax: number | null }): string {
+function salary(value: { salaryMin: number | null; salaryMax: number | null; salaryMonths?: number | null }): string {
   if (!value.salaryMin && !value.salaryMax) return '—'
   const fmt = (n: number | null) => (n === null ? '?' : String(Math.round(n / 1000)))
-  return `${fmt(value.salaryMin)}-${fmt(value.salaryMax)}K`
+  const base = `${fmt(value.salaryMin)}-${fmt(value.salaryMax)}K`
+  /** 发薪月数要跟着月薪走：13 薪的 30K 和 12 薪的 30K 不是一回事 */
+  return value.salaryMonths ? `${base}·${value.salaryMonths}薪` : base
 }
 
 /** 列表里一眼看出这份 JD 是怎么进来的；NULL 是重构前的历史数据 */
