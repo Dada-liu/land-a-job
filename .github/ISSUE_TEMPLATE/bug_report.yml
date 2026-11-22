@@ -1,0 +1,94 @@
+name: Bug report
+description: Something is broken in the local app, the MCP server or a skill.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks. This is a single-user local app, so environment details matter more than usual.
+        Please do **not** paste your `data/land.db`, `data/.token`, real resumes or real company names.
+        For security issues use the private advisory link instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what did you expect?
+      description: Include the exact error message or screenshot (redact personal data).
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. npm start
+        2. Open /jobs
+        3. Click …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      placeholder: "e.g. v0.3.0 or b7d2296"
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      placeholder: "node -v, e.g. v24.1.0 (requires >= 24)"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: OS
+      options:
+        - macOS
+        - Linux
+        - Windows (WSL)
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Were you going through an agent / MCP?
+      options:
+        - "No — web UI only"
+        - "Yes — Claude Code"
+        - "Yes — Codex"
+        - "Yes — WorkBuddy"
+        - "Yes — Cursor"
+        - "Yes — Kimi"
+        - "Yes — other"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part?
+      options:
+        - Web UI
+        - Server / API
+        - MCP server
+        - A skill (SKILL.md)
+        - JD collection
+        - BOSS bridge extension
+        - Resume / PDF export
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: checks
+    attributes:
+      label: Checks already run
+      placeholder: "npm test → … ; npm run typecheck → … ; npm run check:i18n → …"
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirm
+      options:
+        - label: I removed personal data (company names, resumes, tokens) from this report.
+          required: true

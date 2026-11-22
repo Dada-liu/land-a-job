@@ -1,0 +1,51 @@
+name: Feature idea
+description: Propose a change that fits a single-user, local, zero-LLM app.
+title: "[Idea]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check the pinned roadmap first. This project explicitly does **not** do:
+        accounts / multi-user, cloud sync, model calls inside the app, hosted deployment,
+        automatic submit-click, or brute-forcing job boards.
+        Ideas that require any of those will likely be declined — saying so up front saves your time.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you actually hitting?
+      description: Describe a real moment in your job search, not a feature list.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you change?
+    validations:
+      required: true
+  - type: textarea
+    id: not-doing
+    attributes:
+      label: What are you explicitly NOT proposing?
+      description: Which parts of the current design stay untouched?
+  - type: dropdown
+    id: layer
+    attributes:
+      label: Which layer would this touch?
+      options:
+        - Data model / migrations
+        - Server API
+        - MCP contract
+        - A skill
+        - Web UI / i18n
+        - Docs only
+        - Not sure
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirm
+      options:
+        - label: This works offline, keeps data local, and needs no model call inside the app.
+          required: true

@@ -4,17 +4,41 @@
 
 <h1 align="center">Land a Job</h1>
 
-<p align="center"><a href="./README.md">English</a> · <b>简体中文</b></p>
+<p align="center"><a href="./README.md">English</a> · <b>简体中文</b> · <a href="https://dada-liu.github.io/land-a-job/index.zh-CN.html">官网</a></p>
 
-本地优先、Agent 原生的求职流水线：目标公司 → JD 匹配 → 简历定制 → 投递 → 跟进 → 面试 → offer 谈判。
+<p align="center">
+  <a href="https://github.com/Dada-liu/land-a-job/releases"><img alt="release" src="https://img.shields.io/github/v/release/Dada-liu/land-a-job" /></a>
+  <a href="./LICENSE"><img alt="license" src="https://img.shields.io/badge/license-AGPL--3.0-blue" /></a>
+  <a href="https://nodejs.org"><img alt="node" src="https://img.shields.io/badge/node-%E2%89%A524-339933" /></a>
+</p>
 
-- **单用户本地**：数据只存本机 SQLite，无账号、无云同步。
-- **应用零模型调用**：不存 API Key。生成类能力由你安装的 Skill 在任意 Agent（Claude Code / Codex / WorkBuddy / Cursor / 豆包工作 / Kimi）中执行，结果通过 MCP 落回本地库。
-- **Web 只做查看与编辑**：关掉终端也能用；需要 AI 的按钮会给出「在 Agent 中执行」的交接指令。
+> **你的求职数据留在本机，AI 留在你自己的 Agent 里。**
+> 目标公司 → JD 匹配 → 简历定制 → 投递 → 跟进 → 面试 → offer，全部装在一个本地 SQLite 文件里。**应用本身零模型调用。**
 
-**官网**：[dada-liu.github.io/land-a-job](https://dada-liu.github.io/land-a-job/index.zh-CN.html) · **交给 Agent 的安装说明**：[agent-install.zh-CN.md](https://dada-liu.github.io/land-a-job/agent-install.zh-CN.md) · 如果对你有帮助，点个 star。
+[![15 秒操作演示](./docs/screenshots/demo.gif)](./docs/screenshots/demo.gif)
 
-> 当前状态：**P7 完成（八个阶段全部交付）**。数据层、接口、简历、投递看板、JD 定制、投递助手、MCP/Skill、面试与 Offer、指标与打磨全部可用；单测 286 例、端到端 373 项断言全绿。
+### 30 秒跑起来
+
+```bash
+git clone https://github.com/Dada-liu/land-a-job.git && cd land-a-job
+npm install && npm run build && npm start   # → http://127.0.0.1:4399
+```
+
+或者**让 Agent 自己装**：把 <https://dada-liu.github.io/land-a-job/agent-install.zh-CN.md> 丢给 Claude Code / Codex / WorkBuddy / Cursor / Kimi，说一句「按这个装好」。这份说明是写给 Agent 看的：检查环境、clone、构建、起服务、装 Skill、注册 MCP，最后调一次工具验证。
+
+### 为什么这么设计
+
+| | 常见的「AI 求职工具」 | Land a Job |
+| --- | --- | --- |
+| 你的数据 | 上传到平台 | 本机一个 SQLite 文件，服务只绑 `127.0.0.1` |
+| 模型 | 内置 SDK + 你的 API Key | **应用零模型调用、不存 Key、依赖里没有 LLM SDK** |
+| 生成结果 | 黑盒 | AI 写入的每一行都要带 `provenance: {skill, skillVersion}`，否则拒绝写入 |
+| 投递 | 机器人点提交 | 必须 `confirm: true`，最后一下点击永远留给人 |
+| 离线 | 依赖服务端 | 关掉终端照样用 |
+
+MCP 里没有 `generate_*` 工具，只有「取材料」→ 你在自己的 Agent 里生成 →「存结果」。需要 AI 的按钮不会偷偷调模型，而是给你一段可直接粘贴的交接指令。
+
+**中英双语界面、10 个 Agent Skill、40+ MCP 工具、AGPL-3.0。** 如果「零模型调用」这个设计对你有用，点个 ⭐ 能让更多人看到。参与方式见[贡献指南](./CONTRIBUTING.zh-CN.md)，路线图在 [Discussions](https://github.com/Dada-liu/land-a-job/discussions)。
 
 ## 界面截图
 
@@ -25,8 +49,6 @@
 | **总览** — 本周有效投递、转化漏斗、今日待办 | **匹配度** — 每个分项都带上证据 |
 | ![岗位库](./docs/screenshots/jobs.png) | ![投递看板](./docs/screenshots/pipeline.png) |
 | **岗位库** — 按匹配度排序，带 JD 来源标记 | **投递看板** — 从线索到 Offer 七个阶段 |
-
-[看 15 秒操作演示（GIF）](./docs/screenshots/demo.gif) — 总览 → 岗位库 → 岗位详情 → 把定制指令交给 Agent 的「定制建议」抽屉。
 
 ### 文档导航
 
@@ -113,7 +135,7 @@ npm run skills:install
 ## 详细使用方式
 
 > 上面的「快速开始」是最短路径。本节按「装好 → 跑起来 → 接 Agent → 走一遍全流程 → 备份 / 排障」展开。
-> 文中数字以当前仓库为准：MCP 43 工具 / 9 Skill / schema v2 / 单测 286 例 / E2E 373 项断言。
+> 文中数字以当前仓库为准：MCP 43 工具 / 10 Skill / schema v2 / 单测 322 例 / E2E 373 项断言。
 
 ### 1. 环境与前置
 
@@ -309,7 +331,7 @@ curl --noproxy '*' -H "X-Land-Token: $TOKEN" http://127.0.0.1:4399/api/jobs
 | `npm run seed` / `npm run seed -- --reset` | 灌 / 重建样例数据（3 公司 / 5 岗位 / 3 投递 / 1 面试） |
 | `npm run import:legacy` | 从旧项目 `.resume-mcp/store.json` 导简历，保留原 id |
 | `npm run import:legacy -- --file /path/to/store.json` | 指定来源文件 |
-| `npm test` | Vitest 全量单测（含 DDL 漂移检查）286 例 |
+| `npm test` | Vitest 全量单测（含 DDL 漂移检查）322 例 |
 | `npm run test:core` / `npm run test:server` | 只跑某一层 |
 | `npm run typecheck` | 编译 core / server + `tsc --noEmit` 检查 web |
 | `npm run e2e` | 先 build，再顺序跑 P3–P7（373 项断言） |

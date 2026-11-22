@@ -21,3 +21,12 @@ test-results/
 
 # 桌面端（Tauri 客户端）只存在于 desktop/tauri 分支，主线不跟踪它的任何产物
 apps/desktop/
+
+# 本机 Agent 的项目级配置，不是项目源码
+.kimi-code/
+
+# 开发向 Skill 草稿（ATS 接入/排障规约）已移到 .workbuddy/skill-drafts/：
+# 未注册进 SKILL_REGISTRY，不能放进 skills/ —— install-skills.sh 会链接该目录下
+# 所有子目录，且 manifest.test.ts 断言 skills/ 恰好 10 个目录。
+# 若要正式发布，须同步注册表、5 处数量断言与 README/ARCHITECTURE。
+skills/fetching-ats-jobs/

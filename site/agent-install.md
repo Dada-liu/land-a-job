@@ -5,6 +5,10 @@
 You are helping the user install **Land a Job** on their own machine: a local-first, agent-native job-search pipeline.
 All data lives in a local SQLite file, and the application itself **never calls a model**. The AI capability comes from this repository's skills running inside you (the agent), reading and writing local data over MCP.
 
+This guide installs the open-source local app from `main`: no account, no activation.
+A separate Tauri desktop build with a per-device activation gate is released from the
+`desktop/tauri` branch; it is not part of these steps.
+
 Run the steps **in order**. Before each step, tell the user in one sentence what you are about to do. Where a decision belongs to the user (install directory, whether to run it permanently), stop and ask — don't decide for them.
 
 - Repository: https://github.com/Dada-liu/land-a-job

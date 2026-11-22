@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Setup help, questions and ideas
+    url: https://github.com/Dada-liu/land-a-job/discussions
+    about: Ask here first — most "how do I…" questions are faster in Q&A than in an issue.
+  - name: Security vulnerability (private)
+    url: https://github.com/Dada-liu/land-a-job/security/advisories/new
+    about: Never open a public issue for a security problem. See SECURITY.md.
+  - name: Roadmap and what we are not building
+    url: https://github.com/Dada-liu/land-a-job/discussions/categories/announcements
+    about: Check the pinned roadmap before proposing a new feature.

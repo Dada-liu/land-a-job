@@ -4,17 +4,41 @@
 
 <h1 align="center">Land a Job</h1>
 
-<p align="center"><b>English</b> · <a href="./README.zh-CN.md">简体中文</a></p>
+<p align="center"><b>English</b> · <a href="./README.zh-CN.md">简体中文</a> · <a href="https://dada-liu.github.io/land-a-job/">Website</a></p>
 
-A local-first, agent-native job-search pipeline: target companies → JD matching → resume tailoring → applications → follow-ups → interviews → offer negotiation.
+<p align="center">
+  <a href="https://github.com/Dada-liu/land-a-job/releases"><img alt="release" src="https://img.shields.io/github/v/release/Dada-liu/land-a-job" /></a>
+  <a href="./LICENSE"><img alt="license" src="https://img.shields.io/badge/license-AGPL--3.0-blue" /></a>
+  <a href="https://nodejs.org"><img alt="node" src="https://img.shields.io/badge/node-%E2%89%A524-339933" /></a>
+</p>
 
-- **Single user, local only.** Data lives in a local SQLite file. No accounts, no cloud sync.
-- **Zero model calls inside the app.** No API keys are stored. Generation happens in whatever agent you already use (Claude Code / Codex / WorkBuddy / Cursor / Doubao Work / Kimi) through skills you install; results are written back over MCP.
-- **The web UI only reads and edits.** It works with the terminal closed. Buttons that would need an AI hand you an instruction to run in your agent instead.
+> **Your job search stays on your machine. Your AI stays in your agent.**
+> Target companies → JD matching → resume tailoring → applications → follow-ups → interviews → offers, all in one local SQLite file. **The application itself makes zero model calls.**
 
-**Website**: [dada-liu.github.io/land-a-job](https://dada-liu.github.io/land-a-job/) · **Install notes for your agent**: [agent-install.md](https://dada-liu.github.io/land-a-job/agent-install.md) · A star is appreciated if this helps.
+[![15-second tour](./docs/screenshots/en/demo.gif)](./docs/screenshots/en/demo.gif)
 
-> Status: **P7 complete — all eight stages delivered.** Data layer, API, resumes, pipeline board, JD tailoring, apply assistant, MCP/skills, interviews and offers, metrics and polish are all in place. 286 unit tests and 373 end-to-end assertions pass.
+### Try it in 30 seconds
+
+```bash
+git clone https://github.com/Dada-liu/land-a-job.git && cd land-a-job
+npm install && npm run build && npm start   # → http://127.0.0.1:4399
+```
+
+Or **let your agent install it**: paste <https://dada-liu.github.io/land-a-job/agent-install.md> into Claude Code / Codex / WorkBuddy / Cursor / Kimi and say "install this". The guide is written for agents — it checks the environment, clones, builds, starts the server, installs the skills, registers MCP and verifies with a tool call.
+
+### Why it's built this way
+
+| | Typical "AI job tool" | Land a Job |
+| --- | --- | --- |
+| Your data | Uploaded to a service | One SQLite file on your laptop; service bound to `127.0.0.1` |
+| The model | Baked-in SDK + your API key | **No model calls, no key, no LLM dependency in the app** |
+| AI output | A black box | Every AI-written row carries `provenance: {skill, skillVersion}` or the write is rejected |
+| Applying | Bot clicks submit | `confirm: true` required; the final click is always yours |
+| Offline | Needs the service | Works with the terminal closed |
+
+The app has no `generate_*` tool. Its MCP surface is "fetch material" → you generate in your own agent → "store result". Clicking a button that would need AI hands you a ready-to-paste instruction instead of silently calling a model.
+
+**Bilingual UI (EN / 中文), 10 agent skills, 40+ MCP tools, AGPL-3.0.** If the zero-LLM-call design is useful to you, a ⭐ helps other people find it. See [how to contribute](./CONTRIBUTING.md) and the [roadmap in Discussions](https://github.com/Dada-liu/land-a-job/discussions).
 
 ## Screenshots
 
@@ -25,8 +49,6 @@ The UI ships in **English and 中文** — switch from the 中文 / EN control i
 | **Overview** — weekly effective applications, funnel conversion, today's to-dos | **Fit score** — every factor with its evidence |
 | ![Job library](./docs/screenshots/en/jobs.png) | ![Application pipeline](./docs/screenshots/en/pipeline.png) |
 | **Job library** — sorted by fit, with JD source badges | **Pipeline** — seven stages from lead to offer |
-
-[Watch the 15-second tour (GIF)](./docs/screenshots/en/demo.gif) — overview → job library → job detail → the tailoring plan drawer that hands an instruction to your agent.
 
 ### Documentation
 
@@ -111,7 +133,7 @@ Hard rules (enforced by both skills and MCP):
 ## Detailed usage
 
 > Quick start above is the shortest path. This section goes: install → run → connect an agent → walk the full loop → backup / troubleshooting.
-> Numbers reflect the current repo: 43 MCP tools / 10 skills / schema v2 / 286 unit tests / 373 E2E assertions.
+> Numbers reflect the current repo: 43 MCP tools / 10 skills / schema v2 / 322 unit tests / 373 E2E assertions.
 
 ### 1. Requirements
 
@@ -306,7 +328,7 @@ Supported official channels: Greenhouse, Lever, Feishu Recruiting, Beisen iTalen
 | `npm run seed` / `npm run seed -- --reset` | Seed / rebuild sample data (3 companies / 5 jobs / 3 applications / 1 interview) |
 | `npm run import:legacy` | Import resumes from the old project's `.resume-mcp/store.json`, keeping ids |
 | `npm run import:legacy -- --file /path/to/store.json` | Point at a specific file |
-| `npm test` | Full Vitest suite (including DDL drift checks), 286 tests |
+| `npm test` | Full Vitest suite (including DDL drift checks), 322 tests |
 | `npm run test:core` / `npm run test:server` | Run one layer only |
 | `npm run typecheck` | Compile core / server and `tsc --noEmit` the web app |
 | `npm run e2e` | Build, then run P3–P7 in order (373 assertions) |
