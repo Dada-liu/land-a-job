@@ -24,7 +24,6 @@
 - https://github.com/Dada-liu/land-a-job
 - License: AGPL-3.0-or-later, full text at https://github.com/Dada-liu/land-a-job/blob/main/LICENSE
 - Source: this repository is the source. Under AGPL §13, anyone using this application over a network is entitled to the source of the version being run.
-- `main` is the full open-source local app: no account, no activation, no model calls. A separate Tauri desktop build with a per-device activation gate is released from the `desktop/tauri` branch and is not required by the install guide.
 
 ## Key constraints
 

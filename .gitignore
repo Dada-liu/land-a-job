@@ -19,9 +19,6 @@ test-results/
 # 本地 worktree 隔离工作区
 .worktrees/
 
-# 桌面端（Tauri 客户端）只存在于 desktop/tauri 分支，主线不跟踪它的任何产物
-apps/desktop/
-
 # 本机 Agent 的项目级配置，不是项目源码
 .kimi-code/
 
