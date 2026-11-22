@@ -150,6 +150,8 @@ export class LandBridge {
       ...(input.city ? { city: input.city } : {}),
       ...(input.salaryMin != null ? { salaryMin: input.salaryMin } : {}),
       ...(input.salaryMax != null ? { salaryMax: input.salaryMax } : {}),
+      /** 声明来源：这是招聘平台列表卡片上的价格，比从 JD 正文抽的准 */
+      ...(input.salaryMin != null || input.salaryMax != null ? { salarySource: 'listing' } : {}),
     })
     return row.id
   }

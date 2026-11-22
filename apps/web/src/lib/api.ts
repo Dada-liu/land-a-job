@@ -241,6 +241,8 @@ export interface JobSummaryDto {
   city: string | null
   salaryMin: number | null
   salaryMax: number | null
+  /** listing / jd / manual；null = 迁移前录入，来源未知 */
+  salarySource: string | null
   level: string | null
   keywords: string[] | null
   fitScore: number | null

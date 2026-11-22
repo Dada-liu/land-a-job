@@ -4,6 +4,13 @@ import { patchOf, zId, zIso, zMoney, zOptText, zPriority, zText, zUrl } from './
 
 export const JOB_STATUSES = ['open', 'paused', 'closed'] as const
 export const FIT_SOURCES = ['rule', 'agent', 'user'] as const
+/**
+ * 薪资来源。同一个数字可能是三条路来的，覆盖规则不一样：
+ * - `listing`：招聘平台的岗位卡片（插件解析 `12-18K` 那种），最贴近岗位本身
+ * - `jd`：从 JD 正文里抽的，常常是"我们给这个范围"或别家的数字
+ * - `manual`：用户自己填的
+ */
+export const SALARY_SOURCES = ['listing', 'jd', 'manual'] as const
 
 const jobFields = {
   companyId: zId,
@@ -13,6 +20,7 @@ const jobFields = {
   city: zOptText(40),
   salaryMin: zMoney.nullish(),
   salaryMax: zMoney.nullish(),
+  salarySource: z.enum(SALARY_SOURCES).nullish(),
   level: zOptText(40),
   keywords: z.array(z.string().trim().min(1).max(40)).max(40).nullish(),
   status: z.enum(JOB_STATUSES),
@@ -60,6 +68,8 @@ export interface JobDto {
   city: string | null
   salaryMin: number | null
   salaryMax: number | null
+  /** listing / jd / manual；NULL = 迁移前录入，来源未知 */
+  salarySource: string | null
   level: string | null
   keywords: string[] | null
   fitScore: number | null

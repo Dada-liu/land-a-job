@@ -50,7 +50,7 @@ export const TABLES: Record<TableName, TableSpec> = {
     table: 'job',
     softDelete: true,
     fields:
-      'id companyId title jdText jdUrl jdSnapshot jdSource channel city salaryMin salaryMax level keywords fitScore fitReasons fitSource status priority notes createdAt updatedAt deletedAt',
+      'id companyId title jdText jdUrl jdSnapshot jdSource channel city salaryMin salaryMax salarySource level keywords fitScore fitReasons fitSource status priority notes createdAt updatedAt deletedAt',
     overrides: { keywords: 'keywords_json', fitReasons: 'fit_reasons_json' },
     json: ['keywords', 'fitReasons'],
   },

@@ -13,6 +13,7 @@ import {
   type JdCollectionDto,
 } from '../lib/api'
 import { qk } from '../lib/queries'
+import { salarySourceLabelOrUnknown, salarySourceShort } from '../lib/salary-source'
 import { CHANNEL_OPTIONS } from '../lib/channels'
 import { Copy } from 'lucide-react'
 import { Button, Card, Field, Input, PageHeader, Select, Textarea, Tooltip } from '../components/ui'
@@ -209,7 +210,10 @@ export default function JobDetail() {
         description={t('{company} · {city} · {salary} · {channel}', {
           company: data.companyName ?? t('未知公司'),
           city: data.city ?? t('城市未填'),
-          salary: `${money(data.salaryMin)}-${money(data.salaryMax)}`,
+          salary: [
+            `${money(data.salaryMin)}-${money(data.salaryMax)}`,
+            salarySourceShort(data.salarySource) ? `（${salarySourceShort(data.salarySource)}）` : '',
+          ].join(''),
           channel: t(CHANNEL_OPTIONS.find((item) => item.value === data.channel)?.label ?? '其他'),
         })}
         actions={
@@ -428,6 +432,9 @@ export default function JobDetail() {
               />
             </Field>
           </div>
+          <p className="-mt-1 text-[11px] text-stone-400" data-testid="job-salary-source-hint">
+            {t('来源：{source}', { source: t(salarySourceLabelOrUnknown(data.salarySource)) })}
+          </p>
           <Field label={t('JD 链接')}>
             <Input value={form.jdUrl} onChange={(event) => setForm({ ...form, jdUrl: event.target.value })} />
           </Field>

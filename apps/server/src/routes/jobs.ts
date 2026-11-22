@@ -99,10 +99,29 @@ async function writeJd(db: Db, id: string, input: JdWriteInput): Promise<{ job: 
     ...(job.title.trim() ? {} : { title: input.structured.title ?? job.title }),
     ...(job.city?.trim() ? {} : { city: input.structured.city ?? input.signals.cities[0] ?? null }),
     ...(job.salaryMin == null && job.salaryMax == null && input.signals.salary
-      ? { salaryMin: input.signals.salary.min, salaryMax: input.signals.salary.max }
+      ? {
+          salaryMin: input.signals.salary.min,
+          salaryMax: input.signals.salary.max,
+          /** 从正文抽的，价格常是"该岗位给的范围"甚至别家的数字，标清楚方便日后覆盖 */
+          salarySource: 'jd',
+        }
       : {}),
   })
   return { job: updated, snapshot }
+}
+
+/**
+ * 薪资来源的兜底：调用方没声明就按「人工录入」算。
+ *
+ * 这是刻意的保守选择——来源越可疑，越不应该被自动化覆盖。插件（招聘平台列表）
+ * 会显式带 `salarySource: 'listing'`，Agent 从 JD 抽的带 `'jd'`，剩下的一律当人填的。
+ */
+function withSalarySource<T extends { salaryMin?: number | null; salaryMax?: number | null; salarySource?: string | null }>(
+  input: T,
+): T {
+  if (input.salarySource) return input
+  if (input.salaryMin == null && input.salaryMax == null) return input
+  return { ...input, salarySource: 'manual' }
 }
 
 export function registerJobRoutes(app: FastifyInstance, { db, ws }: RouteDeps): void {
@@ -121,7 +140,7 @@ export function registerJobRoutes(app: FastifyInstance, { db, ws }: RouteDeps): 
   })
 
   app.post('/api/jobs', async (request, reply) => {
-    const input = zJobCreate.parse(request.body)
+    const input = withSalarySource(zJobCreate.parse(request.body))
     const job = createJob(db, input)
     ws.invalidate(['jobs', 'companies', 'stats'])
     return reply.code(201).send(ok(job))
@@ -129,7 +148,7 @@ export function registerJobRoutes(app: FastifyInstance, { db, ws }: RouteDeps): 
 
   app.patch('/api/jobs/:id', async (request) => {
     const { id } = z.object({ id: zId }).parse(request.params)
-    const patch = zJobPatch.parse(request.body)
+    const patch = withSalarySource(zJobPatch.parse(request.body))
     const job = updateJob(db, id, patch)
     ws.invalidate(['jobs', `job:${id}`, 'companies'])
     return ok(job)

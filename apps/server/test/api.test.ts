@@ -145,6 +145,44 @@ describe('岗位 CRUD', () => {
     expect(result.status).toBe(404)
   })
 
+  it('没声明来源的薪资按人工填写算（保守，自动化不会覆盖）', async () => {
+    const { jobId } = await seedJob()
+    const detail = await app.call('GET', `/jobs/${jobId}`)
+    expect(detail.body.data.salarySource).toBe('manual')
+  })
+
+  it('插件声明 salarySource=listing 时按声明落库', async () => {
+    const company = await app.call('POST', '/companies', { name: '列表来源公司' })
+    const job = await app.call('POST', '/jobs', {
+      companyId: company.body.data.id,
+      title: 'AI Agent 开发',
+      salaryMin: 20_000,
+      salaryMax: 40_000,
+      salarySource: 'listing',
+    })
+    expect(job.body.data.salarySource).toBe('listing')
+  })
+
+  it('不给薪资就不带来源', async () => {
+    const company = await app.call('POST', '/companies', { name: '无薪资公司' })
+    const job = await app.call('POST', '/jobs', { companyId: company.body.data.id, title: '待定岗位' })
+    expect(job.body.data.salarySource).toBeNull()
+  })
+
+  it('只改薪资、没声明来源时改记为人工填写', async () => {
+    const company = await app.call('POST', '/companies', { name: '改薪资公司' })
+    const job = await app.call('POST', '/jobs', {
+      companyId: company.body.data.id,
+      title: '前端',
+      salaryMin: 20_000,
+      salaryMax: 30_000,
+      salarySource: 'listing',
+    })
+    const patched = await app.call('PATCH', `/jobs/${job.body.data.id}`, { salaryMin: 25_000 })
+    expect(patched.body.data.salaryMin).toBe(25_000)
+    expect(patched.body.data.salarySource).toBe('manual')
+  })
+
   it('列表不返回 jdText（避免一次拉几 MB）', async () => {
     const { jobId } = await seedJob()
     const list = await app.call('GET', '/jobs')
