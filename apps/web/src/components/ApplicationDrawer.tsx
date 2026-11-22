@@ -278,7 +278,11 @@ export function ApplicationDrawer({
                       <span className="ml-auto font-mono text-[10px] text-stone-400">{formatTime(event.at)}</span>
                     </div>
                     {eventNote(event) ? (
-                      <div className="mt-0.5 text-[11px] leading-relaxed text-stone-500">{eventNote(event)}</div>
+                      // 备注是按「一段一条」记的（输入框就是多行），HTML 默认会把换行折成空格，
+                      // 不 pre-wrap 的话写的人看到的是一大坨，和自己敲的样子对不上
+                      <div className="mt-0.5 whitespace-pre-wrap break-words text-[11px] leading-relaxed text-stone-500">
+                        {eventNote(event)}
+                      </div>
                     ) : null}
                     <div className="mt-0.5 text-[10px] text-stone-300">
                       来自 {event.source} · {event.actor}

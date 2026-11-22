@@ -12,6 +12,7 @@ import {
 } from '@dnd-kit/core'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
+import { ArrowUpRight } from 'lucide-react'
 import { STATUS_LABELS, nextStatuses, type Status } from '@land/core/application'
 import {
   changeStatus,
@@ -26,9 +27,13 @@ import { ApplicationDrawer } from '../components/ApplicationDrawer'
 import { errorText, useToast } from '../components/Toast'
 import { useT } from '../i18n'
 
-/** 看板列：只放「还在推进」的状态；终态不参与拖拽，避免误操作把记录挪进黑洞 */
+/**
+ * 看板列：只放「还在推进」的状态；终态不参与拖拽，避免误操作把记录挪进黑洞。
+ *
+ * 「线索」列已下线：服务端不会产出 lead 投递（新建一律 queued），这一列长期是空的，
+ * 白占一屏宽度。历史 lead 记录也不再出现在看板上（见下方的 closed 过滤）。
+ */
 const COLUMNS: { status: string; label: string; hint?: string }[] = [
-  { status: 'lead', label: '线索' },
   { status: 'queued', label: '待投' },
   { status: 'applied', label: '已投递' },
   { status: 'screening', label: '筛选中' },
@@ -41,6 +46,13 @@ function daysLabel(days: number | undefined): string {
   if (days === undefined) return ''
   return days === 0 ? '今天' : '{days} 天'
 }
+
+/**
+ * 卡片里的链接要自己截住指针/点击/按键事件：
+ * 卡片本身是拖拽源，还兼着「点开抽屉」。不拦的话按下去会起拖拽、点一下又顺手把抽屉打开，
+ * 用户看到的会是「新开了岗位页，同时底下还压着一层抽屉」。
+ */
+const swallow = (event: { stopPropagation: () => void }) => event.stopPropagation()
 
 function AppCard({
   app,
@@ -57,6 +69,10 @@ function AppCard({
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: 30 }
     : undefined
 
+  // 岗位详情、简历编辑都按新开页跳：看板上正在拖/正在看的那一屏不能丢
+  const jobHref = `/jobs/${app.jobId}`
+  const resumeHref = app.resumeId ? `/resumes/${app.resumeId}` : null
+
   return (
     <div
       ref={setNodeRef}
@@ -67,7 +83,8 @@ function AppCard({
       {...listeners}
       onClick={onOpen}
       onKeyDown={(event) => {
-        if (event.key === 'Enter') onOpen()
+        // 焦点在内嵌链接上时回车归链接，别再顺带把抽屉打开
+        if (event.key === 'Enter' && event.target === event.currentTarget) onOpen()
       }}
       role="button"
       tabIndex={0}
@@ -78,17 +95,45 @@ function AppCard({
     >
       <div className="flex items-start justify-between gap-1.5">
         <span className="truncate text-[11px] text-stone-500">{app.companyName ?? t('未知公司')}</span>
-        {app.resumeId ? (
-          <span className="shrink-0 rounded bg-emerald-50 px-1 text-[9px] text-emerald-700" title={t('已关联简历')}>
+        {resumeHref ? (
+          <a
+            href={resumeHref}
+            target="_blank"
+            rel="noreferrer"
+            title={t('打开简历')}
+            aria-label={t('打开简历')}
+            onPointerDown={swallow}
+            onClick={swallow}
+            onKeyDown={swallow}
+            className="shrink-0 rounded bg-emerald-50 px-1 text-[9px] text-emerald-700 underline-offset-2 transition-colors hover:bg-emerald-100 hover:text-emerald-800 hover:underline"
+          >
             {t('有简历')}
-          </span>
+          </a>
         ) : (
           <span className="shrink-0 rounded bg-amber-50 px-1 text-[9px] text-amber-700" title={t('未关联简历，不算有效投递')}>
             {t('缺简历')}
           </span>
         )}
       </div>
-      <div className="mt-0.5 line-clamp-2 text-xs font-medium leading-snug text-stone-900">{app.jobTitle ?? t('未知岗位')}</div>
+      <div className="group/title mt-0.5 flex items-start gap-1">
+        <div className="line-clamp-2 min-w-0 flex-1 text-xs font-medium leading-snug text-stone-900">
+          {app.jobTitle ?? t('未知岗位')}
+        </div>
+        {/* 悬停岗位名才显形：常态留出同样的位置，出现时不把标题挤到换行 */}
+        <a
+          href={jobHref}
+          target="_blank"
+          rel="noreferrer"
+          title={t('打开岗位')}
+          aria-label={t('打开岗位')}
+          onPointerDown={swallow}
+          onClick={swallow}
+          onKeyDown={swallow}
+          className="mt-px shrink-0 rounded p-0.5 text-stone-400 opacity-0 transition-opacity hover:bg-stone-100 hover:text-stone-900 focus-visible:opacity-100 group-hover/title:opacity-100"
+        >
+          <ArrowUpRight className="h-3 w-3" />
+        </a>
+      </div>
       <div className="mt-1 flex items-center justify-between text-[10px] text-stone-400">
         <span className="font-mono" title={t('岗位匹配度')}>
           {fit === null ? t('匹配度 —') : t('匹配度 {score}', { score: fit })}
@@ -206,7 +251,10 @@ export default function Pipeline() {
     return map
   }, [rows])
 
-  const closed = rows.filter((item) => !COLUMNS.some((column) => column.status === item.status))
+  // 「已结束」只收终态；lead 属于列已下线的那一档，不能混进来假装是已结束
+  const closed = rows.filter(
+    (item) => item.status !== 'lead' && !COLUMNS.some((column) => column.status === item.status),
+  )
 
   const onDragStart = (event: DragStartEvent) => setActiveId(String(event.active.id))
 
