@@ -304,7 +304,7 @@ export default function PrivateJobs() {
                   <td className="whitespace-nowrap px-3 py-2.5">
                     <span className="flex items-center gap-1.5 font-mono text-stone-600">
                       {salary(job)}
-                      {/* 标签用短名：全称「列表薪资」在这一列会被挤成两行 */}
+                      {/* 标签用短名：全称「插件采集」在这一列会被挤成两行 */}
                       {salarySourceShort(job.salarySource) && (
                         <span
                           className="rounded bg-stone-100 px-1 font-sans text-[10px] text-stone-500"

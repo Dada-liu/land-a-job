@@ -6,7 +6,7 @@
  * 这个价格要不要信，而不是只看数字。
  */
 const LABELS: Record<string, string> = {
-  listing: '列表薪资',
+  listing: '插件采集',
   jd: 'JD 抽取',
   manual: '手动填写',
 }
@@ -19,7 +19,7 @@ export function salarySourceLabel(value: string | null | undefined): string | nu
 
 /** 标题下面那行用短标签，四个字段并排时不至于挤成一团 */
 const SHORT: Record<string, string> = {
-  listing: '列表',
+  listing: '插件',
   jd: 'JD',
   manual: '手填',
 }
