@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { createJob, listCompanies, listJobCities, listJobs, type JobSummaryDto } from '../lib/api'
 import { qk } from '../lib/queries'
-import { salarySourceShort } from '../lib/salary-source'
 import { useSessionState } from '../lib/sessionState'
 import { Copy } from 'lucide-react'
 import { Button, Card, EmptyState, Field, Input, PageHeader, Select, Textarea, Tooltip } from '../components/ui'
@@ -302,18 +301,7 @@ export default function PrivateJobs() {
                   </td>
                   <td className="px-3 py-2.5 text-stone-600">{job.city ?? '—'}</td>
                   <td className="whitespace-nowrap px-3 py-2.5">
-                    <span className="flex items-center gap-1.5 font-mono text-stone-600">
-                      {salary(job)}
-                      {/* 标签用短名：全称「插件采集」在这一列会被挤成两行 */}
-                      {salarySourceShort(job.salarySource) && (
-                        <span
-                          className="rounded bg-stone-100 px-1 font-sans text-[10px] text-stone-500"
-                          data-testid="job-salary-source"
-                        >
-                          {t(salarySourceShort(job.salarySource) as string)}
-                        </span>
-                      )}
-                    </span>
+                    <span className="font-mono text-stone-600">{salary(job)}</span>
                   </td>
                   <td className="px-3 py-2.5">
                     <span
