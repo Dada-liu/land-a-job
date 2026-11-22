@@ -42,11 +42,11 @@ export const SKILL_REGISTRY: readonly SkillMeta[] = [
   },
   {
     name: 'resume-tailor',
-    version: '1.0.0',
+    version: '1.1.0',
     minVersion: '1.0.0',
     title: '简历定制',
     purpose: '按 JD 重排重述简历，产出 variant，绝不编造',
-    writeTools: ['tailor_resume', 'update_resume'],
+    writeTools: ['tailor_resume', 'update_resume', 'add_application_note'],
   },
   {
     name: 'job-prep',
@@ -74,11 +74,11 @@ export const SKILL_REGISTRY: readonly SkillMeta[] = [
   },
   {
     name: 'resume-tailor-batch',
-    version: '1.0.0',
+    version: '1.1.0',
     minVersion: '1.0.0',
     title: '批量定制并进入待投',
-    purpose: '给未进待投的岗位逐个定制 variant 简历、绑定岗位、建 queued 投递',
-    writeTools: ['tailor_resume', 'update_resume', 'create_application'],
+    purpose: '给未进待投的岗位逐个定制 variant 简历、绑定岗位、建 queued 投递并记缺口',
+    writeTools: ['tailor_resume', 'update_resume', 'create_application', 'add_application_note'],
   },
   {
     name: 'browser-apply',

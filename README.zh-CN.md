@@ -232,11 +232,11 @@ codex mcp add land-a-job -- node /绝对路径/land-a-job/apps/mcp/dist/index.js
 | --- | --- | --- |
 | `jd-collect` | 「把这个岗位收进来」「抓一下这份 JD」「刷新这份 JD」 | `job.jd_text` / `keywords_json` / `jd_source` / 快照 |
 | `job-hunt` | 「今天该做什么」「帮我盯着这些投递」「这家帮我投了」 | `job` / `application` / `application_event` |
-| `resume-tailor` | 「按这个 JD 改简历」「这版简历投这个岗位合适吗」 | `resume(kind=variant)` + `provenance_json` |
+| `resume-tailor` | 「按这个 JD 改简历」「这版简历投这个岗位合适吗」 | `resume(kind=variant)` + `provenance_json` + 投递上的缺口备注 |
 | `job-prep` | 「明天面试帮我准备」「面试挂了复盘一下」 | `question` / `interview.feedback` |
 | `offer-decide` | 「这两个 offer 选哪个」「怎么谈薪」 | `offer.assumptions_json` / `decision_note` |
 | `job-search-batch` | 「搜一下杭州的岗位」「再翻一倍继续找」 | `company` / `job` / JD 正文与 fit |
-| `resume-tailor-batch` | 「库里没进待投的岗位都定制一遍」 | `resume(kind=variant)` + `queued` 投递 |
+| `resume-tailor-batch` | 「库里没进待投的岗位都定制一遍」 | `resume(kind=variant)` + `queued` 投递（每条带缺口备注） |
 | `browser-apply` | 「帮我投 XX 公司，最后我自己点提交」 | `applied` 投递 + 时间线证据备注 |
 | `application-status-sync` | 「每天 9 点帮我巡检各站点状态」 | 状态跃迁 + `application_event` / 定时任务 |
 | `open-boss-browser` | 「打开插件」「打开 BOSS 浏览器」「插件装了没反应」 | 不落库：只开浏览器、读页面、讲清下一步 |

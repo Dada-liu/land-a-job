@@ -1,6 +1,6 @@
 ---
 name: resume-tailor-batch
-version: 1.0.0
+version: 1.1.0
 description: 批量定制简历并入待投：给库里还没有投递记录的岗位逐个按 JD 生成定制版简历、绑定岗位、进入待投（queued）。当用户说「把库里的岗位都定制一遍」「每个岗位配一份简历并放进待投」「批量进待投」时使用。
 ---
 
@@ -60,11 +60,15 @@ description: 批量定制简历并入待投：给库里还没有投递记录的�
 4. 按 `plan` 改正文，只允许四件事：**重排 / 重述 / 突出 / 删冗余**。
    `plan.gap` 里 `blocking` 的项如实留白，不把没做过的技术写进技能列表。
 5. `update_resume` 落到 `variantId`，带
-   `provenance: { skill: "resume-tailor-batch", skillVersion: "1.0.0" }`。
+   `provenance: { skill: "resume-tailor-batch", skillVersion: "1.1.0" }`。
    服务端会校验是否新增条目或改动公司 / 在职时间 / 学历，被拒就按拒因重改，不要绕过校验。
 6. `create_application`：`jobId`、`resumeId` = `variantId`、`status: "queued"`、`channel` 取岗位的渠道。
    **不要传 `appliedAt`**：待投还没投出去，写了会被漏斗算成「已投」。
-7. `get_application` 复核：`status` 是 `queued`、`resumeId` 是刚生成的 variant、`appliedAt` 为空。
+7. 拿上一步返回的投递 id，`add_application_note` 追加一条缺口备注（模板见
+   `resume-tailor/references/gap-classification.md` 的「落库口径」）。
+   批量最容易漏这一步：20 条跑完只剩 20 份简历，没人记得哪份差在哪、当时为什么留白。
+8. `get_application` 复核：`status` 是 `queued`、`resumeId` 是刚生成的 variant、`appliedAt` 为空、
+   时间线里有一条 `note` 事件。
 
 单条失败（抓取不到正文、`update_resume` 被拒、409 已有投递）**记录原因后继续下一条**，
 不要中断整批、也不要回滚已成功的岗位。409 说明状态在两轮取数之间变了，按「已有投递」跳过即可。
@@ -78,6 +82,7 @@ description: 批量定制简历并入待投：给库里还没有投递记录的�
 ## 5. 产出契约
 
 - 每个成功岗位：一条 variant（带 `provenance`）+ 一条 `queued` 投递，两者都指向该岗位。
+- 那条投递的时间线上必须有一条缺口备注（`add_application_note`），带 variant id、命中率与按严重度分组的缺口。
 - 不在对话里贴一堆改写后的简历正文；交付物是数据库里的记录，用 id 和 Web 链接指给用户。
 - 未完成的那部分必须明确说「没做」，不能把「跳过」说成「已完成」。
 
@@ -92,6 +97,7 @@ description: 批量定制简历并入待投：给库里还没有投递记录的�
 - 禁止新增经历 / 项目 / 学历条目，禁止改公司名、在职时间、职级、学校、学位，禁止虚构数字。
 - 禁止改母版简历，禁止从别的 variant 复制当母版，禁止给同一岗位造两份 variant。
 - 禁止给没有 JD 正文的岗位定制，禁止把 `plan.gap` 里的技术直接写进简历。
+- 禁止跳过缺口备注：建了投递没写 `note`，这一条算「没做完」，不能报成功。
 - 禁止把投递建成 `applied` 或写 `appliedAt`；本 Skill 只做到「待投」。
 - 禁止顺手 `submit_application`、发投递、改别的状态；投递是用户或 `browser-apply` 的事。
 

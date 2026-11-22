@@ -229,11 +229,11 @@ Ask the agent to call `get_app_status`. It should return service/DB status plus 
 | --- | --- | --- |
 | `jd-collect` | "Add this job", "Fetch this JD", "Refresh this JD" | `job.jd_text` / `keywords_json` / `jd_source` / snapshot |
 | `job-hunt` | "What should I do today", "Watch these applications", "I applied to this one" | `job` / `application` / `application_event` |
-| `resume-tailor` | "Tailor my resume to this JD", "Is this version a good fit" | `resume(kind=variant)` + `provenance_json` |
+| `resume-tailor` | "Tailor my resume to this JD", "Is this version a good fit" | `resume(kind=variant)` + `provenance_json` + gap note on the application |
 | `job-prep` | "Prep me for tomorrow's interview", "Debrief a failed interview" | `question` / `interview.feedback` |
 | `offer-decide` | "Which offer", "How to negotiate" | `offer.assumptions_json` / `decision_note` |
 | `job-search-batch` | "Search jobs in Hangzhou", "Double the list and keep going" | `company` / `job` / JD text and fit |
-| `resume-tailor-batch` | "Tailor every job that isn't queued yet" | `resume(kind=variant)` + `queued` applications |
+| `resume-tailor-batch` | "Tailor every job that isn't queued yet" | `resume(kind=variant)` + `queued` applications, each with a gap note |
 | `browser-apply` | "Apply to X, I'll click submit myself" | `applied` + timeline evidence note |
 | `application-status-sync` | "Check every site at 9am daily" | status transitions + `application_event` / scheduled task |
 | `open-boss-browser` | "Open the plugin", "Is the browser extension loaded?" | nothing — it only launches a browser and reads the page |
